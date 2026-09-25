@@ -1,49 +1,1098 @@
+/* ==========================================================================
+   Timberstone ERP — Clickable Wireframe
+   Intentionally low-fidelity "blueprint" styling: grayscale, boxed,
+   dashed placeholders. This communicates layout & flow, not visual design.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Brand palette sourced from timberstone.in (Elementor/theme CSS):
+     primary forest green #3E5743 (buttons, side-panel), cream #FFF1DF
+     (soft section backgrounds), plus neutrals for text/lines. */
+  --brand: #3e5743;
+  --brand-dark: #2a3c2e;
+  --brand-light: #6d8a76;
+  --cream: #fff1df;
+  --peach: #ffbc7d;
+  --ink: #1a1f1b;
+  --ink-soft: #5c665e;
+  --line: #a9b6ac;
+  --line-soft: #d9e0da;
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --hatch: repeating-linear-gradient(
+    45deg,
+    #eef0ea,
+    #eef0ea 6px,
+    #f7f6f1 6px,
+    #f7f6f1 12px
+  );
+  --done: #3e5743;
+  --pending: #a35b00;
+  --idle: #9aa39d;
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "Courier New", Courier, monospace;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
   padding: 0;
   margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
 }
 
 a {
   color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+.wf-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas:
+    "top top"
+    "side main";
+  min-height: 100vh;
+}
+
+.wf-topbar {
+  grid-area: top;
+  border-bottom: 2px solid var(--ink);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.wf-brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+.wf-brand .wf-logo {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--ink);
+  display: inline-block;
+  position: relative;
+}
+.wf-brand .wf-logo::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed var(--ink);
+}
+
+.wf-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.wf-role-pill,
+.wf-bell {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  background: var(--panel);
+}
+
+.wf-sidebar {
+  grid-area: side;
+  border-right: 2px solid var(--ink);
+  background: var(--panel);
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.wf-nav-group {
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--idle);
+  margin-top: 10px;
+}
+
+.wf-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink);
+  border-left: 3px solid transparent;
+}
+
+.wf-nav-link:hover {
+  background: #f0f1ec;
+}
+
+.wf-nav-link.active {
+  border-left-color: var(--ink);
+  background: #eceeea;
+  font-weight: 700;
+}
+
+.wf-nav-icon {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  flex: none;
+  display: inline-block;
+}
+
+.wf-main {
+  grid-area: main;
+  padding: 20px 28px 60px;
+  max-width: 1180px;
+}
+
+.wf-crumb {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--idle);
+  margin-bottom: 6px;
+}
+
+.wf-h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wf-sub {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 0 0 18px;
+}
+
+.wf-box {
+  border: 1.5px solid var(--ink);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.wf-box-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ink-soft);
+  margin: -16px -16px 14px;
+  padding: 8px 16px;
+  border-bottom: 1.5px solid var(--ink);
+  background: #f5f4ef;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wf-grid {
+  display: grid;
+  gap: 14px;
+}
+.wf-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.wf-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.wf-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.wf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-field label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.wf-input,
+.wf-textarea,
+.wf-select {
+  border: 1px solid var(--line);
+  background: #fafaf6;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  border-radius: 2px;
+}
+
+.wf-textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.wf-placeholder {
+  border: 1.5px dashed var(--line);
+  background: var(--hatch);
+  color: var(--ink-soft);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px 8px;
+  min-height: 78px;
+  border-radius: 2px;
+}
+
+.wf-upload {
+  border: 1.5px dashed var(--line);
+  background: #f9f8f3;
+  color: var(--ink-soft);
+  font-size: 12px;
+  padding: 18px;
+  text-align: center;
+  border-radius: 2px;
+}
+.wf-upload .wf-btn {
+  margin-top: 8px;
+}
+
+.wf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 2px;
+  text-decoration: none;
+}
+.wf-btn:hover {
+  background: #eceee8;
+}
+.wf-btn.primary {
+  background: var(--ink);
+  color: #fff;
+}
+.wf-btn.primary:hover {
+  background: #16241a;
+}
+.wf-btn.ghost {
+  border-style: dashed;
+}
+.wf-btn.danger {
+  border-color: #7b2020;
+  color: #7b2020;
+}
+.wf-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.wf-btn-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wf-actions-end {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-soft);
+}
+
+.wf-badge {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.wf-badge.done {
+  color: #fff;
+  background: var(--done);
+  border-color: var(--done);
+}
+.wf-badge.pending {
+  color: #fff;
+  background: var(--pending);
+  border-color: var(--pending);
+}
+.wf-badge.idle {
+  color: var(--ink-soft);
+  background: #eef1ec;
+}
+.wf-badge.current {
+  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.wf-role-tag {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px dashed var(--line);
+  color: var(--ink-soft);
+  background: #f4f1e9;
+  white-space: nowrap;
+}
+
+.wf-table-wrap {
+  overflow-x: auto;
+}
+
+.wf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.wf-table th,
+.wf-table td {
+  border: 1px solid var(--line-soft);
+  padding: 8px 10px;
+  text-align: left;
+}
+.wf-table th {
+  background: #f5f4ef;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-soft);
+}
+.wf-table tr:hover td {
+  background: #f9f8f3;
+}
+
+.wf-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.wf-card {
+  border: 1.5px solid var(--ink);
+  background: var(--panel);
+  padding: 14px;
+  border-radius: 2px;
+}
+.wf-card .num {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+.wf-card .label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Stepper */
+.wf-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.wf-step {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 3px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.wf-step .n {
+  font-weight: 700;
+  font-size: 10px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wf-step.done {
+  border-color: var(--done);
+  color: var(--done);
+  background: #eaf1ea;
+}
+.wf-step.current {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: #eceeea;
+  font-weight: 700;
+}
+.wf-step.locked {
+  color: var(--idle);
+  cursor: default;
+}
+
+.wf-phase-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--idle);
+  margin: 14px 0 4px;
+  width: 100%;
+}
+
+.wf-progress-track {
+  height: 6px;
+  background: #e2e6df;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+.wf-progress-fill {
+  height: 100%;
+  background: var(--ink);
+}
+
+.wf-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.wf-list li {
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wf-list li:last-child {
+  border-bottom: none;
+}
+
+.wf-empty {
+  color: var(--idle);
+  font-size: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 1.5px dashed var(--line-soft);
+}
+
+.wf-meta-row {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.wf-note {
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: #f5f4ef;
+  border: 1px dashed var(--line-soft);
+  padding: 8px 10px;
+  border-radius: 2px;
+  margin-top: 10px;
+}
+
+.wf-annot {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #a35b00;
+  background: #fff1df;
+  border: 1px dashed #ffbc7d;
+  padding: 6px 8px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.wf-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.wf-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+
+@media (max-width: 900px) {
+  .wf-shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "top"
+      "main";
+  }
+  .wf-sidebar {
+    display: none;
+  }
+  .wf-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .wf-grid-2,
+  .wf-grid-3,
+  .wf-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Role Hub — the one deliberately "high-fidelity" screen in this wireframe.
+   Everything past this gate uses the grayscale/dashed system above; this
+   entry screen exists purely to route a demo viewer into the right role.
+   ========================================================================== */
+
+.wf-landing {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% -10%, #4a6b52 0%, #2f4434 55%, #1c2a20 100%);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  padding: 64px 20px 80px;
+}
+
+.wf-landing-inner {
+  width: 100%;
+  max-width: 640px;
+}
+
+.wf-landing-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.wf-landing-logo {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  background: #fff;
+  color: #2a3c2e;
+  font-size: 32px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wf-landing-title {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.wf-landing-sub {
+  font-size: 15px;
+  color: #d7e6da;
+  margin: 0 0 14px;
+}
+
+.wf-landing-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cfe3d4;
+}
+
+.wf-landing-live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8fd6a0;
+  display: inline-block;
+}
+
+.wf-landing-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.wf-landing-btn {
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-block;
+  border: 1.5px solid transparent;
+}
+
+.wf-landing-btn.primary {
+  background: #fff;
+  color: #2a3c2e;
+}
+
+.wf-landing-btn.ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.wf-landing-prompt {
+  text-align: center;
+  font-size: 13px;
+  color: #d7e6da;
+  margin: 36px 0 16px;
+}
+
+.wf-role-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  text-decoration: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.wf-role-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.wf-role-card.highlight {
+  border-color: #ffbc7d;
+  box-shadow: 0 0 0 3px rgba(255, 188, 125, 0.28);
+}
+
+.wf-role-card-icon {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 10px;
+  background: #eaf1ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.wf-role-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wf-role-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.wf-role-card-desc {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+.wf-role-card-chevron {
+  flex: none;
+  color: var(--idle);
+  font-size: 18px;
+}
+
+.wf-role-pill-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.wf-landing-footer {
+  text-align: center;
+  font-size: 11.5px;
+  color: #9fb8a6;
+  margin-top: 30px;
+}
+
+/* ==========================================================================
+   Supervisor Mobile App — phone-frame wireframe (routes under /m).
+   Same STAGES data + the same StageForm kind-renderer used by the desktop
+   Projects module (see components/StageForm.js) — only the chrome differs:
+   a phone frame + bottom tab bar instead of the sidebar/topbar shell, plus
+   narrow-viewport overrides for the shared wf-* form classes below.
+   On a real phone (<=480px) the decorative bezel disappears via media query
+   so this behaves like an installed full-screen app.
+   ========================================================================== */
+
+.wf-phone-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef1ec 0%, #e2e6df 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 36px 16px 60px;
+}
+
+.wf-phone {
+  width: 390px;
+  max-width: 100%;
+  height: 820px;
+  max-height: 88vh;
+  background: var(--bg);
+  border: 10px solid #1a1f1b;
+  border-radius: 44px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.wf-phone-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 22px;
+  background: #1a1f1b;
+  border-radius: 0 0 14px 14px;
+  z-index: 5;
+}
+
+.wf-phone-statusbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 22px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--panel);
+  flex: none;
+}
+
+.wf-phone-appbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--brand);
+  color: #fff;
+  flex: none;
+}
+
+.wf-phone-appbar-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.wf-phone-appbar-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.wf-phone-appbar-sub {
+  font-size: 10.5px;
+  color: rgba(255, 241, 223, 0.85);
+}
+
+.wf-phone-exit {
+  margin-left: auto;
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  opacity: 0.85;
+}
+
+.wf-phone-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 90px;
+  font-size: 13px;
+}
+
+.wf-phone-content .wf-h1 {
+  font-size: 17px;
+}
+.wf-phone-content .wf-sub {
+  font-size: 12px;
+}
+.wf-phone-content .wf-box {
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.wf-phone-content .wf-grid-2,
+.wf-phone-content .wf-grid-3,
+.wf-phone-content .wf-grid-4 {
+  grid-template-columns: 1fr;
+}
+.wf-phone-content .wf-btn {
+  width: 100%;
+  justify-content: center;
+}
+.wf-phone-content .wf-btn-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+.wf-phone-content .wf-actions-end {
+  flex-direction: column;
+  gap: 10px;
+}
+.wf-phone-content .wf-actions-end .wf-btn-row {
+  width: 100%;
+}
+
+.wf-phone-tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  border-top: 1.5px solid var(--line-soft);
+  background: var(--panel);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+}
+
+.wf-phone-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: 10px;
+  border-radius: 8px;
+}
+
+.wf-phone-tab-icon {
+  font-size: 18px;
+}
+
+.wf-phone-tab.active {
+  color: var(--brand);
+  font-weight: 700;
+  background: #eaf1ea;
+}
+
+.wf-phone-caption {
+  margin-top: 16px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  text-align: center;
+  max-width: 390px;
+}
+
+/* Mobile-native step list (project detail screen) */
+.wf-mobile-steplist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wf-mobile-step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.wf-mobile-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+.wf-mobile-step-row.done .wf-mobile-step-num {
+  background: var(--done);
+  border-color: var(--done);
+  color: #fff;
+}
+.wf-mobile-step-row.current .wf-mobile-step-num {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.wf-mobile-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.wf-mobile-step-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.wf-mobile-step-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.wf-mobile-step-chevron {
+  color: var(--idle);
+  font-size: 16px;
+}
+.wf-mobile-step-row.locked {
+  opacity: 0.55;
+}
+
+/* Mobile home / list cards */
+.wf-mcard {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.wf-mcard-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.wf-mcard-sub {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.wf-mcard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.wf-mstats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.wf-mstat {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.wf-mstat-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brand);
+}
+.wf-mstat-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.wf-mgreeting {
+  margin-bottom: 14px;
+}
+.wf-mgreeting h1 {
+  font-size: 18px;
+  margin: 0 0 2px;
+}
+.wf-mgreeting p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 480px) {
+  .wf-phone-page {
+    padding: 0;
+    background: var(--bg);
+  }
+  .wf-phone {
+    width: 100%;
+    height: 100vh;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .wf-phone-notch,
+  .wf-phone-statusbar {
+    display: none;
+  }
+  .wf-phone-caption {
+    display: none;
   }
 }

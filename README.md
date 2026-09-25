@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Timberstone ERP — Clickable Wireframe
 
-## Getting Started
+A low-fidelity, clickable wireframe for the AppiMindTech Timberstone ERP
+proposal ("Lead to Work Handover"). Single Next.js (JS, App Router) codebase
+that serves both as a normal web app and an installable PWA.
 
-First, run the development server:
+## Run it
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. Data is stored in the browser's `localStorage`
+(seeded with sample leads/projects on first load), so creating a lead,
+converting it to a project, and clicking through stages persists across
+reloads. Clear the site's local storage to reset the demo data.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## What's covered
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The flow reflects Timberstone's actual 12-step Lead-to-Handover process
+(clarified by the client on 25 Sep 2026), organized role-wise across
+Marketing, Sales, Supervisor, Design, Accounts and Manager:
 
-## Learn More
+- **Leads module** (`/leads`) — Steps 1–3: Lead Creation (Marketing/Sales),
+  Initial Contact & Rough Estimate (Sales), and Measurement Booking + Advance
+  Payment + Sales Operator Assignment (Sales). "Convert to Project" hands off
+  into the project stepper once a lead is fully booked.
+- **Projects module** (`/projects`) — Steps 4–12: the 9-step execution
+  workflow (Product/Design/Sample Selection → Measurement & Final Quotation →
+  Work Order & Payment Terms → Order Placed → Material Delivery → Site
+  Readiness → Contractor Allocation → Daily Supervision Reports → Final
+  Measurement, Add-ons & Credit Note), rendered as a clickable stepper. Each
+  stage is its own screen (`/projects/[id]/stage/[slug]`) with fields, sample
+  uploads, payment-term editing, delivery challans, checklists, multi-
+  contractor allocation, and per-contractor DSR logging.
+- **Dashboard** (`/`) — pipeline, stage counts, pending approvals at a
+  glance.
+- **Notifications** (`/notifications`) and **Role-wise Workflow** (`/roles`)
+  — the latter is the client-facing view of exactly which department owns
+  (or collaborates on) each of the 12 steps.
 
-To learn more about Next.js, take a look at the following resources:
+Styling is intentionally grayscale/boxed/dashed — it communicates layout,
+navigation and field coverage, not final visual design.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## PWA
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`app/manifest.js` declares the web app manifest (installable, standalone
+display). For production, add a service worker (e.g. via `next-pwa` or
+`serwist`) for offline caching — not included here since it would interfere
+with iterative wireframe development.
 
-## Deploy on Vercel
+## Next steps (not part of this wireframe)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Real backend / database, auth, and role-based access control.
+- File upload storage for drawings, photos, challans, DSR photos.
+- Visual design pass once the flow is validated with Timberstone.
