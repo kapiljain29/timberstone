@@ -117,7 +117,7 @@ export default function RoleHubPage() {
           );
         })}
 
-        <p className="wf-landing-footer">Fullestop Technology · Timberstone ERP wireframe v1.0</p>
+        <p className="wf-landing-footer">Appimindtech Technology · Timberstone ERP wireframe v1.0</p>
       </div>
     </div>
   );
