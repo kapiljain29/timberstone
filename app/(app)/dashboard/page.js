@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Box, Badge, DataTable, leadStatusTone } from "@/components/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Box, Badge, BranchFilter, DataTable, leadStatusTone } from "@/components/ui";
 import { getLeads, getProjects } from "@/lib/store";
-import { NOTIFICATIONS, DASHBOARD_STAGE_COUNTS } from "@/lib/data";
-import { STAGES } from "@/lib/stages";
+import { NOTIFICATIONS, BRANCHES, branchName } from "@/lib/data";
+import { PHASES, STAGES } from "@/lib/stages";
 
 export default function DashboardPage() {
   const [leads, setLeads] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [branch, setBranch] = useState("all");
 
   // Reads from localStorage, which is unavailable during SSR — must load post-mount.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -19,10 +20,29 @@ export default function DashboardPage() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const activeProjects = projects.length;
-  const openLeads = leads.filter((l) => !l.convertedProjectId).length;
+  const scopedLeads = useMemo(
+    () => (branch === "all" ? leads : leads.filter((l) => l.branch === branch)),
+    [leads, branch]
+  );
+  const scopedProjects = useMemo(
+    () => (branch === "all" ? projects : projects.filter((p) => p.branch === branch)),
+    [projects, branch]
+  );
+
+  const activeProjects = scopedProjects.length;
+  const openLeads = scopedLeads.filter((l) => !l.convertedProjectId).length;
   const pendingApprovals = 5;
   const dsrDue = 1;
+
+  const stageCounts = useMemo(() => {
+    return PHASES.map((phase) => ({
+      phase: phase.label,
+      count: scopedProjects.filter((p) => {
+        const stage = STAGES.find((s) => s.slug === p.currentStageSlug);
+        return stage?.phase === phase.key;
+      }).length,
+    }));
+  }, [scopedProjects]);
 
   return (
     <div>
@@ -32,6 +52,8 @@ export default function DashboardPage() {
         Section 10 of the proposal — lead pipeline, project stages, pending approvals and
         at-risk projects at a glance.
       </p>
+
+      <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
 
       <div className="wf-cards">
         <div className="wf-card">
@@ -55,7 +77,7 @@ export default function DashboardPage() {
       <div className="wf-grid wf-grid-2">
         <Box title="Projects by Workflow Stage">
           <ul className="wf-list">
-            {DASHBOARD_STAGE_COUNTS.map((s) => (
+            {stageCounts.map((s) => (
               <li key={s.phase}>
                 <span>{s.phase}</span>
                 <Badge tone="idle">{s.count} projects</Badge>
@@ -92,13 +114,14 @@ export default function DashboardPage() {
         }
       >
         <DataTable
-          columns={["Project", "Customer", "Value", "Current Stage", "Status"]}
-          rows={projects.map((p) => {
+          columns={["Project", "Branch", "Customer", "Value", "Current Stage", "Status"]}
+          rows={scopedProjects.map((p) => {
             const stage = STAGES.find((s) => s.slug === p.currentStageSlug);
             return [
               <Link key={p.id} href={`/projects/${p.id}`} className="wf-link-btn">
                 {p.id}
               </Link>,
+              branchName(p.branch),
               p.customer,
               p.value,
               stage ? `${stage.number}. ${stage.title}` : "—",
@@ -119,11 +142,12 @@ export default function DashboardPage() {
         }
       >
         <DataTable
-          columns={["Lead", "Company / Project", "Source", "Rough Estimate", "Status"]}
-          rows={leads.map((l) => [
+          columns={["Lead", "Branch", "Company / Project", "Source", "Rough Estimate", "Status"]}
+          rows={scopedLeads.map((l) => [
             <Link key={l.id} href={`/leads/${l.id}`} className="wf-link-btn">
               {l.name}
             </Link>,
+            branchName(l.branch),
             l.projectRef,
             l.source,
             l.roughEstimate || l.estCost || "—",

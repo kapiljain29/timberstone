@@ -1,18 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Box, Badge, DataTable, leadStatusTone } from "@/components/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Box, Badge, BranchFilter, DataTable, leadStatusTone } from "@/components/ui";
 import { getLeads } from "@/lib/store";
+import { BRANCHES, branchName } from "@/lib/data";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
+  const [branch, setBranch] = useState("all");
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLeads(getLeads());
   }, []);
+
+  const scopedLeads = useMemo(
+    () => (branch === "all" ? leads : leads.filter((l) => l.branch === branch)),
+    [leads, branch]
+  );
 
   return (
     <div>
@@ -30,11 +37,14 @@ export default function LeadsPage() {
         </Link>
       </div>
 
-      <Box title={`All Leads (${leads.length})`}>
+      <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
+
+      <Box title={`All Leads (${scopedLeads.length})`}>
         <DataTable
-          columns={["Lead", "Project / Reference", "Source", "Rough Estimate", "Status", ""]}
-          rows={leads.map((l) => [
+          columns={["Lead", "Branch", "Project / Reference", "Source", "Rough Estimate", "Status", ""]}
+          rows={scopedLeads.map((l) => [
             l.name,
+            branchName(l.branch),
             l.projectRef,
             l.source,
             l.roughEstimate || l.estCost || "—",

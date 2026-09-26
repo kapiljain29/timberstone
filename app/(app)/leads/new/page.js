@@ -4,11 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Box, Annotation, CheckboxGroup } from "@/components/ui";
 import { addLead } from "@/lib/store";
-import { LEAD_SOURCES, PRODUCT_TYPES } from "@/lib/data";
+import { BRANCHES, LEAD_SOURCES, PRODUCT_TYPES } from "@/lib/data";
 
 const initial = {
   name: "",
   company: "",
+  branch: BRANCHES[0].id,
   source: LEAD_SOURCES[0],
   phone: "",
   email: "",
@@ -53,6 +54,16 @@ export default function NewLeadPage() {
               <select className="wf-select" value={form.source} onChange={(e) => set("source", e.target.value)}>
                 {LEAD_SOURCES.map((s) => (
                   <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="wf-field">
+              <label>Branch</label>
+              <select className="wf-select" value={form.branch} onChange={(e) => set("branch", e.target.value)}>
+                {BRANCHES.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.tag})
+                  </option>
                 ))}
               </select>
             </div>

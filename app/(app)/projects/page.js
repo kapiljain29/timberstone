@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Box, Badge, DataTable, ProgressBar } from "@/components/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Box, Badge, BranchFilter, DataTable, ProgressBar } from "@/components/ui";
 import { getProjects, getProgress } from "@/lib/store";
 import { STAGES } from "@/lib/stages";
+import { BRANCHES, branchName } from "@/lib/data";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState([]);
+  const [branch, setBranch] = useState("all");
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProjects(getProjects());
   }, []);
+
+  const scopedProjects = useMemo(
+    () => (branch === "all" ? projects : projects.filter((p) => p.branch === branch)),
+    [projects, branch]
+  );
 
   return (
     <div>
@@ -24,15 +31,18 @@ export default function ProjectsPage() {
         Open a project to view its clickable stage-by-stage stepper.
       </p>
 
-      <Box title={`All Projects (${projects.length})`}>
+      <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
+
+      <Box title={`All Projects (${scopedProjects.length})`}>
         <DataTable
-          columns={["Project", "Customer", "Value", "Current Stage", "Progress", ""]}
-          rows={projects.map((p) => {
+          columns={["Project", "Branch", "Customer", "Value", "Current Stage", "Progress", ""]}
+          rows={scopedProjects.map((p) => {
             const { completed } = getProgress(p.id);
             const pct = Math.round((completed.length / STAGES.length) * 100);
             const stage = STAGES.find((s) => s.slug === p.currentStageSlug);
             return [
               p.id,
+              branchName(p.branch),
               p.customer,
               p.value,
               stage ? (

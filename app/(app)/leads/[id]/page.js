@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
 import { getLead, updateLead, convertLeadToProject } from "@/lib/store";
-import { LEAD_STATUSES } from "@/lib/data";
+import { LEAD_STATUSES, branchName } from "@/lib/data";
 
 export default function LeadDetailPage() {
   const { id } = useParams();
@@ -88,7 +88,7 @@ export default function LeadDetailPage() {
             {lead.name} <Badge tone={leadStatusTone(lead.status)}>{lead.status}</Badge>
           </h1>
           <p className="wf-sub">
-            {lead.company} · Lead ID {lead.id} · Created {lead.createdAt}
+            {lead.company} · Lead ID {lead.id} · Branch: {branchName(lead.branch)} · Created {lead.createdAt}
             {lead.productTypes && lead.productTypes.length > 0 ? ` · ${lead.productTypes.join(", ")}` : ""}
           </p>
         </div>

@@ -111,6 +111,39 @@ export function CheckboxGroup({ label, options, values = [], onChange, disabled 
   );
 }
 
+// Segmented pill control for switching between branch-wise and all-branches
+// views within the same panel (Owner/Management can see everything, or
+// scope down to one branch, without leaving the page). Controlled component
+// — parent owns the selected value so pages can filter their own data.
+export function BranchFilter({ branches, value, onChange, allLabel = "All Branches" }) {
+  return (
+    <div className="wf-branch-filter" role="tablist" aria-label="Filter by branch">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "all"}
+        className={`wf-branch-filter-btn${value === "all" ? " active" : ""}`}
+        onClick={() => onChange?.("all")}
+      >
+        {allLabel}
+      </button>
+      {branches.map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          role="tab"
+          aria-selected={value === b.id}
+          className={`wf-branch-filter-btn${value === b.id ? " active" : ""}`}
+          onClick={() => onChange?.(b.id)}
+        >
+          {b.name}
+          <span className="wf-branch-filter-tag">{b.tag}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function leadStatusTone(status) {
   if (status === "Booked" || status === "Conducted") return "done";
   if (["Prospect", "Followup", "Contact in Future"].includes(status)) return "pending";

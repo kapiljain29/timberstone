@@ -7,6 +7,7 @@ import { Box, Badge, ProgressBar } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import { getProject, getProgress } from "@/lib/store";
 import { STAGES, getStage } from "@/lib/stages";
+import { branchName } from "@/lib/data";
 
 export default function ProjectOverviewPage() {
   const { id } = useParams();
@@ -39,7 +40,8 @@ export default function ProjectOverviewPage() {
       </div>
       <h1 className="wf-h1">{project.projectName}</h1>
       <p className="wf-sub">
-        Customer: {project.customer} · Value: {project.value} · Created {project.createdAt}
+        Customer: {project.customer} · Branch: {branchName(project.branch)} · Value: {project.value} · Created{" "}
+        {project.createdAt}
       </p>
 
       <Box title="Progress">

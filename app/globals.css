@@ -445,6 +445,53 @@ button {
   padding: 12px;
 }
 
+.wf-branch-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  margin-bottom: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  width: fit-content;
+}
+
+.wf-branch-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.wf-branch-filter-btn:hover {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.wf-branch-filter-btn.active {
+  background: var(--grad-brand);
+  color: #fff;
+  box-shadow: var(--shadow-1);
+}
+
+.wf-branch-filter-tag {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .wf-main {
   flex: 1;
   padding: 22px 28px 60px;
