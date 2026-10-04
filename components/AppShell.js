@@ -22,6 +22,11 @@ const ICONS = {
       <path d="M15.5 12.3c2.6.3 4.5 2.4 4.5 5.4" />
     </svg>
   ),
+  callQueue: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4h3.2l1.6 4-2 1.3a10.5 10.5 0 0 0 5 5l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z" />
+    </svg>
+  ),
   projects: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4.2l1.6 2h9.2a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z" />
@@ -31,6 +36,20 @@ const ICONS = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13.5 6 9.5Z" />
       <path d="M10.2 19a1.9 1.9 0 0 0 3.6 0" />
+    </svg>
+  ),
+  team: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="6" rx="1.5" />
+      <rect x="3" y="14" width="7.5" height="6" rx="1.5" />
+      <rect x="13.5" y="14" width="7.5" height="6" rx="1.5" />
+      <path d="M12 10v2M6.75 14v-2h10.5v2" />
+    </svg>
+  ),
+  architects: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 4 20M12 3l8 17M7.5 13h9" />
+      <circle cx="12" cy="3.5" r="1" />
     </svg>
   ),
   roles: (
@@ -50,11 +69,21 @@ const NAV = [
   },
   {
     group: "Pre-Sales",
-    links: [{ href: "/leads", label: "Leads", icon: ICONS.leads }],
+    links: [
+      { href: "/call-queue", label: "Call Queue", icon: ICONS.callQueue },
+      { href: "/leads", label: "Leads", icon: ICONS.leads },
+    ],
   },
   {
     group: "Project Execution",
     links: [{ href: "/projects", label: "Projects", icon: ICONS.projects }],
+  },
+  {
+    group: "Admin",
+    links: [
+      { href: "/team", label: "Team & Departments", icon: ICONS.team },
+      { href: "/architects", label: "Architects", icon: ICONS.architects },
+    ],
   },
   {
     group: "Reference",

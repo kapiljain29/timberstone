@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
-import { getLead, updateLead, convertLeadToProject } from "@/lib/store";
+import { getLead, updateLead, convertLeadToProject, getCallLogs } from "@/lib/store";
 import { LEAD_STATUSES, branchName } from "@/lib/data";
 
 export default function LeadDetailPage() {
@@ -71,6 +71,7 @@ export default function LeadDetailPage() {
   }
 
   const alreadyConverted = !!lead.convertedProjectId;
+  const callHistory = getCallLogs().filter((c) => c.leadId === lead.id).reverse();
   const readyToConvert =
     lead.measurementRequired === true && !!lead.advancePayment && !!lead.salesOperator;
 
@@ -125,7 +126,45 @@ export default function LeadDetailPage() {
             <label>Product Type(s)</label>
             <input className="wf-input" defaultValue={(lead.productTypes || []).join(", ") || "—"} readOnly />
           </div>
+          <div className="wf-field">
+            <label>Assigned Sales Rep</label>
+            <input className="wf-input" defaultValue={lead.assignedRep || "—"} readOnly />
+          </div>
+          <div className="wf-field">
+            <label>Design Required</label>
+            <input
+              className="wf-input"
+              defaultValue={lead.designRequired === true ? "Yes" : lead.designRequired === false ? "No" : "—"}
+              readOnly
+            />
+          </div>
+          <div className="wf-field">
+            <label>Architect</label>
+            <input className="wf-input" defaultValue={lead.architect || "None / Direct Customer"} readOnly />
+          </div>
         </div>
+      </Box>
+
+      <Box title={`Call History (${callHistory.length})`} right={<Link href="/call-queue" className="wf-link-btn">Call Queue →</Link>}>
+        {callHistory.length === 0 ? (
+          <div className="wf-empty">No calls logged yet.</div>
+        ) : (
+          <ul className="wf-list">
+            {callHistory.map((c) => (
+              <li key={c.id}>
+                <span>
+                  <strong>
+                    {c.date} {c.time}
+                  </strong>{" "}
+                  · {c.rep} · {c.outcome}
+                  {c.nextCallback ? ` · callback ${c.nextCallback}` : ""}
+                  {c.note ? ` · “${c.note}”` : ""}
+                </span>
+                <Badge tone={c.connected ? "done" : "pending"}>{c.connected ? "Connected" : "Not connected"}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
       </Box>
 
       <Box title="Step 2 — Initial Contact & Rough Estimate" right={<span className="wf-role-tag">Marketing / Sales</span>}>

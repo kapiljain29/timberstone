@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Annotation, CheckboxGroup } from "@/components/ui";
-import { addLead } from "@/lib/store";
-import { BRANCHES, LEAD_SOURCES, PRODUCT_TYPES } from "@/lib/data";
+import { addLead, getArchitects, getSalesReps } from "@/lib/store";
+import { BRANCHES, LEAD_SOURCES, PRODUCT_TYPES, architectLabel } from "@/lib/data";
 
 const initial = {
   name: "",
@@ -15,12 +15,27 @@ const initial = {
   email: "",
   projectRef: "",
   productTypes: [],
+  designRequired: "",
+  architect: "",
+  assignedRep: "",
   notes: "",
 };
 
 export default function NewLeadPage() {
   const router = useRouter();
   const [form, setForm] = useState(initial);
+  const [reps, setReps] = useState([]);
+  const [architects, setArchitects] = useState([]);
+
+  useEffect(() => {
+    // Reads from localStorage, which is unavailable during SSR — must load post-mount.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const salesReps = getSalesReps();
+    setReps(salesReps);
+    setArchitects(getArchitects().filter((a) => a.active));
+    setForm((f) => ({ ...f, assignedRep: f.assignedRep || salesReps[0] || "" }));
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -28,7 +43,7 @@ export default function NewLeadPage() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    const lead = addLead(form);
+    const lead = addLead({ ...form, designRequired: form.designRequired === "yes" });
     router.push(`/leads/${lead.id}`);
   }
 
@@ -68,6 +83,14 @@ export default function NewLeadPage() {
               </select>
             </div>
             <div className="wf-field">
+              <label>Assigned Sales Rep</label>
+              <select className="wf-select" value={form.assignedRep} onChange={(e) => set("assignedRep", e.target.value)}>
+                {reps.map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+            <div className="wf-field">
               <label>Project Reference</label>
               <input className="wf-input" value={form.projectRef} onChange={(e) => set("projectRef", e.target.value)} placeholder="e.g. Exterior Wall — Italian Paints" />
             </div>
@@ -78,6 +101,23 @@ export default function NewLeadPage() {
             <div className="wf-field">
               <label>Email</label>
               <input className="wf-input" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+            </div>
+            <div className="wf-field">
+              <label>Design Required?</label>
+              <select className="wf-select" required value={form.designRequired} onChange={(e) => set("designRequired", e.target.value)}>
+                <option value="">Select…</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div className="wf-field">
+              <label>Architect</label>
+              <select className="wf-select" value={form.architect} onChange={(e) => set("architect", e.target.value)}>
+                <option value="">None / Direct Customer</option>
+                {architects.map((a) => (
+                  <option key={a.id}>{architectLabel(a)}</option>
+                ))}
+              </select>
             </div>
           </div>
           <CheckboxGroup
@@ -94,7 +134,8 @@ export default function NewLeadPage() {
             <textarea className="wf-textarea" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Anything captured at first contact..." />
           </div>
           <Annotation>
-            Lead status defaults to &quot;Prospect&quot;. Rough estimate (Step 2) and measurement /
+            Lead status defaults to &quot;Prospect&quot; and the lead goes straight into the
+            assigned rep&apos;s Call Queue. Rough estimate (Step 2) and measurement /
             advance payment / sales operator assignment (Step 3) are captured on the lead detail
             page after this record is created.
           </Annotation>

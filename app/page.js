@@ -18,8 +18,8 @@ const ROLE_CARDS = [
     badge: "Pre-Sales",
     badgeColor: "#3e7a52",
     icon: "📞",
-    description: "Leads, rough estimates, measurement booking & advance payment.",
-    href: "/leads",
+    description: "Daily call queue, leads, rough estimates, measurement booking & advance payment.",
+    href: "/call-queue",
   },
   {
     department: "Supervisor",
