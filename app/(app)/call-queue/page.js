@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
 import { getLeads, getCallLogs, getSalesReps, logCall } from "@/lib/store";
+import { useRole } from "@/lib/roles";
 import { QUEUE_STATUSES, CALL_OUTCOMES, CALLBACK_SLOTS, branchName } from "@/lib/data";
 
 // Queue order: overdue callbacks first, then today's callbacks, then fresh
@@ -24,8 +25,11 @@ function isDueNow(lead) {
 const emptyCall = { outcomeId: "", nextCallback: CALLBACK_SLOTS[1], note: "" };
 
 export default function CallQueuePage() {
+  const role = useRole();
   const [reps, setReps] = useState([]);
-  const [rep, setRep] = useState("");
+  const [pickedRep, setRep] = useState("");
+  // A Sales rep always works their own queue; Management can view any rep's.
+  const rep = role?.id === "Sales" ? role.user : pickedRep;
   const [leads, setLeads] = useState([]);
   const [logs, setLogs] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -190,14 +194,20 @@ export default function CallQueuePage() {
           <h1 className="wf-h1">Today&apos;s Call Queue</h1>
           <p className="wf-sub">Your assigned leads that need a call today, with overdue callbacks first.</p>
         </div>
-        <div className="wf-field" style={{ minWidth: 200 }}>
-          <label>Viewing as Sales Rep</label>
-          <select className="wf-select" value={rep} onChange={(e) => switchRep(e.target.value)}>
-            {reps.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </select>
-        </div>
+        {role?.id === "Sales" ? (
+          <span className="wf-role-tag" style={{ marginBottom: 18 }}>
+            {rep}&apos;s queue
+          </span>
+        ) : (
+          <div className="wf-field" style={{ minWidth: 200 }}>
+            <label>Viewing Sales Rep</label>
+            <select className="wf-select" value={rep} onChange={(e) => switchRep(e.target.value)}>
+              {reps.map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="wf-cards">

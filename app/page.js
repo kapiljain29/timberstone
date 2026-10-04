@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RoleLink from "@/components/RoleLink";
 import { stepsOwnedBy, stepsSupportedBy } from "@/lib/stages";
 
 const ROLE_CARDS = [
@@ -73,9 +74,9 @@ export default function RoleHubPage() {
             Interactive wireframe · mock data
           </span>
           <div className="wf-landing-actions">
-            <Link href="/dashboard" className="wf-landing-btn primary">
+            <RoleLink roleId="Manager" href="/dashboard" className="wf-landing-btn primary">
               Enter Dashboard
-            </Link>
+            </RoleLink>
             <Link href="/roles" className="wf-landing-btn ghost">
               Role-wise Workflow
             </Link>
@@ -94,8 +95,9 @@ export default function RoleHubPage() {
                 ? `Collaborates on ${supportedCount} step${supportedCount > 1 ? "s" : ""} of 12`
                 : "";
           return (
-            <Link
+            <RoleLink
               key={role.department}
+              roleId={role.department}
               href={role.href}
               className={`wf-role-card${role.highlight ? " highlight" : ""}`}
             >
@@ -113,7 +115,7 @@ export default function RoleHubPage() {
                 </span>
               </span>
               <span className="wf-role-card-chevron">›</span>
-            </Link>
+            </RoleLink>
           );
         })}
 

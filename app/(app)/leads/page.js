@@ -5,10 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Badge, BranchFilter, DataTable, leadStatusTone } from "@/components/ui";
 import { getLeads } from "@/lib/store";
 import { BRANCHES, branchName } from "@/lib/data";
+import { useRole } from "@/lib/roles";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
   const [branch, setBranch] = useState("all");
+  const role = useRole();
+  const ownOnly = role?.id === "Sales";
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
@@ -17,8 +20,11 @@ export default function LeadsPage() {
   }, []);
 
   const scopedLeads = useMemo(
-    () => (branch === "all" ? leads : leads.filter((l) => l.branch === branch)),
-    [leads, branch]
+    () =>
+      leads
+        .filter((l) => !ownOnly || l.assignedRep === role.user)
+        .filter((l) => branch === "all" || l.branch === branch),
+    [leads, branch, ownOnly, role]
   );
 
   return (
@@ -39,7 +45,7 @@ export default function LeadsPage() {
 
       <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
 
-      <Box title={`All Leads (${scopedLeads.length})`}>
+      <Box title={`${ownOnly ? "My Leads" : "All Leads"} (${scopedLeads.length})`}>
         <DataTable
           columns={["Lead", "Branch", "Project / Reference", "Source", "Rough Estimate", "Status", ""]}
           rows={scopedLeads.map((l) => [

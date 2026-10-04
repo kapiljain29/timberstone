@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
 import { getLead, updateLead, convertLeadToProject, getCallLogs } from "@/lib/store";
 import { LEAD_STATUSES, branchName } from "@/lib/data";
+import { canAccess, canWorkLead, useRole } from "@/lib/roles";
 
 export default function LeadDetailPage() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState(null);
   const [step2, setStep2] = useState({ roughEstimate: "", status: "Prospect", notes: "" });
   const [step3, setStep3] = useState({ measurementRequired: "", advancePayment: "", salesOperator: "" });
+  const role = useRole();
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
@@ -34,9 +36,29 @@ export default function LeadDetailPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [id]);
 
-  if (!lead) {
+  if (!lead || !role) {
     return <div className="wf-empty">Loading lead…</div>;
   }
+
+  // A Sales rep only works the leads assigned to them.
+  if (role.id === "Sales" && lead.assignedRep !== role.user) {
+    return (
+      <div className="wf-noaccess">
+        <div className="wf-noaccess-icon">🔒</div>
+        <h1 className="wf-h1" style={{ justifyContent: "center" }}>
+          Not your lead
+        </h1>
+        <p className="wf-sub">
+          {lead.id} is assigned to {lead.assignedRep || "another rep"}. Sales reps can only open their own leads.
+        </p>
+        <Link href="/leads" className="wf-btn primary">
+          Back to my leads
+        </Link>
+      </div>
+    );
+  }
+
+  const canWork = canWorkLead(role.id);
 
   function refresh() {
     setLead(getLead(id));
@@ -98,7 +120,7 @@ export default function LeadDetailPage() {
             View Project →
           </Link>
         ) : (
-          <button className="wf-btn primary" onClick={handleConvert} disabled={!readyToConvert}>
+          <button className="wf-btn primary" onClick={handleConvert} disabled={!readyToConvert || !canWork}>
             Convert to Project →
           </button>
         )}
@@ -145,7 +167,7 @@ export default function LeadDetailPage() {
         </div>
       </Box>
 
-      <Box title={`Call History (${callHistory.length})`} right={<Link href="/call-queue" className="wf-link-btn">Call Queue →</Link>}>
+      <Box title={`Call History (${callHistory.length})`} right={canAccess(role.id, "/call-queue") ? <Link href="/call-queue" className="wf-link-btn">Call Queue →</Link> : null}>
         {callHistory.length === 0 ? (
           <div className="wf-empty">No calls logged yet.</div>
         ) : (
@@ -203,6 +225,13 @@ export default function LeadDetailPage() {
         </div>
       </Box>
 
+      {!canWork && (
+        <div className="wf-viewonly">
+          👁 View only — Step 3 (measurement booking, advance payment) and conversion are handled by Sales.
+        </div>
+      )}
+
+      <fieldset className="wf-readonly" disabled={!canWork}>
       <Box title="Step 3 — Measurement Booking, Advance Payment & Sales Operator" right={<span className="wf-role-tag">Sales</span>}>
         <div className="wf-field">
           <label>Does the customer require an on-site measurement?</label>
@@ -249,6 +278,7 @@ export default function LeadDetailPage() {
           Supervisor-led execution flow).
         </Annotation>
       </Box>
+      </fieldset>
     </div>
   );
 }

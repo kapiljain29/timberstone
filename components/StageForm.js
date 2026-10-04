@@ -31,6 +31,7 @@ import {
   getClosure,
   saveClosure,
 } from "@/lib/store";
+import { canEditStep, useRole } from "@/lib/roles";
 
 export default function StageForm({ id, slug, basePath = "/projects" }) {
   const router = useRouter();
@@ -53,6 +54,9 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
   const [closure, setClosure] = useState(null);
 
   const stage = getStage(slug);
+  const webRole = useRole();
+  // The mobile app is the Supervisor's; on the web, use the logged-in role.
+  const roleId = basePath.startsWith("/m") ? "Supervisor" : webRole?.id;
 
   // Reads from localStorage, which is unavailable during SSR — must load post-mount.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -79,6 +83,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
   }
 
   const unlocked = isStageUnlocked(id, slug);
+  const canEdit = !!roleId && canEditStep(roleId, stage);
   const isComplete = progress.completed.includes(slug);
   const next = getNextStage(slug);
   const prev = getPrevStage(slug);
@@ -161,6 +166,14 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
         </div>
       </div>
 
+      {!canEdit && (
+        <div className="wf-viewonly">
+          👁 View only — this step is handled by {stage.role}
+          {stage.collaborators?.length ? ` with ${stage.collaborators.join(", ")}` : ""}.
+        </div>
+      )}
+
+      <fieldset className="wf-readonly" disabled={!canEdit}>
       {!unlocked && (
         <Annotation>
           This stage is shown for wireframe navigation purposes — normally it unlocks only after
@@ -442,6 +455,8 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
         </Box>
       )}
 
+      </fieldset>
+
       <div className="wf-actions-end">
         <button className="wf-btn" disabled={!prev} onClick={() => prev && goToStage(prev.slug)}>
           ← Back{prev ? `: ${prev.title}` : ""}
@@ -452,7 +467,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
           </button>
           <button
             className="wf-btn primary"
-            disabled={stage.approval ? approval !== "yes" : false}
+            disabled={!canEdit || (stage.approval ? approval !== "yes" : false)}
             onClick={handleComplete}
           >
             {isComplete ? "Update & Continue" : "Mark Complete & Continue"} →

@@ -6,10 +6,13 @@ import { Box, Badge, BranchFilter, DataTable, ProgressBar } from "@/components/u
 import { getProjects, getProgress } from "@/lib/store";
 import { STAGES } from "@/lib/stages";
 import { BRANCHES, branchName } from "@/lib/data";
+import { useRole } from "@/lib/roles";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState([]);
   const [branch, setBranch] = useState("all");
+  const role = useRole();
+  const ownOnly = role?.id === "Sales";
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
@@ -18,8 +21,11 @@ export default function ProjectsPage() {
   }, []);
 
   const scopedProjects = useMemo(
-    () => (branch === "all" ? projects : projects.filter((p) => p.branch === branch)),
-    [projects, branch]
+    () =>
+      projects
+        .filter((p) => !ownOnly || p.salesOperator === role.user)
+        .filter((p) => branch === "all" || p.branch === branch),
+    [projects, branch, ownOnly, role]
   );
 
   return (
@@ -33,7 +39,7 @@ export default function ProjectsPage() {
 
       <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
 
-      <Box title={`All Projects (${scopedProjects.length})`}>
+      <Box title={`${ownOnly ? "My Projects" : "All Projects"} (${scopedProjects.length})`}>
         <DataTable
           columns={["Project", "Branch", "Customer", "Value", "Current Stage", "Progress", ""]}
           rows={scopedProjects.map((p) => {

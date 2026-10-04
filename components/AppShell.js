@@ -1,9 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { NOTIFICATIONS } from "@/lib/data";
+import { WEB_ROLES, canAccess, setRoleId, useRole } from "@/lib/roles";
+
+function initials(name) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 const ICONS = {
   dashboard: (
@@ -96,11 +106,27 @@ const NAV = [
 
 export default function AppShell({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const role = useRole();
   const [showBell, setShowBell] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  // Only the menus this role may open; empty groups are dropped.
+  const nav = role
+    ? NAV.map((section) => ({ ...section, links: section.links.filter((l) => canAccess(role.id, l.href)) })).filter(
+        (section) => section.links.length > 0
+      )
+    : [];
+  const allowed = role ? canAccess(role.id, pathname) : false;
+
+  function switchRole(id) {
+    setRoleId(id);
+    const next = WEB_ROLES.find((r) => r.id === id);
+    router.push(next.home);
+  }
 
   return (
     <div className="wf-shell">
@@ -137,7 +163,7 @@ export default function AppShell({ children }) {
         </div>
 
         <div className="wf-sidebar-nav">
-          {NAV.map((section) => (
+          {nav.map((section) => (
             <div className="wf-sidebar-group" key={section.group}>
               {!collapsed && <p className="wf-sidebar-group-label">{section.group}</p>}
               {section.links.map((link) => {
@@ -164,11 +190,11 @@ export default function AppShell({ children }) {
 
         <div className="wf-sidebar-footer">
           <div className="wf-sidebar-user">
-            <span className="wf-sidebar-avatar">RS</span>
-            {!collapsed && (
+            <span className="wf-sidebar-avatar">{role ? initials(role.user) : ""}</span>
+            {!collapsed && role && (
               <div className="wf-sidebar-user-info">
-                <p className="wf-sidebar-user-name">Rahul Sharma</p>
-                <p className="wf-sidebar-user-role">Management</p>
+                <p className="wf-sidebar-user-name">{role.user}</p>
+                <p className="wf-sidebar-user-role">{role.label}</p>
               </div>
             )}
             {!collapsed && (
@@ -191,10 +217,18 @@ export default function AppShell({ children }) {
             ☰
           </button>
           <div className="wf-topbar-right">
-            <span className="wf-role-pill">Rahul Sharma · Management</span>
-            <Link href="/" className="wf-link-btn">
-              Switch Role
-            </Link>
+            {role && (
+              <label className="wf-role-switch">
+                <span>Logged in as</span>
+                <select value={role.id} onChange={(e) => switchRole(e.target.value)} aria-label="Switch role">
+                  {WEB_ROLES.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.user} · {r.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div style={{ position: "relative" }}>
               <button className="wf-bell" onClick={() => setShowBell((v) => !v)}>
                 🔔 {NOTIFICATIONS.length}
@@ -223,7 +257,25 @@ export default function AppShell({ children }) {
           </div>
         </header>
 
-        <main className="wf-main">{children}</main>
+        <main className="wf-main">
+          {!role ? null : allowed ? (
+            children
+          ) : (
+            <div className="wf-noaccess">
+              <div className="wf-noaccess-icon">🔒</div>
+              <h1 className="wf-h1" style={{ justifyContent: "center" }}>
+                No access for {role.label}
+              </h1>
+              <p className="wf-sub">
+                This page isn&apos;t part of the {role.label} role. Switch role from the top bar, or go
+                back to your home page.
+              </p>
+              <Link href={role.home} className="wf-btn primary">
+                Go to my home →
+              </Link>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );

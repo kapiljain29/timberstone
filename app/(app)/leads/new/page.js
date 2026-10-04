@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Box, Annotation, CheckboxGroup } from "@/components/ui";
 import { addLead, getArchitects, getSalesReps } from "@/lib/store";
+import { getRoleId, getWebRole } from "@/lib/roles";
 import { BRANCHES, LEAD_SOURCES, PRODUCT_TYPES, architectLabel } from "@/lib/data";
 
 const initial = {
@@ -33,7 +34,9 @@ export default function NewLeadPage() {
     const salesReps = getSalesReps();
     setReps(salesReps);
     setArchitects(getArchitects().filter((a) => a.active));
-    setForm((f) => ({ ...f, assignedRep: f.assignedRep || salesReps[0] || "" }));
+    // A Sales rep's new leads default to themselves.
+    const me = getRoleId() === "Sales" ? getWebRole("Sales").user : null;
+    setForm((f) => ({ ...f, assignedRep: f.assignedRep || (me && salesReps.includes(me) ? me : salesReps[0]) || "" }));
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
