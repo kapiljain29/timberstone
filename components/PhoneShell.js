@@ -8,13 +8,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MIcon } from "@/components/MobileUI";
+import { NOTIFICATIONS } from "@/lib/data";
 
 const TABS = [
-  { href: "/m", label: "Home", icon: "🏠" },
-  { href: "/m/projects", label: "Projects", icon: "📁" },
-  { href: "/m/dsr", label: "DSR", icon: "📝" },
-  { href: "/m/notifications", label: "Alerts", icon: "🔔" },
-  { href: "/m/profile", label: "Profile", icon: "👤" },
+  { href: "/m", label: "Home", icon: "home" },
+  { href: "/m/projects", label: "Projects", icon: "projects" },
+  { href: "/m/dsr", label: "DSR", icon: "dsr" },
+  { href: "/m/notifications", label: "Alerts", icon: "bell", badge: NOTIFICATIONS.length },
+  { href: "/m/profile", label: "Profile", icon: "user" },
 ];
 
 export default function PhoneShell({ children }) {
@@ -26,7 +28,10 @@ export default function PhoneShell({ children }) {
         <div className="wf-phone-notch" />
         <div className="wf-phone-statusbar">
           <span>9:41</span>
-          <span>●●● 🔋</span>
+          <span className="wf-phone-status-icons">
+            <i className="sig" />
+            <i className="bat" />
+          </span>
         </div>
         <div className="wf-phone-appbar">
           <span className="wf-phone-appbar-logo">T</span>
@@ -34,8 +39,8 @@ export default function PhoneShell({ children }) {
             <div className="wf-phone-appbar-title">Timberstone Field</div>
             <div className="wf-phone-appbar-sub">Supervisor App</div>
           </div>
-          <Link href="/" className="wf-phone-exit" title="Exit to Role Hub">
-            ⇦
+          <Link href="/" className="wf-phone-exit" title="Exit to Role Hub" aria-label="Exit to Role Hub">
+            <MIcon name="exit" size={18} />
           </Link>
         </div>
         <div className="wf-phone-content">{children}</div>
@@ -44,7 +49,10 @@ export default function PhoneShell({ children }) {
             const active = tab.href === "/m" ? pathname === "/m" : pathname.startsWith(tab.href);
             return (
               <Link key={tab.href} href={tab.href} className={`wf-phone-tab${active ? " active" : ""}`}>
-                <span className="wf-phone-tab-icon">{tab.icon}</span>
+                <span className="wf-phone-tab-icon">
+                  <MIcon name={tab.icon} size={21} />
+                  {!!tab.badge && <span className="wf-phone-tab-badge">{tab.badge}</span>}
+                </span>
                 <span>{tab.label}</span>
               </Link>
             );

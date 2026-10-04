@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui";
 import { getStage, ownsStep } from "@/lib/stages";
 import { getProjects, getProgress } from "@/lib/store";
+import { MIcon, MProjectCard, MSectionTitle, MEmpty } from "@/components/MobileUI";
+
+const DSR_SLUG = "daily-supervision-report";
+const SITE_CHECK_SLUG = "site-readiness-checklist";
 
 export default function MobileHomePage() {
   const [projects, setProjects] = useState(null);
@@ -37,67 +40,94 @@ export default function MobileHomePage() {
     (x) => x.currentStage && ownsStep(x.currentStage, "Supervisor")
   );
   const siteReadyPending = withCurrentStage.filter(
-    (x) => x.currentStage && x.currentStage.slug === "site-readiness-checklist"
+    (x) => x.currentStage && x.currentStage.slug === SITE_CHECK_SLUG
   ).length;
+  const firstDsr = withCurrentStage.find((x) => x.currentStage?.slug === DSR_SLUG) || withCurrentStage[0];
+  const firstCheck = withCurrentStage.find((x) => x.currentStage?.slug === SITE_CHECK_SLUG) || withCurrentStage[0];
 
   return (
     <div>
-      <div className="wf-mgreeting">
-        <h1>Hi, Ramesh 👋</h1>
-        <p>Supervisor · Field App · Today, 25 Sep 2026</p>
+      <div className="wf-mhero">
+        <div className="wf-mhero-top">
+          <div>
+            <div className="wf-mhero-date">Thursday, 25 Sep 2026</div>
+            <h1 className="wf-mhero-title">Good morning, Ramesh</h1>
+          </div>
+          <span className="wf-mhero-avatar">RK</span>
+        </div>
+        <div className="wf-mhero-stats">
+          <div>
+            <div className="wf-mhero-num">{projects.length}</div>
+            <div className="wf-mhero-label">My sites</div>
+          </div>
+          <div>
+            <div className="wf-mhero-num accent">{needsAction.length}</div>
+            <div className="wf-mhero-label">Need action</div>
+          </div>
+          <div>
+            <div className="wf-mhero-num">{siteReadyPending}</div>
+            <div className="wf-mhero-label">Site checks</div>
+          </div>
+        </div>
       </div>
 
-      <div className="wf-mstats">
-        <div className="wf-mstat">
-          <div className="wf-mstat-num">{projects.length}</div>
-          <div className="wf-mstat-label">My Sites</div>
-        </div>
-        <div className="wf-mstat">
-          <div className="wf-mstat-num">{needsAction.length}</div>
-          <div className="wf-mstat-label">Need Action</div>
-        </div>
-        <div className="wf-mstat">
-          <div className="wf-mstat-num">{siteReadyPending}</div>
-          <div className="wf-mstat-label">Site Checks</div>
-        </div>
-      </div>
-
-      <div className="wf-crumb" style={{ marginTop: 4 }}>
-        Needs your action
-      </div>
-      {needsAction.length === 0 ? (
-        <div className="wf-empty">Nothing pending — all caught up.</div>
-      ) : (
-        needsAction.map(({ project, currentStage }) => (
-          <Link key={project.id} href={`/m/projects/${project.id}/step/${currentStage.slug}`} className="wf-mcard">
-            <div className="wf-mcard-title">{project.projectName}</div>
-            <div className="wf-mcard-sub">{project.customer}</div>
-            <div className="wf-mcard-row">
-              <Badge tone="current">
-                Step {currentStage.number}: {currentStage.title}
-              </Badge>
-              <span style={{ color: "var(--idle)" }}>›</span>
-            </div>
+      {firstDsr && (
+        <div className="wf-mquick">
+          <Link href={`/m/projects/${firstDsr.project.id}/step/${DSR_SLUG}`} className="wf-mquick-btn">
+            <span className="wf-mquick-icon green">
+              <MIcon name="dsr" />
+            </span>
+            <span>Add DSR</span>
           </Link>
+          <Link href={`/m/projects/${firstCheck.project.id}/step/${SITE_CHECK_SLUG}`} className="wf-mquick-btn">
+            <span className="wf-mquick-icon amber">
+              <MIcon name="checklist" />
+            </span>
+            <span>Site Check</span>
+          </Link>
+          <Link href="/m/projects" className="wf-mquick-btn">
+            <span className="wf-mquick-icon blue">
+              <MIcon name="ruler" />
+            </span>
+            <span>Measure</span>
+          </Link>
+        </div>
+      )}
+
+      <MSectionTitle right={<span className="wf-mcount">{needsAction.length}</span>}>Needs your action</MSectionTitle>
+      {needsAction.length === 0 ? (
+        <MEmpty title="All caught up" sub="Nothing is waiting on you right now." />
+      ) : (
+        needsAction.map(({ project, progress, currentStage }) => (
+          <MProjectCard
+            key={project.id}
+            project={project}
+            progress={progress}
+            currentStage={currentStage}
+            href={`/m/projects/${project.id}/step/${currentStage.slug}`}
+            action
+          />
         ))
       )}
 
-      <div className="wf-crumb" style={{ marginTop: 18 }}>
-        All my projects
-      </div>
-      {withCurrentStage.map(({ project, currentStage }) => (
-        <Link key={project.id} href={`/m/projects/${project.id}`} className="wf-mcard">
-          <div className="wf-mcard-title">{project.projectName}</div>
-          <div className="wf-mcard-sub">
-            {project.customer} · {project.value}
-          </div>
-          <div className="wf-mcard-row">
-            <Badge tone={currentStage && ownsStep(currentStage, "Supervisor") ? "current" : "idle"}>
-              {currentStage ? currentStage.title : "—"}
-            </Badge>
-            <span style={{ color: "var(--idle)" }}>›</span>
-          </div>
-        </Link>
+      <MSectionTitle
+        right={
+          <Link href="/m/projects" className="wf-msection-link">
+            See all
+          </Link>
+        }
+      >
+        All my sites
+      </MSectionTitle>
+      {withCurrentStage.map(({ project, progress, currentStage }) => (
+        <MProjectCard
+          key={project.id}
+          project={project}
+          progress={progress}
+          currentStage={currentStage}
+          href={`/m/projects/${project.id}`}
+          action={!!currentStage && ownsStep(currentStage, "Supervisor")}
+        />
       ))}
     </div>
   );

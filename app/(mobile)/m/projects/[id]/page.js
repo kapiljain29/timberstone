@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge, ProgressBar, Box } from "@/components/ui";
 import { getProject, getProgress } from "@/lib/store";
 import { STAGES, getStage, ownsStep } from "@/lib/stages";
+import { MIcon, MProgress, MSectionTitle, projectPercent } from "@/components/MobileUI";
 
 export default function MobileProjectDetailPage() {
   const { id } = useParams();
@@ -24,51 +24,54 @@ export default function MobileProjectDetailPage() {
     return <div className="wf-empty">Loading project…</div>;
   }
 
-  const pct = Math.round((progress.completed.length / STAGES.length) * 100);
+  const pct = projectPercent(progress);
   const currentStage = getStage(progress.current) || STAGES[STAGES.length - 1];
   const isClosed = progress.completed.length === STAGES.length;
 
   return (
     <div>
-      <div className="wf-crumb">
-        <Link href="/m/projects" className="wf-link-btn">
-          My Projects
-        </Link>{" "}
-        / {project.id}
-      </div>
-      <h1 className="wf-h1">{project.projectName}</h1>
-      <p className="wf-sub">
-        {project.customer} · {project.value}
-      </p>
+      <Link href="/m/projects" className="wf-mback">
+        <MIcon name="back" size={16} /> My Sites
+      </Link>
 
-      <Box title="Progress">
-        <div className="wf-meta-row">
+      <div className="wf-mproj-hero">
+        <div className="wf-mproj-hero-id">{project.id}</div>
+        <h1 className="wf-mproj-hero-title">{project.projectName}</h1>
+        <div className="wf-mproj-hero-meta">
           <span>
-            {progress.completed.length} / {STAGES.length} steps complete
+            <MIcon name="pin" size={13} /> {project.customer}
           </span>
+          <span>
+            <MIcon name="rupee" size={13} /> {project.value}
+          </span>
+        </div>
+        <div className="wf-mproj-hero-progress">
+          <MProgress percent={pct} />
           <span>{pct}%</span>
         </div>
-        <ProgressBar percent={pct} />
-        <div style={{ marginTop: 12 }}>
-          {isClosed ? (
-            <Badge tone="done">Project Closed</Badge>
-          ) : (
-            <>
-              <Badge tone="current">Current: {currentStage.title}</Badge>
-              <Link
-                href={`/m/projects/${project.id}/step/${currentStage.slug}`}
-                className="wf-btn primary"
-                style={{ marginTop: 10 }}
-              >
-                Continue →
-              </Link>
-            </>
-          )}
+        <div className="wf-mproj-hero-steps">
+          {progress.completed.length} of {STAGES.length} steps complete
         </div>
-      </Box>
+      </div>
 
-      <div className="wf-crumb">Full step list</div>
-      <div className="wf-mobile-steplist">
+      {isClosed ? (
+        <div className="wf-mnext done">
+          <MIcon name="check" /> Project closed
+        </div>
+      ) : (
+        <Link href={`/m/projects/${project.id}/step/${currentStage.slug}`} className="wf-mnext">
+          <span className="wf-mnext-label">
+            Up next · Step {currentStage.number}
+            <strong>{currentStage.title}</strong>
+          </span>
+          <span className="wf-mnext-go">
+            <MIcon name="chevron" size={18} />
+          </span>
+        </Link>
+      )}
+
+      <MSectionTitle>All steps</MSectionTitle>
+      <div className="wf-mtimeline">
         {STAGES.map((stage) => {
           const isDone = progress.completed.includes(stage.slug);
           const isCurrent = stage.slug === progress.current;
@@ -77,20 +80,26 @@ export default function MobileProjectDetailPage() {
           const cls = isDone ? "done" : isCurrent ? "current" : "locked";
           const row = (
             <>
-              <span className="wf-mobile-step-num">{isDone ? "✓" : stage.number}</span>
-              <span className="wf-mobile-step-body">
-                <span className="wf-mobile-step-title">{stage.title}</span>
-                <span className="wf-mobile-step-meta">{mine ? "Your task" : `Owned by ${stage.role}`}</span>
+              <span className="wf-mtimeline-dot">{isDone ? <MIcon name="check" size={14} /> : stage.number}</span>
+              <span className="wf-mtimeline-body">
+                <span className="wf-mtimeline-title">{stage.title}</span>
+                <span className="wf-mtimeline-meta">
+                  {mine ? <span className="wf-mtag">Your task</span> : `Owned by ${stage.role}`}
+                </span>
               </span>
-              <span className="wf-mobile-step-chevron">›</span>
+              {unlocked && (
+                <span className="wf-mtimeline-chev">
+                  <MIcon name="chevron" size={16} />
+                </span>
+              )}
             </>
           );
           return unlocked ? (
-            <Link key={stage.slug} href={`/m/projects/${id}/step/${stage.slug}`} className={`wf-mobile-step-row ${cls}`}>
+            <Link key={stage.slug} href={`/m/projects/${id}/step/${stage.slug}`} className={`wf-mtimeline-row ${cls}`}>
               {row}
             </Link>
           ) : (
-            <div key={stage.slug} className={`wf-mobile-step-row ${cls}`} title="Complete previous steps first">
+            <div key={stage.slug} className={`wf-mtimeline-row ${cls}`} title="Complete previous steps first">
               {row}
             </div>
           );

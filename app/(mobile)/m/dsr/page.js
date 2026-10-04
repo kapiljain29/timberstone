@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getProjects, getDsrEntries } from "@/lib/store";
+import { MIcon } from "@/components/MobileUI";
 
 const DSR_SLUG = "daily-supervision-report";
 
@@ -29,23 +30,26 @@ export default function MobileDsrQuickPage() {
 
   return (
     <div>
-      <h1 className="wf-h1">Daily Supervision Report</h1>
-      <p className="wf-sub">Pick a site to submit today&apos;s DSR entry per contractor.</p>
+      <h1 className="wf-mtitle">Daily Supervision Report</h1>
+      <p className="wf-msub">Pick a site to submit today&apos;s DSR, one entry per contractor.</p>
 
-      {projects.map((project) => (
-        <Link key={project.id} href={`/m/projects/${project.id}/step/${DSR_SLUG}`} className="wf-mcard">
-          <div className="wf-mcard-title">{project.projectName}</div>
-          <div className="wf-mcard-sub">{project.customer}</div>
-          <div className="wf-mcard-row">
-            <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
-              {countMap[project.id] || 0} DSR entr{(countMap[project.id] || 0) === 1 ? "y" : "ies"} logged
+      {projects.map((project) => {
+        const count = countMap[project.id] || 0;
+        return (
+          <Link key={project.id} href={`/m/projects/${project.id}/step/${DSR_SLUG}`} className="wf-mdsr">
+            <span className={`wf-mdsr-icon${count ? " done" : ""}`}>
+              <MIcon name={count ? "check" : "dsr"} />
             </span>
-            <span className="wf-btn primary" style={{ padding: "6px 12px", fontSize: 11 }}>
-              + Add DSR
+            <span className="wf-mdsr-body">
+              <span className="wf-mdsr-title">{project.projectName}</span>
+              <span className="wf-mdsr-sub">
+                {project.customer} · {count} entr{count === 1 ? "y" : "ies"} logged
+              </span>
             </span>
-          </div>
-        </Link>
-      ))}
+            <span className="wf-mdsr-add">+ Add</span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

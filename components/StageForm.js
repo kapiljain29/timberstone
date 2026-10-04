@@ -142,17 +142,17 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
         / Step {stage.number}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
+      <div className="wf-stage-head">
+        <div className="wf-stage-head-main">
           <h1 className="wf-h1">
             <span className="wf-badge idle">Step {stage.number} / {STAGES[STAGES.length - 1].number}</span>
             {stage.title}
           </h1>
           <p className="wf-sub">{stage.description}</p>
         </div>
-        <div style={{ textAlign: "right" }}>
+        <div className="wf-stage-head-side">
           <Badge tone={isComplete ? "done" : "current"}>{isComplete ? "Completed" : stage.status}</Badge>
-          <div style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 6 }}>
+          <div className="wf-stage-head-roles">
             <span className="wf-role-tag">{stage.role}</span>
             {stage.collaborators && stage.collaborators.length > 0 && (
               <span style={{ marginLeft: 6 }}>+ {stage.collaborators.join(", ")}</span>
