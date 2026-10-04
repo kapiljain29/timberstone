@@ -118,7 +118,20 @@ export default function CallQueuePage() {
               <Badge tone="current">Calling…</Badge>
             ) : (
               <button type="button" className="wf-btn primary" onClick={() => startCall(lead)}>
-                📞 Call
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 4h3.2l1.6 4-2 1.3a10.5 10.5 0 0 0 5 5l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z" />
+                </svg>
+                Call
               </button>
             )}
           </div>
