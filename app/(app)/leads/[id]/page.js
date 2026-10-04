@@ -153,6 +153,10 @@ export default function LeadDetailPage() {
             <input className="wf-input" defaultValue={lead.assignedRep || "—"} readOnly />
           </div>
           <div className="wf-field">
+            <label>Budget Size</label>
+            <input className="wf-input" defaultValue={lead.budgetSize || "—"} readOnly />
+          </div>
+          <div className="wf-field">
             <label>Design Required</label>
             <input
               className="wf-input"

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Box, Annotation, CheckboxGroup } from "@/components/ui";
 import { addLead, getArchitects, getSalesReps } from "@/lib/store";
 import { getRoleId, getWebRole } from "@/lib/roles";
-import { BRANCHES, LEAD_SOURCES, PRODUCT_TYPES, architectLabel } from "@/lib/data";
+import { BRANCHES, BUDGET_SIZES, LEAD_SOURCES, PRODUCT_TYPES, architectLabel } from "@/lib/data";
 
 const initial = {
   name: "",
@@ -16,6 +16,7 @@ const initial = {
   email: "",
   projectRef: "",
   productTypes: [],
+  budgetSize: "",
   designRequired: "",
   architect: "",
   assignedRep: "",
@@ -104,6 +105,15 @@ export default function NewLeadPage() {
             <div className="wf-field">
               <label>Email</label>
               <input className="wf-input" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+            </div>
+            <div className="wf-field">
+              <label>Budget Size</label>
+              <select className="wf-select" value={form.budgetSize} onChange={(e) => set("budgetSize", e.target.value)}>
+                <option value="">Select…</option>
+                {BUDGET_SIZES.map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
+              </select>
             </div>
             <div className="wf-field">
               <label>Design Required?</label>

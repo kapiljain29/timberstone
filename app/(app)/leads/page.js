@@ -47,12 +47,13 @@ export default function LeadsPage() {
 
       <Box title={`${ownOnly ? "My Leads" : "All Leads"} (${scopedLeads.length})`}>
         <DataTable
-          columns={["Lead", "Branch", "Project / Reference", "Source", "Rough Estimate", "Status", ""]}
+          columns={["Lead", "Branch", "Project / Reference", "Source", "Budget", "Rough Estimate", "Status", ""]}
           rows={scopedLeads.map((l) => [
             l.name,
             branchName(l.branch),
             l.projectRef,
             l.source,
+            l.budgetSize || "—",
             l.roughEstimate || l.estCost || "—",
             <Badge key={l.id + "b"} tone={leadStatusTone(l.status)}>
               {l.status}
