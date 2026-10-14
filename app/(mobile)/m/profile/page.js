@@ -37,6 +37,9 @@ export default function MobileProfilePage() {
         ))}
       </div>
 
+      <Link href="/m/install" className="wf-mexit neutral">
+        <MIcon name="download" size={18} /> Replay install flow
+      </Link>
       <Link href="/" className="wf-mexit">
         <MIcon name="exit" size={18} /> Switch role
       </Link>

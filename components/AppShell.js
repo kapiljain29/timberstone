@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NOTIFICATIONS } from "@/lib/data";
-import { WEB_ROLES, canAccess, setRoleId, useRole } from "@/lib/roles";
+import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
 
 function initials(name) {
   return name
@@ -107,6 +107,7 @@ const NAV = [
 export default function AppShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
+  const roleId = useRoleId();
   const role = useRole();
   const [showBell, setShowBell] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -121,6 +122,16 @@ export default function AppShell({ children }) {
       )
     : [];
   const allowed = role ? canAccess(role.id, pathname) : false;
+
+  // Signed out — send to the login page, then back here after sign-in.
+  useEffect(() => {
+    if (roleId === "") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [roleId, pathname, router]);
+
+  function handleSignOut() {
+    signOut();
+    router.replace("/login");
+  }
 
   function switchRole(id) {
     setRoleId(id);
@@ -198,9 +209,9 @@ export default function AppShell({ children }) {
               </div>
             )}
             {!collapsed && (
-              <Link href="/" className="wf-sidebar-switch" title="Switch role">
+              <button type="button" className="wf-sidebar-switch" onClick={handleSignOut} title="Sign out" aria-label="Sign out">
                 ⇦
-              </Link>
+              </button>
             )}
           </div>
         </div>

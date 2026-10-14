@@ -5,11 +5,19 @@
 // 480px) the decorative bezel/notch/status-bar disappear via CSS so it
 // behaves like an installed full-screen app; on desktop it renders as a
 // phone mockup so the client can review the design in a normal browser.
+//
+// First run: until the supervisor has been through install + sign-in
+// (lib/install.js), every screen redirects to /m/install. The install and
+// login screens render "bare" — no app bar or tab bar.
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { MIcon } from "@/components/MobileUI";
 import { NOTIFICATIONS } from "@/lib/data";
+import { useOnboarded } from "@/lib/install";
+
+const ONBOARDING_ROUTES = ["/m/install", "/m/login"];
 
 const TABS = [
   { href: "/m", label: "Home", icon: "home" },
@@ -21,6 +29,14 @@ const TABS = [
 
 export default function PhoneShell({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const onboarded = useOnboarded();
+  const bare = ONBOARDING_ROUTES.includes(pathname);
+  const blocked = !bare && onboarded !== true;
+
+  useEffect(() => {
+    if (!bare && onboarded === false) router.replace("/m/install");
+  }, [bare, onboarded, router]);
 
   return (
     <div className="wf-phone-page">
@@ -33,34 +49,46 @@ export default function PhoneShell({ children }) {
             <i className="bat" />
           </span>
         </div>
-        <div className="wf-phone-appbar">
-          <span className="wf-phone-appbar-logo">T</span>
-          <div>
-            <div className="wf-phone-appbar-title">Timberstone Field</div>
-            <div className="wf-phone-appbar-sub">Supervisor App</div>
+        {!bare && (
+          <div className="wf-phone-appbar">
+            <span className="wf-phone-appbar-logo">T</span>
+            <div>
+              <div className="wf-phone-appbar-title">Timberstone Field</div>
+              <div className="wf-phone-appbar-sub">Supervisor App</div>
+            </div>
+            <Link href="/" className="wf-phone-exit" title="Exit to Role Hub" aria-label="Exit to Role Hub">
+              <MIcon name="exit" size={18} />
+            </Link>
           </div>
-          <Link href="/" className="wf-phone-exit" title="Exit to Role Hub" aria-label="Exit to Role Hub">
-            <MIcon name="exit" size={18} />
-          </Link>
+        )}
+        <div className={`wf-phone-content${bare ? " bare" : ""}`}>
+          {blocked ? <div className="wf-empty">Loading…</div> : children}
         </div>
-        <div className="wf-phone-content">{children}</div>
-        <nav className="wf-phone-tabbar">
-          {TABS.map((tab) => {
-            const active = tab.href === "/m" ? pathname === "/m" : pathname.startsWith(tab.href);
-            return (
-              <Link key={tab.href} href={tab.href} className={`wf-phone-tab${active ? " active" : ""}`}>
-                <span className="wf-phone-tab-icon">
-                  <MIcon name={tab.icon} size={21} />
-                  {!!tab.badge && <span className="wf-phone-tab-badge">{tab.badge}</span>}
-                </span>
-                <span>{tab.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        {!bare && (
+          <nav className="wf-phone-tabbar">
+            {TABS.map((tab) => {
+              const active = tab.href === "/m" ? pathname === "/m" : pathname.startsWith(tab.href);
+              return (
+                <Link key={tab.href} href={tab.href} className={`wf-phone-tab${active ? " active" : ""}`}>
+                  <span className="wf-phone-tab-icon">
+                    <MIcon name={tab.icon} size={21} />
+                    {!!tab.badge && <span className="wf-phone-tab-badge">{tab.badge}</span>}
+                  </span>
+                  <span>{tab.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </div>
       <p className="wf-phone-caption">
         Supervisor Mobile App · clickable wireframe · same data model as the desktop app
+        {bare && (
+          <>
+            {" · "}
+            <Link href="/">Back to Role Hub</Link>
+          </>
+        )}
       </p>
     </div>
   );

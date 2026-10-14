@@ -356,6 +356,10 @@ button {
   width: 26px;
   height: 26px;
   text-decoration: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 .wf-sidebar-switch:hover {
   color: #fff;
@@ -1154,6 +1158,277 @@ button {
    Everything past this gate uses the grayscale/dashed system above; this
    entry screen exists purely to route a demo viewer into the right role.
    ========================================================================== */
+
+/* ---- web panel sign-in (/login) ---- */
+.wf-login {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% -10%, #4a6b52 0%, #2f4434 55%, #1c2a20 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+.wf-login-card {
+  width: 100%;
+  max-width: 880px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  background: var(--panel);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.wf-login-brand {
+  background: linear-gradient(160deg, #3e5743 0%, #2a3c2e 70%, #1c2a20 120%);
+  color: #fff;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+}
+.wf-login-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--cream);
+  color: var(--brand-dark);
+  font-size: 24px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wf-login-brand-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 18px 0 4px;
+  letter-spacing: -0.02em;
+}
+.wf-login-brand-sub {
+  font-size: 13px;
+  color: rgba(234, 241, 234, 0.75);
+  margin: 0;
+}
+.wf-login-brand-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(234, 241, 234, 0.6);
+  margin: 28px 0 10px;
+}
+.wf-login-brand-roles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wf-login-brand-roles li {
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 5px 11px;
+}
+.wf-login-brand-app {
+  margin-top: auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 241, 223, 0.1);
+  border: 1px solid rgba(255, 241, 223, 0.2);
+  color: #fff;
+  text-decoration: none;
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.wf-login-brand-app:hover {
+  background: rgba(255, 241, 223, 0.16);
+}
+.wf-login-form {
+  padding: 36px 40px;
+}
+.wf-login-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.wf-login-sub {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 4px 0 22px;
+}
+.wf-login-alert {
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+.wf-login-alert.error {
+  background: var(--red-050);
+  color: var(--red-text);
+}
+.wf-login-alert.info {
+  background: var(--brand-050);
+  color: var(--brand-dark);
+}
+.wf-login-alert a {
+  color: inherit;
+  font-weight: 700;
+}
+.wf-login-form .wf-field {
+  margin-bottom: 14px;
+}
+.wf-login-form .wf-input {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 14px;
+}
+.wf-login-password {
+  position: relative;
+}
+.wf-login-password .wf-input {
+  padding-right: 64px;
+}
+.wf-login-reveal {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.wf-login-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin: 2px 0 6px;
+}
+.wf-login-remember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.wf-login-remember input {
+  accent-color: var(--brand);
+}
+.wf-login-link {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: var(--brand);
+  cursor: pointer;
+  padding: 0;
+}
+.wf-login-note {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+.wf-btn.wf-login-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 16px;
+  font-size: 14.5px;
+  margin-top: 16px;
+}
+.wf-login-demo {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+}
+.wf-login-demo-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin: 0 0 10px;
+}
+.wf-login-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.wf-login-demo-btn {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.wf-login-demo-btn:hover {
+  border-color: var(--brand-light);
+  background: var(--brand-050);
+}
+.wf-login-demo-btn b {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.wf-login-demo-btn span {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+.wf-login-footer {
+  font-size: 12px;
+  color: #cfe3d4;
+  margin-top: 20px;
+}
+.wf-login-footer a {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (max-width: 760px) {
+  .wf-login {
+    justify-content: flex-start;
+    padding: 24px 16px;
+  }
+  .wf-login-card {
+    grid-template-columns: 1fr;
+  }
+  .wf-login-brand {
+    padding: 22px 20px;
+  }
+  .wf-login-brand-label,
+  .wf-login-brand-roles {
+    display: none;
+  }
+  .wf-login-brand-app {
+    margin-top: 16px;
+  }
+  .wf-login-form {
+    padding: 24px 20px;
+  }
+}
 
 .wf-landing {
   min-height: 100vh;
@@ -2402,6 +2677,326 @@ button {
   margin-top: 2px;
 }
 
+.wf-mexit.neutral {
+  color: var(--brand-dark);
+}
+
+/* ---- first run: install + sign in (/m/install, /m/login) ---- */
+.wf-phone-content.bare {
+  padding: 0 0 24px;
+}
+.wf-phone-caption a {
+  color: var(--brand);
+  font-weight: 700;
+}
+.wf-minstall-hero {
+  background: linear-gradient(160deg, #2f4535 0%, #2a3c2e 60%, #1c2a20 100%);
+  color: #fff;
+  text-align: center;
+  padding: 26px 20px 30px;
+  border-radius: 0 0 28px 28px;
+}
+.wf-minstall-hero.compact {
+  padding: 22px 20px 24px;
+}
+.wf-minstall-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--cream);
+  color: var(--brand-dark);
+  font-size: 28px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+.wf-minstall-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 12px 0 2px;
+}
+.wf-minstall-sub {
+  font-size: 12.5px;
+  color: rgba(234, 241, 234, 0.75);
+  margin: 0;
+}
+.wf-minstall-body {
+  padding: 18px 16px 0;
+}
+.wf-minstall-h2 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+.wf-minstall-perks {
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 4px 14px;
+  box-shadow: 0 0 0 1px var(--line-soft);
+}
+.wf-minstall-perk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+}
+.wf-minstall-perk + .wf-minstall-perk {
+  border-top: 1px solid var(--line-soft);
+}
+.wf-minstall-perk-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--brand-050);
+  color: var(--brand-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.wf-minstall-perk-title {
+  display: block;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.wf-minstall-perk-sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+.wf-mseg {
+  display: flex;
+  background: #e4e9e1;
+  border-radius: 14px;
+  padding: 4px;
+  margin: 18px 0 6px;
+}
+.wf-mseg-btn {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding: 9px 0;
+  border-radius: 11px;
+  cursor: pointer;
+}
+.wf-mseg-btn.active {
+  background: var(--panel);
+  color: var(--brand-dark);
+  box-shadow: 0 1px 3px rgba(28, 36, 32, 0.12);
+}
+.wf-minstall-panel {
+  margin-top: 12px;
+}
+.wf-phone-content .wf-btn.wf-minstall-cta {
+  gap: 8px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.wf-minstall-hint {
+  font-size: 11.5px;
+  color: var(--faint);
+  text-align: center;
+  margin: 8px 0 0;
+}
+.wf-minstall-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 12px 0 0;
+  line-height: 1.45;
+}
+.wf-minstall-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--amber-text);
+  background: var(--amber-050);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+}
+.wf-minstall-steps {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wf-minstall-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 0 0 1px var(--line-soft);
+}
+.wf-minstall-step-n {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.wf-minstall-step-text {
+  flex: 1;
+}
+.wf-minstall-step-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.wf-minstall-skip {
+  display: block;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin: 18px 0 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wf-minstall-done {
+  text-align: center;
+  padding-top: 6px;
+}
+.wf-minstall-done-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--green-050);
+  color: var(--green-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.wf-minstall-text {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin: 0;
+}
+.wf-minstall-homeicon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 18px 0 4px;
+}
+.wf-minstall-homeicon-tile {
+  width: 60px;
+  height: 60px;
+  border-radius: 15px;
+  background: linear-gradient(150deg, #3e5743 0%, #2a3c2e 100%);
+  color: var(--cream);
+  font-size: 26px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(42, 60, 46, 0.3);
+}
+.wf-minstall-homeicon-tile.small {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  font-size: 19px;
+  flex: none;
+}
+.wf-minstall-done .wf-btn {
+  margin-top: 16px;
+}
+.wf-minstall-body .wf-field {
+  margin-bottom: 12px;
+}
+
+/* mock of Chrome's install sheet */
+.wf-msheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 20, 0.45);
+  display: flex;
+  align-items: flex-end;
+  z-index: 10;
+}
+.wf-msheet {
+  width: 100%;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+.wf-msheet-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.wf-msheet-app {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 18px;
+}
+.wf-msheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.wf-msheet-btn {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a73e8;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.wf-msheet-btn.primary {
+  background: #1a73e8;
+  color: #fff;
+}
+.wf-msheet-caption {
+  font-size: 10.5px;
+  color: var(--faint);
+  text-align: center;
+  margin-top: 12px;
+}
+
 @media (max-width: 480px) {
   .wf-phone-page {
     padding: 0;
@@ -2426,5 +3021,8 @@ button {
   }
   .wf-phone-tabbar {
     bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .wf-minstall-hero {
+    padding-top: calc(26px + env(safe-area-inset-top, 0px));
   }
 }

@@ -61,6 +61,26 @@ const PATHS = {
     </>
   ),
   rupee: <path d="M7 5h10M7 9h10M7 5h3.5a4 4 0 0 1 0 8H7l7 6.5" />,
+  share: (
+    <>
+      <path d="M12 3.5v11M8 7.5l4-4 4 4" />
+      <path d="M8 10.5H6.5A1.5 1.5 0 0 0 5 12v7a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-7a1.5 1.5 0 0 0-1.5-1.5H16" />
+    </>
+  ),
+  plusSquare: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="3.5" />
+      <path d="M12 8.5v7M8.5 12h7" />
+    </>
+  ),
+  download: <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" />,
+  bolt: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />,
+  lock: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    </>
+  ),
 };
 
 export function MIcon({ name, size = 20 }) {

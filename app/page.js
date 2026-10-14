@@ -74,16 +74,16 @@ export default function RoleHubPage() {
             Interactive wireframe · mock data
           </span>
           <div className="wf-landing-actions">
-            <RoleLink roleId="Manager" href="/dashboard" className="wf-landing-btn primary">
-              Enter Dashboard
-            </RoleLink>
+            <Link href="/login" className="wf-landing-btn primary">
+              Sign in
+            </Link>
             <Link href="/roles" className="wf-landing-btn ghost">
               Role-wise Workflow
             </Link>
           </div>
         </div>
 
-        <p className="wf-landing-prompt">Or jump directly to a role for demo:</p>
+        <p className="wf-landing-prompt">Or skip sign-in and jump directly to a role for demo:</p>
 
         {ROLE_CARDS.map((role) => {
           const ownedCount = stepsOwnedBy(role.department).length;
