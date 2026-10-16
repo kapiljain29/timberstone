@@ -65,6 +65,20 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   The API stays the source of truth — the dialog never replaces a
   server-side check.
 
+## CRITICAL RULE: Form fields — required marker and messages
+
+- **Mark every required field with `*`.** Put the `required` attribute on
+  its `<input>` / `<select>` / `<textarea>` (direct child of `.wf-field`)
+  — `app/globals.css` adds the red `*` to the label. For a group (e.g.
+  `CheckboxGroup`) pass `required`. Mark only fields the API really
+  requires, and update the marker when that depends on another field
+  (e.g. Branches is not shown for all-branch roles). Forms keep
+  `noValidate`, so the API does the checking and its messages are shown.
+- **Show API validation messages as-is** under the field
+  (`<FieldError>{fieldErrors.<param>}</FieldError>`). They already name
+  the field ("Branch code is required") — never prefix the label again
+  and never show a bare fragment like "is required".
+
 ## Calling the Timberstone API
 
 - Every backend call goes through `lib/api.js` (`api.get/post/put/patch/delete`,

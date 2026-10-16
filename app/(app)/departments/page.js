@@ -90,6 +90,7 @@ export default function DepartmentsPage() {
                 <label htmlFor="dept-name">Department Name</label>
                 <input
                   id="dept-name"
+                  required
                   className="wf-input"
                   value={form.department_name}
                   onChange={(e) => set("department_name", e.target.value)}

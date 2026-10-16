@@ -91,8 +91,9 @@ export function Field({ field, value, onChange }) {
 }
 
 // options: strings, or { value, label } objects (values then holds the
-// selected `value`s). error: message shown under the group.
-export function CheckboxGroup({ label, options, values = [], onChange, disabled = false, error }) {
+// selected `value`s). error: message shown under the group. required: marks
+// the label with *.
+export function CheckboxGroup({ label, options, values = [], onChange, disabled = false, error, required = false }) {
   const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
   function toggle(value) {
     if (disabled) return;
@@ -101,7 +102,7 @@ export function CheckboxGroup({ label, options, values = [], onChange, disabled 
   }
   return (
     <div className="wf-field">
-      {label && <label>{label}</label>}
+      {label && <label className={required ? "wf-required" : undefined}>{label}</label>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 16px" }}>
         {items.map((o) => (
           <label key={o.value} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>

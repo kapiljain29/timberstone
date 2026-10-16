@@ -112,8 +112,8 @@ export default function BranchesPage() {
           <Box title={form.branch ? `Edit Branch — ${form.branch.name}` : "New Branch"}>
             <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
-              {input("name", "Branch Name", { placeholder: "e.g. Jaipur", autoFocus: true })}
-              {input("code", "Branch Code", { placeholder: "e.g. JPR", style: { textTransform: "uppercase" }, maxLength: 20 })}
+              {input("name", "Branch Name", { required: true, placeholder: "e.g. Jaipur", autoFocus: true })}
+              {input("code", "Branch Code", { required: true, placeholder: "e.g. JPR", style: { textTransform: "uppercase" }, maxLength: 20 })}
               {input("city", "City", { placeholder: "e.g. Jaipur" })}
               {input("phone", "Phone", { type: "tel", placeholder: "10–15 digits, e.g. 9829010001" })}
               {input("email", "Email", { type: "email", placeholder: "branch@timberstone.in" })}

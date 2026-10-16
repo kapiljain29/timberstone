@@ -137,13 +137,14 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
       <Box title={member ? `Edit Team Member — ${member.name}` : "Member Details"}>
         <Alert>{save.error}</Alert>
         <div className="wf-grid wf-grid-3">
-          {input("name", "Full Name", { placeholder: "e.g. Karan Mathur", autoFocus: !member })}
-          {input("email", "Email", { type: "email", placeholder: "name@timberstone.in" })}
+          {input("name", "Full Name", { required: true, placeholder: "e.g. Karan Mathur", autoFocus: !member })}
+          {input("email", "Email", { required: true, type: "email", placeholder: "name@timberstone.in" })}
           {input("mobile", "Mobile", { type: "tel", placeholder: "10–15 digits, e.g. 9829010009" })}
           <div className="wf-field">
             <label htmlFor="member-role">Role</label>
             <select
               id="member-role"
+              required
               className="wf-select"
               value={form.role}
               onChange={(e) => set("role", e.target.value)}
@@ -197,6 +198,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
           </div>
           {!member &&
             input("password", "Password", {
+              required: true,
               type: "password",
               autoComplete: "new-password",
               placeholder: "Min 8 chars, a letter and a number",
@@ -208,6 +210,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
           ) : (
             <CheckboxGroup
               label="Branches"
+              required
               options={(master?.branches || []).map((b) => ({ value: b.id, label: `${b.name} (${b.code})` }))}
               values={form.branch_ids}
               onChange={(ids) => set("branch_ids", ids)}

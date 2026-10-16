@@ -3065,3 +3065,12 @@ button {
   gap: 10px;
   margin-top: 20px;
 }
+
+/* Required field marker: label of a .wf-field whose input / select /
+   textarea has the `required` attribute, or a label with .wf-required
+   (e.g. a checkbox group). */
+.wf-field:has(> :is(input, select, textarea)[required]) > label::after,
+.wf-field > label.wf-required::after {
+  content: " *";
+  color: var(--red-text);
+}
