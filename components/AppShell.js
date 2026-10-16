@@ -228,7 +228,15 @@ export default function AppShell({ children }) {
             ☰
           </button>
           <div className="wf-topbar-right">
-            {role && (
+            {role?.fromApi && (
+              <span className="wf-role-switch">
+                <span>Logged in as</span>
+                <b>
+                  {role.user} · {role.label}
+                </b>
+              </span>
+            )}
+            {role && !role.fromApi && (
               <label className="wf-role-switch">
                 <span>Logged in as</span>
                 <select value={role.id} onChange={(e) => switchRole(e.target.value)} aria-label="Switch role">

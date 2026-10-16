@@ -2,159 +2,129 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { WEB_ROLES, findRoleByEmail, setRoleId } from "@/lib/roles";
+import { useEffect, useState } from "react";
+import AuthCard, { AuthInput, AuthPasswordInput } from "@/components/AuthCard";
+import { ApiError, login, logout } from "@/lib/api";
+import { getWebRole, useRoleId, webRoleIdForApiRole } from "@/lib/roles";
 
-// Web panel sign-in for Management, Sales, Marketing, Design and Accounts.
+// Web panel sign-in (POST /api/public/auth/login). Only roles whose panel
+// runs on the API can sign in for now (super admin); others see a notice.
 // Supervisors are pointed to the Timberstone Field app instead.
-// Wireframe only: the email picks a demo user and any password works; the
-// real screen will call login() from lib/api.js.
 
-const PANEL_ROLES = WEB_ROLES.filter((r) => r.id !== "Supervisor");
+
+// Only same-site paths, so ?next= can't send the user to another site.
+function nextPath(fallback) {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const roleId = useRoleId();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [supervisor, setSupervisor] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [notice, setNotice] = useState(""); // "supervisor" | "not-enabled"
 
-  function fillDemo(role) {
-    setEmail(role.email);
-    setPassword("demo1234");
-    setError("");
-    setSupervisor(false);
-  }
+  // Already signed in through the API — skip the form.
+  useEffect(() => {
+    if (roleId && getWebRole(roleId).fromApi) router.replace(nextPath(getWebRole(roleId).home));
+  }, [roleId, router]);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    setSupervisor(false);
+    setFieldErrors({});
+    setNotice("");
 
-    const match = findRoleByEmail(email);
-    if (!match || !password) {
-      // Same message for unknown email and wrong password — don't reveal which accounts exist.
-      setError("Email or password is incorrect.");
-      return;
-    }
-    if (match.id === "Supervisor") {
-      setSupervisor(true);
+    const errors = {};
+    if (!email.trim()) errors.email = "Enter your email";
+    if (!password) errors.password = "Enter your password";
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
       return;
     }
 
-    setRoleId(match.id);
-    // Return to the page that sent the user here, if it was a panel page.
-    const next = new URLSearchParams(window.location.search).get("next");
-    router.replace(next && next.startsWith("/") && !next.startsWith("//") ? next : match.home);
+    setSubmitting(true);
+    try {
+      const { user } = await login(email.trim(), password);
+      const webRoleId = webRoleIdForApiRole(user.role);
+      if (!webRoleId) {
+        // Valid account, but this role's panel isn't on the API yet.
+        await logout();
+        setNotice(user.role === "supervisor" ? "supervisor" : "not-enabled");
+        return;
+      }
+      router.replace(nextPath(getWebRole(webRoleId).home));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setFieldErrors(err.fieldErrors);
+        setError(err.generalMessage);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <div className="wf-login">
-      <div className="wf-login-card">
-        <aside className="wf-login-brand">
-          <span className="wf-login-logo">T</span>
-          <h2 className="wf-login-brand-title">Timberstone ERP</h2>
-          <p className="wf-login-brand-sub">Lead-to-Handover Platform</p>
-          <p className="wf-login-brand-label">Web panel for</p>
-          <ul className="wf-login-brand-roles">
-            {PANEL_ROLES.map((r) => (
-              <li key={r.id}>{r.label}</li>
-            ))}
-          </ul>
-          <Link href="/m/install" className="wf-login-brand-app">
-            <span>
-              <b>Site supervisor?</b>
-              <br />
-              Use the Timberstone Field app on your phone
-            </span>
-            <span aria-hidden="true">→</span>
+    <AuthCard>
+      <form onSubmit={handleSubmit} noValidate>
+        <h1 className="wf-login-title">Sign in</h1>
+        <p className="wf-login-sub">Use your work email and password.</p>
+
+        {error && (
+          <div className="wf-login-alert error" role="alert">
+            {error}
+          </div>
+        )}
+        {notice === "supervisor" && (
+          <div className="wf-login-alert info" role="alert">
+            Supervisors work from the <b>Timberstone Field</b> mobile app.{" "}
+            <Link href="/m/install">Install the app →</Link>
+          </div>
+        )}
+        {notice === "not-enabled" && (
+          <div className="wf-login-alert info" role="alert">
+            Web panel sign-in isn&apos;t available for your role yet. Please check back soon.
+          </div>
+        )}
+
+        <AuthInput
+          id="login-email"
+          label="Email"
+          type="email"
+          autoComplete="username"
+          placeholder="name@timberstone.in"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={fieldErrors.email}
+          disabled={submitting}
+          autoFocus
+        />
+        <AuthPasswordInput
+          id="login-password"
+          label="Password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={fieldErrors.password}
+          disabled={submitting}
+        />
+
+        <div className="wf-login-row">
+          <Link href="/forgot-password" className="wf-login-link">
+            Forgot password?
           </Link>
-        </aside>
+        </div>
 
-        <form className="wf-login-form" onSubmit={handleSubmit} noValidate>
-          <h1 className="wf-login-title">Sign in</h1>
-          <p className="wf-login-sub">Use your work email and password.</p>
-
-          {error && (
-            <div className="wf-login-alert error" role="alert">
-              {error}
-            </div>
-          )}
-          {supervisor && (
-            <div className="wf-login-alert info" role="alert">
-              Supervisors work from the <b>Timberstone Field</b> mobile app.{" "}
-              <Link href="/m/install">Install the app →</Link>
-            </div>
-          )}
-
-          <div className="wf-field">
-            <label htmlFor="login-email">Email</label>
-            <input
-              id="login-email"
-              className="wf-input"
-              type="email"
-              autoComplete="username"
-              placeholder="name@timberstone.in"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="wf-field">
-            <label htmlFor="login-password">Password</label>
-            <div className="wf-login-password">
-              <input
-                id="login-password"
-                className="wf-input"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="Any password works in the demo"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button type="button" className="wf-login-reveal" onClick={() => setShowPassword((v) => !v)}>
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-
-          <div className="wf-login-row">
-            <label className="wf-login-remember">
-              <input type="checkbox" defaultChecked /> Keep me signed in
-            </label>
-            <button type="button" className="wf-login-link" onClick={() => setShowForgot((v) => !v)}>
-              Forgot password?
-            </button>
-          </div>
-          {showForgot && (
-            <p className="wf-login-note">
-              Ask Management or your admin to reset it from <b>Team &amp; Departments</b>. You&apos;ll get a new
-              temporary password by email.
-            </p>
-          )}
-
-          <button type="submit" className="wf-btn primary wf-login-submit">
-            Sign in
-          </button>
-
-          <div className="wf-login-demo">
-            <p className="wf-login-demo-label">Demo accounts · click to fill</p>
-            <div className="wf-login-demo-grid">
-              {PANEL_ROLES.map((r) => (
-                <button key={r.id} type="button" className="wf-login-demo-btn" onClick={() => fillDemo(r)}>
-                  <b>{r.label}</b>
-                  <span>{r.user}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </form>
-      </div>
-      <p className="wf-login-footer">
-        <Link href="/">← Back to Role Hub</Link> · Timberstone ERP wireframe
-      </p>
-    </div>
+        <button type="submit" className="wf-btn primary wf-login-submit" disabled={submitting}>
+          {submitting ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </AuthCard>
   );
 }

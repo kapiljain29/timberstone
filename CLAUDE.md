@@ -1,5 +1,41 @@
 @AGENTS.md
 
+## CRITICAL RULE: DRY — Don't Repeat Yourself
+
+Every piece of UI and logic has **one** home. Before writing code, search
+for an existing component or helper and reuse or extend it — never
+copy-paste and tweak.
+
+- **Where shared code lives** (check here first):
+  - `components/ui.js` — buttons, inputs, selects, cards, tables, badges,
+    modals, empty / loading / error states. Screens compose these; they
+    don't restyle raw HTML elements in their own way.
+  - `components/` — layout and larger shared pieces (`AppShell`,
+    `MobileUI`, `PhoneShell`, `Stepper`, `StageForm`, `RoleLink`).
+  - `lib/api.js` — the only place that talks to the backend (see below).
+  - `lib/` — shared helpers: formatting (dates, ₹ amounts, phone numbers),
+    role/access checks (`lib/roles.js`), workflow steps (`lib/stages.js`).
+- **Same thing twice → extract it.** When the same markup, hook or logic
+  appears on a second screen, move it to `components/` or `lib/` in that
+  change and switch both screens to it. Typical candidates: list screens
+  (search + filters + pagination + table), form fields with error messages
+  (`ApiError.fieldErrors`), branch switcher, status badges, file upload,
+  confirm dialogs, data-loading with loading/empty/error states.
+- **One way to load data:** use a shared hook / helper around `lib/api.js`
+  for loading, error and empty states — don't hand-write the same
+  `useEffect` + `useState` loading pattern in every screen.
+- **Dropdown lists** come from the API's `/master` endpoints through one
+  shared helper/hook — never fetch the same list differently on two screens.
+- **No repeated literals:** route paths, role ids, status values and
+  colours used in more than one file go in `lib/` constants (or CSS
+  variables in `app/globals.css`).
+- Web panel (`app/(app)`) and Supervisor app (`app/(mobile)`) share logic
+  (`lib/`); only their presentation differs.
+- **Don't over-abstract.** Share what is genuinely the same; don't build
+  one component with many flags to cover screens that only look alike.
+- Changing a shared component/helper → check every place that uses it
+  (`get_impact_radius` / `query_graph`) in the same change.
+
 ## Calling the Timberstone API
 
 - Every backend call goes through `lib/api.js` (`api.get/post/put/patch/delete`,
@@ -7,6 +43,10 @@
   Never call `fetch()` against the API directly — `lib/api.js` handles the
   `{ is_crypto, req }` / `{ response }` envelope, AES (when
   `NEXT_PUBLIC_API_CRYPTO=1`), the Bearer token and `x-branch-id`.
+- Access tokens are refreshed automatically: on a 401, `lib/api.js` calls
+  `POST /api/public/auth/refresh` once (shared across concurrent calls) and
+  retries; if the refresh token is rejected the session is cleared and
+  `AppShell` sends the user to `/login`.
 - Calls resolve with the API's `result`; failures throw `ApiError`
   (`status`, `errors` = `[{ param, msg }]`, `fieldErrors` = `{ field: msg }`
   for form validation messages).
@@ -47,13 +87,15 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 
 ### Screen migration status
 
-`mock` = still on wireframe data · `api` = fully on the API.
+`mock` = still on wireframe data · `partial` = partly on the API (see notes) · `api` = fully on the API.
 
 | Screen | Route | Status | Endpoints needed / notes |
 |---|---|---|---|
-| Web panel login | `/login` | mock | `POST /auth/login` (exists) |
+| Web panel login | `/login` | api | `POST /api/public/auth/login`. Only `super_admin` can sign in for now; other roles get a "not available yet" notice — add them to `API_ROLE_TO_WEB` in `lib/roles.js` as their panels move to the API |
+| Forgot password | `/forgot-password` | api | `POST /api/public/auth/forgot-password` |
+| Reset password (emailed link) | `/reset-password?token=` | api | `POST /api/public/auth/verify-reset-token`, `POST /api/public/auth/reset-password` |
 | Supervisor login | `/m/login` | mock | `POST /auth/login` (exists) |
-| Panel shell (user, role menu, bell) | `components/AppShell.js` | mock | session, notifications count |
+| Panel shell (user, role menu, bell) | `components/AppShell.js` | partial | Signed-in user + sign-out (revokes refresh token) from the API session; demo role switcher only without a session. Needs: branch switcher (branch list already comes in the login response, in `session.branches`), notifications count |
 | Dashboard | `/dashboard` | mock | |
 | Call queue | `/call-queue` | mock | |
 | Leads list | `/leads` | mock | |
