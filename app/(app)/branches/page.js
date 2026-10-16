@@ -10,10 +10,18 @@ import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
-const EMPTY = { code: "", name: "", city: "", phone: "", email: "", address: "" };
+const EMPTY = { code: "", name: "", city: "", phone: "", email: "", gst_number: "", address: "" };
 
 function fromBranch(b) {
-  return { code: b.code, name: b.name, city: b.city || "", phone: b.phone || "", email: b.email || "", address: b.address || "" };
+  return {
+    code: b.code,
+    name: b.name,
+    city: b.city || "",
+    phone: b.phone || "",
+    email: b.email || "",
+    gst_number: b.gst_number || "",
+    address: b.address || "",
+  };
 }
 
 export default function BranchesPage() {
@@ -117,6 +125,11 @@ export default function BranchesPage() {
               {input("city", "City", { placeholder: "e.g. Jaipur" })}
               {input("phone", "Phone", { type: "tel", placeholder: "10–15 digits, e.g. 9829010001" })}
               {input("email", "Email", { type: "email", placeholder: "branch@timberstone.in" })}
+              {input("gst_number", "GST Number", {
+                placeholder: "15 characters, e.g. 08AABCT1234F1Z5",
+                style: { textTransform: "uppercase" },
+                maxLength: 15,
+              })}
             </div>
             <div className="wf-field" style={{ marginTop: 14 }}>
               <label htmlFor="branch-address">Address</label>
@@ -170,12 +183,13 @@ export default function BranchesPage() {
         ) : (
           !list.error && (
             <DataTable
-              columns={["Branch", "Code", "City", "Phone", "Email", "Members", "Status", ""]}
+              columns={["Branch", "Code", "City", "GST No.", "Phone", "Email", "Members", "Status", ""]}
               emptyLabel={debouncedSearch ? "No branches match this search." : "No branches yet. Add the first one."}
               rows={items.map((b) => [
                 <strong key="n">{b.name}</strong>,
                 b.code,
                 b.city || "—",
+                b.gst_number || "—",
                 b.phone || "—",
                 b.email || "—",
                 <Link key="m" href={`/team?branch=${b.id}`} className="wf-link-btn">
