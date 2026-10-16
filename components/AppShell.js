@@ -56,6 +56,18 @@ const ICONS = {
       <path d="M12 10v2M6.75 14v-2h10.5v2" />
     </svg>
   ),
+  branches: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+      <circle cx="12" cy="10" r="2.4" />
+    </svg>
+  ),
+  members: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5" />
+    </svg>
+  ),
   architects: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3 4 20M12 3l8 17M7.5 13h9" />
@@ -91,7 +103,9 @@ const NAV = [
   {
     group: "Admin",
     links: [
-      { href: "/team", label: "Team & Departments", icon: ICONS.team },
+      { href: "/branches", label: "Branches", icon: ICONS.branches },
+      { href: "/departments", label: "Departments", icon: ICONS.team },
+      { href: "/team", label: "Team Members", icon: ICONS.members },
       { href: "/architects", label: "Architects", icon: ICONS.architects },
     ],
   },

@@ -1,0 +1,196 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { api } from "@/lib/api";
+import { DEPARTMENT_API, STATUS, useTeamMaster } from "@/lib/team";
+import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { useStatusToggle } from "@/lib/useStatusToggle";
+
+const PAGE_SIZE = 20;
+const emptyForm = { id: null, department_name: "", head_id: "", description: "" };
+
+export default function DepartmentsPage() {
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState(null); // null = closed; { id: null, ... } = add; { id, ... } = edit
+  const debouncedSearch = useDebouncedValue(search.trim());
+
+  const list = useApiData(DEPARTMENT_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const { master, error: masterError } = useTeamMaster();
+  const save = useSubmit();
+  const statusToggle = useStatusToggle(DEPARTMENT_API.status, list.reload);
+
+  const items = list.data?.items || [];
+
+  function set(key, value) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function openForm(department) {
+    save.reset();
+    setForm(
+      department
+        ? {
+            id: department.id,
+            department_name: department.department_name,
+            head_id: department.head_id || "",
+            description: department.description || "",
+          }
+        : emptyForm
+    );
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const { id, ...fields } = form;
+    const body = { ...fields, head_id: fields.head_id || null };
+    const saved = await save.submit(() =>
+      id ? api.post(DEPARTMENT_API.update, { id, ...body }) : api.post(DEPARTMENT_API.create, body)
+    );
+    if (saved) {
+      setForm(null);
+      list.reload();
+    }
+  }
+
+  function toggleDepartment(d) {
+    statusToggle.run(d, {
+      name: d.department_name,
+      deactivate: `It will be hidden from Department dropdowns, so no new members can be added to it. Its ${d.member_count} active member(s) keep this department. You can activate it again later.`,
+      activate: "It will appear in Department dropdowns again, so members can be added to it.",
+    });
+  }
+
+  function onSearch(value) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  return (
+    <div>
+      <div className="wf-crumb">Admin</div>
+      <div className="wf-queue-head">
+        <div>
+          <h1 className="wf-h1">Departments</h1>
+          <p className="wf-sub">Set up the departments your team members belong to, and who heads each one.</p>
+        </div>
+        <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
+          + Add Department
+        </button>
+      </div>
+
+      {form && (
+        <form onSubmit={handleSave} noValidate>
+          <Box title={form.id ? "Edit Department" : "New Department"}>
+            <Alert>{save.error}</Alert>
+            <div className="wf-grid wf-grid-3">
+              <div className="wf-field">
+                <label htmlFor="dept-name">Department Name</label>
+                <input
+                  id="dept-name"
+                  className="wf-input"
+                  value={form.department_name}
+                  onChange={(e) => set("department_name", e.target.value)}
+                  placeholder="e.g. Procurement"
+                  disabled={save.submitting}
+                />
+                <FieldError>{save.fieldErrors.department_name}</FieldError>
+              </div>
+              <div className="wf-field">
+                <label htmlFor="dept-head">Department Head</label>
+                <select
+                  id="dept-head"
+                  className="wf-select"
+                  value={form.head_id}
+                  onChange={(e) => set("head_id", e.target.value)}
+                  disabled={save.submitting || !master}
+                >
+                  <option value="">{master ? "Not assigned yet" : "Loading…"}</option>
+                  {(master?.users || []).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+                <FieldError>{save.fieldErrors.head_id || (masterError && masterError.message)}</FieldError>
+              </div>
+              <div className="wf-field">
+                <label htmlFor="dept-desc">Responsibilities</label>
+                <input
+                  id="dept-desc"
+                  className="wf-input"
+                  value={form.description}
+                  onChange={(e) => set("description", e.target.value)}
+                  placeholder="What this team owns"
+                  disabled={save.submitting}
+                />
+                <FieldError>{save.fieldErrors.description}</FieldError>
+              </div>
+            </div>
+            <div className="wf-actions-end">
+              <button type="button" className="wf-btn" onClick={() => setForm(null)} disabled={save.submitting}>
+                Cancel
+              </button>
+              <button type="submit" className="wf-btn primary" disabled={save.submitting}>
+                {save.submitting ? "Saving…" : "Save Department"}
+              </button>
+            </div>
+          </Box>
+        </form>
+      )}
+
+      <Box
+        title={`Departments (${list.data?.pagination.total ?? "…"})`}
+        right={
+          <input
+            className="wf-input"
+            style={{ width: 220 }}
+            type="search"
+            placeholder="Search departments"
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        }
+      >
+        <LoadError error={list.error} onRetry={list.reload} />
+        <Alert>{statusToggle.error}</Alert>
+        {!list.data && list.loading ? (
+          <div className="wf-empty">Loading departments…</div>
+        ) : (
+          !list.error && (
+            <DataTable
+              columns={["Department", "Head", "Members", "Responsibilities", "Status", ""]}
+              emptyLabel={debouncedSearch ? "No departments match this search." : "No departments yet. Add the first one."}
+              rows={items.map((d) => [
+                <strong key="n">{d.department_name}</strong>,
+                d.head_name || "—",
+                <Link key="m" href={`/team?department=${d.id}`} className="wf-link-btn">
+                  {d.member_count} active
+                </Link>,
+                d.description || "—",
+                <StatusBadge key="s" active={d.status === STATUS.ACTIVE} />,
+                <div key="a" className="wf-btn-row">
+                  <button type="button" className="wf-link-btn" onClick={() => openForm(d)}>
+                    Edit
+                  </button>
+                  {d.status === STATUS.ACTIVE && (
+                    <Link href={`/team/new?department=${d.id}`} className="wf-link-btn">
+                      + Add member
+                    </Link>
+                  )}
+                  <button type="button" className="wf-link-btn" onClick={() => toggleDepartment(d)} disabled={statusToggle.submitting}>
+                    {d.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                  </button>
+                </div>,
+              ])}
+            />
+          )
+        )}
+        <Pagination pagination={list.data?.pagination} onPage={setPage} disabled={list.loading} />
+      </Box>
+      {statusToggle.confirmDialog}
+    </div>
+  );
+}

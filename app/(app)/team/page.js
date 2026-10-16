@@ -1,62 +1,78 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Box, Badge, BranchFilter, DataTable, Annotation } from "@/components/ui";
-import { getDepartments, addDepartment, getTeam, addTeamMember, updateTeamMember } from "@/lib/store";
-import { BRANCHES, branchName } from "@/lib/data";
+import Link from "next/link";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Alert, Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import TeamMemberForm from "@/components/TeamMemberForm";
+import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
+import { useApiData, useDebouncedValue } from "@/lib/useApi";
+import { useStatusToggle } from "@/lib/useStatusToggle";
 
-const emptyDept = { name: "", head: "", description: "" };
-const emptyMember = { name: "", departmentId: "", designation: "", branch: BRANCHES[0].id, phone: "", email: "" };
+const PAGE_SIZE = 20;
 
+// ?department=<id> / ?branch=<id> preselect the department / branch filter
+// (links from the Departments and Branches pages, and back from Add Team
+// Member).
 export default function TeamPage() {
-  const [departments, setDepartments] = useState([]);
-  const [team, setTeam] = useState([]);
-  const [branch, setBranch] = useState("all");
-  const [deptFilter, setDeptFilter] = useState("all");
-  const [showDeptForm, setShowDeptForm] = useState(false);
-  const [showMemberForm, setShowMemberForm] = useState(false);
-  const [dept, setDept] = useState(emptyDept);
-  const [member, setMember] = useState(emptyMember);
-
-  useEffect(() => {
-    // Reads from localStorage, which is unavailable during SSR — must load post-mount.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setDepartments(getDepartments());
-    setTeam(getTeam());
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
-
-  const deptName = (id) => departments.find((d) => d.id === id)?.name || "—";
-
-  const visibleTeam = useMemo(
-    () =>
-      team
-        .filter((m) => branch === "all" || m.branch === branch)
-        .filter((m) => deptFilter === "all" || m.departmentId === deptFilter),
-    [team, branch, deptFilter]
+  return (
+    <Suspense fallback={<div className="wf-empty">Loading…</div>}>
+      <TeamMembers />
+    </Suspense>
   );
+}
 
-  function saveDept(e) {
-    e.preventDefault();
-    setDepartments(addDepartment(dept));
-    setDept(emptyDept);
-    setShowDeptForm(false);
+function TeamMembers() {
+  const params = useSearchParams();
+  const [branch, setBranch] = useState(() => params.get("branch") || "all");
+  const [deptFilter, setDeptFilter] = useState(() => params.get("department") || "all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(null); // member being edited inline, or null
+  const debouncedSearch = useDebouncedValue(search.trim());
+
+  const { master, error: masterError, reload: reloadMaster } = useTeamMaster();
+  const list = useApiData(TEAM_API.list, {
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    branch_id: branch === "all" ? undefined : branch,
+    department_id: deptFilter === "all" ? undefined : deptFilter,
+    role: roleFilter === "all" ? undefined : roleFilter,
+    status: statusFilter === "all" ? undefined : Number(statusFilter),
+  });
+  const statusToggle = useStatusToggle(TEAM_API.status, () => {
+    list.reload();
+    reloadMaster(); // Department Head / Reporting Manager lists show active members only
+  });
+
+  const items = list.data?.items || [];
+  const roles = master?.roles || [];
+  const roleLabel = (value) => roles.find((r) => r.value === value)?.label || value;
+  const addHref = deptFilter === "all" ? "/team/new" : `/team/new?department=${encodeURIComponent(deptFilter)}`;
+
+  // Any filter change goes back to page 1.
+  function filter(setter) {
+    return (value) => {
+      setter(value);
+      setPage(1);
+    };
   }
 
-  function saveMember(e) {
-    e.preventDefault();
-    setTeam(addTeamMember(member));
-    setMember(emptyMember);
-    setShowMemberForm(false);
+  function onEdited() {
+    setEditing(null);
+    list.reload();
+    reloadMaster(); // Department Head list includes members
   }
 
-  function toggleActive(m) {
-    setTeam(updateTeamMember(m.id, { active: !m.active }));
-  }
-
-  function openMemberForm(departmentId = "") {
-    setMember({ ...emptyMember, departmentId: departmentId || departments[0]?.id || "" });
-    setShowMemberForm(true);
+  function toggleMember(m) {
+    statusToggle.run(m, {
+      name: m.name,
+      deactivate: "They will be signed out on all devices and won't be able to sign in until you activate them again.",
+      activate: "They will be able to sign in again with their email and password, with their current role and branches.",
+    });
   }
 
   return (
@@ -64,162 +80,96 @@ export default function TeamPage() {
       <div className="wf-crumb">Admin</div>
       <div className="wf-queue-head">
         <div>
-          <h1 className="wf-h1">Team &amp; Departments</h1>
-          <p className="wf-sub">Set up departments and the people in each team, branch-wise.</p>
+          <h1 className="wf-h1">Team Members</h1>
+          <p className="wf-sub">
+            The people in each department and the branches they work in. Each member signs in with their email.
+          </p>
         </div>
-        <div className="wf-btn-row" style={{ marginBottom: 18 }}>
-          <button type="button" className="wf-btn" onClick={() => setShowDeptForm((v) => !v)}>
-            + Add Department
-          </button>
-          <button type="button" className="wf-btn primary" onClick={() => openMemberForm()}>
-            + Add Team Member
-          </button>
-        </div>
+        <Link href={addHref} className="wf-btn primary" style={{ marginBottom: 18 }}>
+          + Add Team Member
+        </Link>
       </div>
 
-      {showDeptForm && (
-        <form onSubmit={saveDept}>
-          <Box title="New Department">
-            <div className="wf-grid wf-grid-3">
-              <div className="wf-field">
-                <label>Department Name</label>
-                <input className="wf-input" required value={dept.name} onChange={(e) => setDept((d) => ({ ...d, name: e.target.value }))} placeholder="e.g. Procurement" />
-              </div>
-              <div className="wf-field">
-                <label>Department Head</label>
-                <select className="wf-select" value={dept.head} onChange={(e) => setDept((d) => ({ ...d, head: e.target.value }))}>
-                  <option value="">Not assigned yet</option>
-                  {team.filter((m) => m.active).map((m) => (
-                    <option key={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="wf-field">
-                <label>Responsibilities</label>
-                <input className="wf-input" value={dept.description} onChange={(e) => setDept((d) => ({ ...d, description: e.target.value }))} placeholder="What this team owns" />
-              </div>
-            </div>
-            <div className="wf-actions-end">
-              <button type="button" className="wf-btn" onClick={() => setShowDeptForm(false)}>
-                Cancel
-              </button>
-              <button type="submit" className="wf-btn primary">
-                Save Department
-              </button>
-            </div>
-          </Box>
-        </form>
+      <LoadError error={masterError} onRetry={reloadMaster} />
+
+      {editing && (
+        <TeamMemberForm key={editing.id} member={editing} master={master} onSaved={onEdited} onCancel={() => setEditing(null)} />
       )}
 
-      {showMemberForm && (
-        <form onSubmit={saveMember}>
-          <Box title="New Team Member">
-            <div className="wf-grid wf-grid-3">
-              <div className="wf-field">
-                <label>Full Name</label>
-                <input className="wf-input" required value={member.name} onChange={(e) => setMember((m) => ({ ...m, name: e.target.value }))} placeholder="e.g. Karan Mathur" />
-              </div>
-              <div className="wf-field">
-                <label>Department</label>
-                <select className="wf-select" required value={member.departmentId} onChange={(e) => setMember((m) => ({ ...m, departmentId: e.target.value }))}>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="wf-field">
-                <label>Designation</label>
-                <input className="wf-input" value={member.designation} onChange={(e) => setMember((m) => ({ ...m, designation: e.target.value }))} placeholder="e.g. Sales Executive" />
-              </div>
-              <div className="wf-field">
-                <label>Branch</label>
-                <select className="wf-select" value={member.branch} onChange={(e) => setMember((m) => ({ ...m, branch: e.target.value }))}>
-                  {BRANCHES.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.tag})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="wf-field">
-                <label>Phone</label>
-                <input className="wf-input" value={member.phone} onChange={(e) => setMember((m) => ({ ...m, phone: e.target.value }))} placeholder="+91" />
-              </div>
-              <div className="wf-field">
-                <label>Email</label>
-                <input className="wf-input" type="email" value={member.email} onChange={(e) => setMember((m) => ({ ...m, email: e.target.value }))} />
-              </div>
-            </div>
-            <Annotation>
-              Members added to the Sales department appear as Sales Reps on the lead form and in the
-              Call Queue. Logins and role permissions come once the client finalizes role scoping.
-            </Annotation>
-            <div className="wf-actions-end">
-              <button type="button" className="wf-btn" onClick={() => setShowMemberForm(false)}>
-                Cancel
-              </button>
-              <button type="submit" className="wf-btn primary">
-                Save Team Member
-              </button>
-            </div>
-          </Box>
-        </form>
+      {master && master.branches.length > 0 && (
+        <BranchFilter branches={toBranchFilterOptions(master.branches)} value={branch} onChange={filter(setBranch)} />
       )}
-
-      <Box title={`Departments (${departments.length})`}>
-        <DataTable
-          columns={["Department", "Head", "Members", "Responsibilities", ""]}
-          rows={departments.map((d) => {
-            const members = team.filter((m) => m.departmentId === d.id);
-            return [
-              <strong key={d.id + "n"}>{d.name}</strong>,
-              d.head || "—",
-              `${members.filter((m) => m.active).length} active`,
-              d.description || "—",
-              <button key={d.id + "a"} type="button" className="wf-link-btn" onClick={() => openMemberForm(d.id)}>
-                + Add member
-              </button>,
-            ];
-          })}
-        />
-      </Box>
-
-      <BranchFilter branches={BRANCHES} value={branch} onChange={setBranch} />
 
       <Box
-        title={`Team Members (${visibleTeam.length})`}
+        title={`Team Members (${list.data?.pagination.total ?? "…"})`}
         right={
-          <select className="wf-select" style={{ width: "auto" }} value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-            <option value="all">All Departments</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          <div className="wf-btn-row">
+            <input
+              className="wf-input"
+              style={{ width: 200 }}
+              type="search"
+              placeholder="Search name, email, mobile"
+              value={search}
+              onChange={(e) => filter(setSearch)(e.target.value)}
+            />
+            <select className="wf-select" style={{ width: "auto" }} value={deptFilter} onChange={(e) => filter(setDeptFilter)(e.target.value)}>
+              <option value="all">All Departments</option>
+              {(master?.departments || []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.department_name}
+                </option>
+              ))}
+            </select>
+            <select className="wf-select" style={{ width: "auto" }} value={roleFilter} onChange={(e) => filter(setRoleFilter)(e.target.value)}>
+              <option value="all">All Roles</option>
+              {roles.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <select className="wf-select" style={{ width: "auto" }} value={statusFilter} onChange={(e) => filter(setStatusFilter)(e.target.value)}>
+              <option value="all">Any Status</option>
+              <option value={STATUS.ACTIVE}>Active</option>
+              <option value={STATUS.INACTIVE}>Inactive</option>
+            </select>
+          </div>
         }
       >
-        <DataTable
-          columns={["Name", "Department", "Designation", "Branch", "Phone", "Email", "Status", ""]}
-          emptyLabel="No team members match this filter."
-          rows={visibleTeam.map((m) => [
-            <strong key={m.id + "n"}>{m.name}</strong>,
-            deptName(m.departmentId),
-            m.designation || "—",
-            branchName(m.branch),
-            m.phone || "—",
-            m.email || "—",
-            <Badge key={m.id + "s"} tone={m.active ? "done" : "idle"}>
-              {m.active ? "Active" : "Inactive"}
-            </Badge>,
-            <button key={m.id + "t"} type="button" className="wf-link-btn" onClick={() => toggleActive(m)}>
-              {m.active ? "Deactivate" : "Activate"}
-            </button>,
-          ])}
-        />
+        <LoadError error={list.error} onRetry={list.reload} />
+        <Alert>{statusToggle.error}</Alert>
+        {!list.data && list.loading ? (
+          <div className="wf-empty">Loading team members…</div>
+        ) : (
+          !list.error && (
+            <DataTable
+              columns={["Name", "Role", "Department", "Designation", "Reports To", "Branches", "Mobile", "Email", "Status", ""]}
+              emptyLabel="No team members match these filters."
+              rows={items.map((m) => [
+                <strong key="n">{m.name}</strong>,
+                roleLabel(m.role),
+                m.department_name || "—",
+                m.designation || "—",
+                m.reporting_manager_name || "—",
+                m.all_branches ? "All branches" : m.branches.map((b) => b.name).join(", ") || "—",
+                m.mobile || "—",
+                m.email,
+                <StatusBadge key="s" active={m.status === STATUS.ACTIVE} />,
+                <div key="a" className="wf-btn-row">
+                  <button type="button" className="wf-link-btn" onClick={() => setEditing(m)}>
+                    Edit
+                  </button>
+                  <button type="button" className="wf-link-btn" onClick={() => toggleMember(m)} disabled={statusToggle.submitting}>
+                    {m.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                  </button>
+                </div>,
+              ])}
+            />
+          )
+        )}
+        <Pagination pagination={list.data?.pagination} onPage={setPage} disabled={list.loading} />
       </Box>
+      {statusToggle.confirmDialog}
     </div>
   );
 }

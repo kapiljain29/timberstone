@@ -90,22 +90,86 @@ export function Field({ field, value, onChange }) {
   );
 }
 
-export function CheckboxGroup({ label, options, values = [], onChange, disabled = false }) {
-  function toggle(option) {
+// options: strings, or { value, label } objects (values then holds the
+// selected `value`s). error: message shown under the group.
+export function CheckboxGroup({ label, options, values = [], onChange, disabled = false, error }) {
+  const items = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+  function toggle(value) {
     if (disabled) return;
-    const next = values.includes(option) ? values.filter((v) => v !== option) : [...values, option];
+    const next = values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
     onChange?.(next);
   }
   return (
     <div className="wf-field">
       {label && <label>{label}</label>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 16px" }}>
-        {options.map((o) => (
-          <label key={o} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="checkbox" checked={values.includes(o)} onChange={() => toggle(o)} disabled={disabled} />
-            {o}
+        {items.map((o) => (
+          <label key={o.value} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            <input type="checkbox" checked={values.includes(o.value)} onChange={() => toggle(o.value)} disabled={disabled} />
+            {o.label}
           </label>
         ))}
+      </div>
+      <FieldError>{error}</FieldError>
+    </div>
+  );
+}
+
+// Validation message under a form field (e.g. ApiError.fieldErrors.email).
+export function FieldError({ children }) {
+  return children ? <p className="wf-field-error">{children}</p> : null;
+}
+
+// Banner message. tone: "error" | "info".
+export function Alert({ children, tone = "error" }) {
+  return children ? (
+    <div className={`wf-alert ${tone}`} role="alert">
+      {children}
+    </div>
+  ) : null;
+}
+
+// Load failure for a list / screen: no-access for 403, otherwise the
+// ApiError message with a retry button.
+export function LoadError({ error, onRetry }) {
+  if (!error) return null;
+  if (error.status === 403) {
+    return <Alert>You don&apos;t have access to this section.</Alert>;
+  }
+  return (
+    <Alert>
+      {error.message}{" "}
+      {onRetry && (
+        <button type="button" className="wf-link-btn" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </Alert>
+  );
+}
+
+// Active / Inactive badge for records with status 1 / 0.
+export function StatusBadge({ active }) {
+  return <Badge tone={active ? "done" : "idle"}>{active ? "Active" : "Inactive"}</Badge>;
+}
+
+// Prev / next pager for API lists. pagination = the API's pagination meta
+// ({ total, page, totalPages, hasPrevPage, hasNextPage }).
+export function Pagination({ pagination, onPage, disabled = false }) {
+  if (!pagination || pagination.totalPages <= 1) return null;
+  const { page, totalPages, total, hasPrevPage, hasNextPage } = pagination;
+  return (
+    <div className="wf-pager">
+      <span>
+        Page {page} of {totalPages} · {total} records
+      </span>
+      <div className="wf-btn-row">
+        <button type="button" className="wf-btn" disabled={disabled || !hasPrevPage} onClick={() => onPage(page - 1)}>
+          ← Prev
+        </button>
+        <button type="button" className="wf-btn" disabled={disabled || !hasNextPage} onClick={() => onPage(page + 1)}>
+          Next →
+        </button>
       </div>
     </div>
   );

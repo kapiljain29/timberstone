@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Box, Badge, BranchFilter, DataTable, Annotation } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { getArchitects, addArchitect, updateArchitect, getLeads } from "@/lib/store";
 import { BRANCHES, branchName, architectLabel } from "@/lib/data";
 
@@ -13,6 +14,7 @@ export default function ArchitectsPage() {
   const [branch, setBranch] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyArchitect);
+  const [confirm, confirmDialog] = useConfirm();
 
   useEffect(() => {
     // Reads from localStorage, which is unavailable during SSR — must load post-mount.
@@ -38,7 +40,22 @@ export default function ArchitectsPage() {
     setShowForm(false);
   }
 
-  function toggleActive(a) {
+  async function toggleActive(a) {
+    const confirmed = await confirm(
+      a.active
+        ? {
+            title: `Deactivate Ar. ${a.name}?`,
+            message: "They will be hidden from the lead form's Architect dropdown. Existing leads keep this architect.",
+            confirmLabel: "Deactivate",
+          }
+        : {
+            title: `Activate Ar. ${a.name}?`,
+            message: "They will appear in the lead form's Architect dropdown again.",
+            confirmLabel: "Activate",
+            tone: "primary",
+          }
+    );
+    if (!confirmed) return;
     setArchitects(updateArchitect(a.id, { active: !a.active }));
   }
 
@@ -133,6 +150,7 @@ export default function ArchitectsPage() {
           Inactive architects stay on old leads but are hidden from the dropdown.
         </Annotation>
       </Box>
+      {confirmDialog}
     </div>
   );
 }

@@ -11,7 +11,8 @@ copy-paste and tweak.
     modals, empty / loading / error states. Screens compose these; they
     don't restyle raw HTML elements in their own way.
   - `components/` — layout and larger shared pieces (`AppShell`,
-    `MobileUI`, `PhoneShell`, `Stepper`, `StageForm`, `RoleLink`).
+    `MobileUI`, `PhoneShell`, `Stepper`, `StageForm`, `RoleLink`,
+    `ConfirmDialog` — `useConfirm()` for confirmation alerts).
   - `lib/api.js` — the only place that talks to the backend (see below).
   - `lib/` — shared helpers: formatting (dates, ₹ amounts, phone numbers),
     role/access checks (`lib/roles.js`), workflow steps (`lib/stages.js`).
@@ -35,6 +36,34 @@ copy-paste and tweak.
   one component with many flags to cover screens that only look alike.
 - Changing a shared component/helper → check every place that uses it
   (`get_impact_radius` / `query_graph`) in the same change.
+
+## CRITICAL RULE: Confirm before impactful actions
+
+Any action that is destructive, hard to undo, or affects someone other
+than the person clicking must ask for confirmation first, using the
+shared `useConfirm()` from `components/ConfirmDialog.js` — never
+`window.confirm()` and never a hand-built modal.
+
+- **Confirm:** delete / remove; **every status toggle — both activate and
+  deactivate** (users, masters, any record whose status changes what
+  appears in dropdowns or who can sign in); actions that sign
+  someone out or revoke access (role change, branch removal); approve /
+  reject (payment terms, credit notes); status moves that can't be walked
+  back (close a project, cancel a work order, mark a lead Dead / Lost);
+  bulk actions; discarding a form with unsaved changes when leaving it
+  would lose real work.
+- **Don't confirm:** plain saves and creates, filters, navigation, opening / cancelling a form with nothing typed.
+  Too many confirmations train people to click through them.
+- **Write the dialog for the decision:** title names the action and the
+  record (`Deactivate Karan Mathur?`); message says what will happen and
+  whether it can be undone; the confirm button repeats the verb
+  (`Deactivate`, `Activate`, `Delete`, `Save and sign out`) — not "OK" /
+  "Yes". `tone: "danger"` (default) for destructive actions (deactivate,
+  delete), `"primary"` otherwise (activate, save and sign out).
+- **Confirm before the API call**, and only once the client already knows
+  the action is needed (e.g. a role edit that will sign the member out).
+  The API stays the source of truth — the dialog never replaces a
+  server-side check.
 
 ## Calling the Timberstone API
 
@@ -104,7 +133,9 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Projects list | `/projects` | mock | |
 | Project detail | `/projects/[id]` | mock | |
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
-| Team & departments | `/team` | mock | |
+| Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`. Members link opens `/team?branch=<id>` |
+| Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
+| Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role: "sales"`) with those screens |
 | Architects | `/architects` | mock | |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |
