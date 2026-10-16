@@ -683,12 +683,21 @@ button {
   flex-wrap: wrap;
 }
 
+/* Form action row: buttons side by side on the right — secondary
+   (Cancel / Reset) first, then the primary submit. */
 .wf-actions-end {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
+}
+/* Wizard navigation: "← Back" on the left, the step's actions on the right. */
+.wf-actions-end.split {
+  justify-content: space-between;
 }
 
 .wf-badge {
@@ -3087,4 +3096,9 @@ button {
 .wf-phone-input .wf-input {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* Inputs styled uppercase (codes, GSTIN) keep their placeholder as written. */
+.wf-input::placeholder {
+  text-transform: none;
 }

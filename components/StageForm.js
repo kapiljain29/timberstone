@@ -457,7 +457,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
 
       </fieldset>
 
-      <div className="wf-actions-end">
+      <div className="wf-actions-end split">
         <button className="wf-btn" disabled={!prev} onClick={() => prev && goToStage(prev.slug)}>
           ← Back{prev ? `: ${prev.title}` : ""}
         </button>

@@ -79,6 +79,15 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   the field ("Branch code is required") — never prefix the label again
   and never show a bare fragment like "is required".
 
+## Form buttons
+
+Every form ends with one `.wf-actions-end` row: the buttons sit together
+on the right, secondary first (`Cancel`, `Reset to Default`), then the
+primary submit (`wf-btn primary`, labelled with the action — `Add Team
+Member`, `Save Changes`). Never spread Cancel and Submit to opposite
+edges. Only step-by-step wizards use `.wf-actions-end split` (← Back on
+the left, the step's actions grouped on the right).
+
 ## Phone numbers
 
 Every phone / mobile field is a country code + national number, entered
@@ -161,7 +170,8 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes). Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
 | Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role: "sales"`) with those screens |
-| Architects | `/architects` | mock | |
+| Change password | `/account/change-password` | api | `POST /api/admin/account/change-password` (any role). Linked from the key icon next to Sign out in the sidebar footer (API sessions only). Supervisor app (`/m/profile`) still needs its own link when it moves to the API |
+| Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |
 | Supervisor home | `/m` | mock | |

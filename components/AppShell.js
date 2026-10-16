@@ -56,6 +56,12 @@ const ICONS = {
       <path d="M12 10v2M6.75 14v-2h10.5v2" />
     </svg>
   ),
+  key: (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="15" r="4" />
+      <path d="m11 12 9-9M17 6l3 3M15 8l2 2" />
+    </svg>
+  ),
   branches: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
@@ -221,6 +227,17 @@ export default function AppShell({ children }) {
                 <p className="wf-sidebar-user-name">{role.user}</p>
                 <p className="wf-sidebar-user-role">{role.label}</p>
               </div>
+            )}
+            {!collapsed && role?.fromApi && (
+              <Link
+                href="/account/change-password"
+                className="wf-sidebar-switch"
+                title="Change password"
+                aria-label="Change password"
+                onClick={() => setSidebarOpen(false)}
+              >
+                {ICONS.key}
+              </Link>
             )}
             {!collapsed && (
               <button type="button" className="wf-sidebar-switch" onClick={handleSignOut} title="Sign out" aria-label="Sign out">
