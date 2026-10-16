@@ -3074,3 +3074,17 @@ button {
   content: " *";
   color: var(--red-text);
 }
+
+/* Phone input: country code select + number (components/ui.js PhoneField). */
+.wf-phone-input {
+  display: flex;
+  gap: 6px;
+}
+.wf-phone-input .wf-select {
+  width: auto;
+  flex: 0 0 auto;
+}
+.wf-phone-input .wf-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}

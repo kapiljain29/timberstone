@@ -6,16 +6,18 @@
 // confirms discarding unsaved changes.
 
 import { useState } from "react";
-import { Alert, Box, CheckboxGroup, FieldError } from "@/components/ui";
+import { Alert, Box, CheckboxGroup, FieldError, PhoneField } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
+import { defaultCountryCode, phonePlaceholder } from "@/lib/phone";
 import { TEAM_API } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
 const EMPTY = {
   name: "",
   email: "",
-  mobile: "",
+  country_code: "", // "" = the list's default code
+  mobile_number: "",
   role: "",
   department_id: "",
   designation: "",
@@ -30,7 +32,8 @@ function fromMember(member) {
     ...EMPTY,
     name: member.name,
     email: member.email,
-    mobile: member.mobile || "",
+    country_code: member.country_code || "",
+    mobile_number: member.mobile_number || "",
     role: member.role,
     department_id: member.department_id || "",
     designation: member.designation || "",
@@ -51,6 +54,8 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
   const [confirm, confirmDialog] = useConfirm();
 
   const roles = master?.roles || [];
+  const countryCodes = master?.country_codes || [];
+  const countryCode = form.country_code || defaultCountryCode(countryCodes);
   const formRole = roles.find((r) => r.value === form.role);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
@@ -85,6 +90,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
     const { password, ...fields } = form;
     const body = {
       ...fields,
+      country_code: countryCode,
       department_id: fields.department_id || null,
       reporting_manager_id: fields.reporting_manager_id || null,
       branch_ids: formRole?.all_branches ? [] : fields.branch_ids,
@@ -139,7 +145,19 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
         <div className="wf-grid wf-grid-3">
           {input("name", "Full Name", { required: true, placeholder: "e.g. Karan Mathur", autoFocus: !member })}
           {input("email", "Email", { required: true, type: "email", placeholder: "name@timberstone.in" })}
-          {input("mobile", "Mobile", { type: "tel", placeholder: "10–15 digits, e.g. 9829010009" })}
+          <PhoneField
+            id="member-mobile_number"
+            label="Mobile Number"
+            countryCodes={countryCodes}
+            code={countryCode}
+            number={form.mobile_number}
+            onCodeChange={(value) => set("country_code", value)}
+            onNumberChange={(value) => set("mobile_number", value)}
+            codeError={save.fieldErrors.country_code}
+            numberError={save.fieldErrors.mobile_number}
+            placeholder={phonePlaceholder(countryCodes, countryCode)}
+            disabled={save.submitting}
+          />
           <div className="wf-field">
             <label htmlFor="member-role">Role</label>
             <select

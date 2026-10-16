@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Alert, Box, DataTable, FieldError, LoadError, Pagination, PhoneField, StatusBadge } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
+import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { BRANCH_API, STATUS } from "@/lib/team";
 import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
-const EMPTY = { code: "", name: "", city: "", phone: "", email: "", gst_number: "", address: "" };
+// phone_country_code "" = the list's default code.
+const EMPTY = { code: "", name: "", city: "", phone_country_code: "", phone: "", email: "", gst_number: "", address: "" };
 
 function fromBranch(b) {
   return {
     code: b.code,
     name: b.name,
     city: b.city || "",
+    phone_country_code: b.phone_country_code || "",
     phone: b.phone || "",
     email: b.email || "",
     gst_number: b.gst_number || "",
@@ -31,12 +34,15 @@ export default function BranchesPage() {
   const debouncedSearch = useDebouncedValue(search.trim());
 
   const list = useApiData(BRANCH_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const master = useApiData(BRANCH_API.master);
+  const countryCodes = master.data?.country_codes || [];
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statusToggle = useStatusToggle(BRANCH_API.status, list.reload);
 
   const items = list.data?.items || [];
   const values = form?.values;
+  const phoneCode = values?.phone_country_code || defaultCountryCode(countryCodes);
   const dirty = form && JSON.stringify(form.values) !== JSON.stringify(form.initial);
 
   function set(key, value) {
@@ -67,8 +73,9 @@ export default function BranchesPage() {
   async function handleSave(e) {
     e.preventDefault();
     const { branch } = form;
+    const body = { ...values, phone_country_code: phoneCode };
     const saved = await save.submit(() =>
-      branch ? api.post(BRANCH_API.update, { id: branch.id, ...values }) : api.post(BRANCH_API.create, values)
+      branch ? api.post(BRANCH_API.update, { id: branch.id, ...body }) : api.post(BRANCH_API.create, body)
     );
     if (saved) {
       setForm(null);
@@ -123,7 +130,19 @@ export default function BranchesPage() {
               {input("name", "Branch Name", { required: true, placeholder: "e.g. Jaipur", autoFocus: true })}
               {input("code", "Branch Code", { required: true, placeholder: "e.g. JPR", style: { textTransform: "uppercase" }, maxLength: 20 })}
               {input("city", "City", { placeholder: "e.g. Jaipur" })}
-              {input("phone", "Phone", { type: "tel", placeholder: "10–15 digits, e.g. 9829010001" })}
+              <PhoneField
+                id="branch-phone"
+                label="Phone"
+                countryCodes={countryCodes}
+                code={phoneCode}
+                number={values.phone}
+                onCodeChange={(value) => set("phone_country_code", value)}
+                onNumberChange={(value) => set("phone", value)}
+                codeError={save.fieldErrors.phone_country_code}
+                numberError={save.fieldErrors.phone}
+                placeholder={phonePlaceholder(countryCodes, phoneCode)}
+                disabled={save.submitting}
+              />
               {input("email", "Email", { type: "email", placeholder: "branch@timberstone.in" })}
               {input("gst_number", "GST Number", {
                 placeholder: "15 characters, e.g. 08AABCT1234F1Z5",
@@ -190,7 +209,7 @@ export default function BranchesPage() {
                 b.code,
                 b.city || "—",
                 b.gst_number || "—",
-                b.phone || "—",
+                formatPhone(b.phone_country_code, b.phone),
                 b.email || "—",
                 <Link key="m" href={`/team?branch=${b.id}`} className="wf-link-btn">
                   {b.member_count} active

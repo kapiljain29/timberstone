@@ -116,6 +116,61 @@ export function CheckboxGroup({ label, options, values = [], onChange, disabled 
   );
 }
 
+// Phone input: country code select + national number (digits only).
+// countryCodes = the API's country_codes; code "" shows the default code.
+// Errors: codeError / numberError from ApiError.fieldErrors.
+export function PhoneField({
+  id,
+  label,
+  required = false,
+  countryCodes = [],
+  code,
+  number,
+  onCodeChange,
+  onNumberChange,
+  codeError,
+  numberError,
+  placeholder,
+  disabled = false,
+}) {
+  return (
+    <div className="wf-field">
+      <label htmlFor={id} className={required ? "wf-required" : undefined}>
+        {label}
+      </label>
+      <div className="wf-phone-input">
+        <select
+          className="wf-select"
+          aria-label={`${label} country code`}
+          value={code}
+          onChange={(e) => onCodeChange?.(e.target.value)}
+          disabled={disabled || !countryCodes.length}
+        >
+          {!countryCodes.length && <option value="">…</option>}
+          {countryCodes.map((c) => (
+            <option key={c.value} value={c.value} title={c.label}>
+              {c.iso} {c.value}
+            </option>
+          ))}
+        </select>
+        <input
+          id={id}
+          className="wf-input"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          aria-required={required || undefined}
+          value={number}
+          placeholder={placeholder}
+          onChange={(e) => onNumberChange?.(e.target.value.replace(/\D/g, ""))}
+          disabled={disabled}
+        />
+      </div>
+      <FieldError>{codeError || numberError}</FieldError>
+    </div>
+  );
+}
+
 // Validation message under a form field (e.g. ApiError.fieldErrors.email).
 export function FieldError({ children }) {
   return children ? <p className="wf-field-error">{children}</p> : null;

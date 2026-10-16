@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Alert, Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import TeamMemberForm from "@/components/TeamMemberForm";
+import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
 import { useApiData, useDebouncedValue } from "@/lib/useApi";
 import { useStatusToggle } from "@/lib/useStatusToggle";
@@ -152,7 +153,7 @@ function TeamMembers() {
                 m.designation || "—",
                 m.reporting_manager_name || "—",
                 m.all_branches ? "All branches" : m.branches.map((b) => b.name).join(", ") || "—",
-                m.mobile || "—",
+                formatPhone(m.country_code, m.mobile_number),
                 m.email,
                 <StatusBadge key="s" active={m.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">

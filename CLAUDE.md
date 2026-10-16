@@ -79,6 +79,17 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   the field ("Branch code is required") — never prefix the label again
   and never show a bare fragment like "is required".
 
+## Phone numbers
+
+Every phone / mobile field is a country code + national number, entered
+with the shared `PhoneField` (`components/ui.js`) and helpers in
+`lib/phone.js`. The country code list is the API's `country_codes` from
+the form's `/master` (never typed into the screen); `""` in form state
+means the list's `default` code, and the resolved code is sent with the
+number (`country_code` + `mobile_number`, or `phone_country_code` +
+`phone` on branches). The API builds `…_with_country_code` — never send
+it. Lists show the number with `formatPhone(code, number)`.
+
 ## Calling the Timberstone API
 
 - Every backend call goes through `lib/api.js` (`api.get/post/put/patch/delete`,
@@ -147,7 +158,7 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Projects list | `/projects` | mock | |
 | Project detail | `/projects/[id]` | mock | |
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
-| Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`. Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
+| Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes). Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
 | Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role: "sales"`) with those screens |
 | Architects | `/architects` | mock | |
