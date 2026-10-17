@@ -3134,3 +3134,38 @@ button {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* Role form: data scope choice (own / team / all). */
+.wf-scope-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.wf-scope-option,
+.wf-field .wf-scope-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  color: var(--ink);
+}
+.wf-scope-option.active {
+  border-color: var(--brand);
+  background: var(--brand-050);
+}
+.wf-scope-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wf-scope-option small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}

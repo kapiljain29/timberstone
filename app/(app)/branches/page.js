@@ -13,7 +13,7 @@ import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
 // phone_country_code "" = the list's default code.
-const EMPTY = { code: "", name: "", city: "", phone_country_code: "", phone: "", email: "", gst_number: "", address: "" };
+const EMPTY = { code: "", name: "", city: "", phone_country_code: "", phone: "", email: "", gst_number: "", lead_manager_id: "", address: "" };
 
 function fromBranch(b) {
   return {
@@ -24,6 +24,7 @@ function fromBranch(b) {
     phone: b.phone || "",
     email: b.email || "",
     gst_number: b.gst_number || "",
+    lead_manager_id: b.lead_manager_id || "",
     address: b.address || "",
   };
 }
@@ -37,6 +38,7 @@ export default function BranchesPage() {
   const list = useApiData(BRANCH_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
   const master = useApiData(BRANCH_API.master);
   const countryCodes = master.data?.country_codes || [];
+  const leadManagers = master.data?.lead_managers || [];
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statusToggle = useStatusToggle(BRANCH_API.status, list.reload);
@@ -45,6 +47,15 @@ export default function BranchesPage() {
   const items = list.data?.items || [];
   const values = form?.values;
   const phoneCode = values?.phone_country_code || defaultCountryCode(countryCodes);
+
+  // Lead Manager options: people with Leads → Assign who work in this
+  // branch (a new branch has nobody assigned yet → all-branch roles only).
+  // The current manager stays listed even if no longer eligible.
+  const editingId = form?.branch?.id;
+  const managerOptions = leadManagers.filter((u) => u.all_branches || (editingId && u.branch_ids.includes(editingId)));
+  if (form?.branch?.lead_manager_id && !managerOptions.some((u) => u.id === form.branch.lead_manager_id)) {
+    managerOptions.unshift({ id: form.branch.lead_manager_id, name: `${form.branch.lead_manager_name} (no longer eligible)` });
+  }
   const dirty = form && JSON.stringify(form.values) !== JSON.stringify(form.initial);
 
   function set(key, value) {
@@ -75,7 +86,7 @@ export default function BranchesPage() {
   async function handleSave(e) {
     e.preventDefault();
     const { branch } = form;
-    const body = { ...values, phone_country_code: phoneCode };
+    const body = { ...values, phone_country_code: phoneCode, lead_manager_id: values.lead_manager_id || null };
     const saved = await save.submit(() =>
       branch ? api.post(BRANCH_API.update, { id: branch.id, ...body }) : api.post(BRANCH_API.create, body)
     );
@@ -153,6 +164,24 @@ export default function BranchesPage() {
                 style: { textTransform: "uppercase" },
                 maxLength: 15,
               })}
+              <div className="wf-field">
+                <label htmlFor="branch-lead_manager_id">Lead Manager</label>
+                <select
+                  id="branch-lead_manager_id"
+                  className="wf-select"
+                  value={values.lead_manager_id}
+                  onChange={(e) => set("lead_manager_id", e.target.value)}
+                  disabled={save.submitting || !master.data}
+                >
+                  <option value="">No lead manager</option>
+                  {managerOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+                <FieldError>{save.fieldErrors.lead_manager_id}</FieldError>
+              </div>
             </div>
             <div className="wf-field" style={{ marginTop: 14 }}>
               <label htmlFor="branch-address">Address</label>
@@ -167,6 +196,10 @@ export default function BranchesPage() {
               />
               <FieldError>{save.fieldErrors.address}</FieldError>
             </div>
+            <Alert tone="info">
+              The <strong>Lead Manager</strong> receives this branch&apos;s unassigned leads (e.g. new Meta leads in the head
+              branch) and assigns them to their team. Only people with Leads → Assign who work in this branch can be picked.
+            </Alert>
             <Alert tone="info">
               The branch code is the prefix for this branch&apos;s document numbers (quotations, work orders, challans).
               Changing it only affects documents numbered afterwards.
@@ -206,7 +239,7 @@ export default function BranchesPage() {
         ) : (
           !list.error && (
             <DataTable
-              columns={["Branch", "Code", "City", "GST No.", "Phone", "Email", "Members", "Status", ""]}
+              columns={["Branch", "Code", "City", "GST No.", "Phone", "Email", "Lead Manager", "Members", "Status", ""]}
               emptyLabel={debouncedSearch ? "No branches match this search." : "No branches yet. Add the first one."}
               rows={items.map((b) => [
                 <strong key="n">{b.name}</strong>,
@@ -215,6 +248,7 @@ export default function BranchesPage() {
                 b.gst_number || "—",
                 formatPhone(b.phone_country_code, b.phone),
                 b.email || "—",
+                b.lead_manager_name || "—",
                 can("team.view") ? (
                   <Link key="m" href={`/team?branch=${b.id}`} className="wf-link-btn">
                     {b.member_count} active

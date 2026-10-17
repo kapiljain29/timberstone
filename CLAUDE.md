@@ -181,17 +181,17 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Panel shell (user, role menu, bell) | `components/AppShell.js` | partial | Signed-in user + sign-out (revokes refresh token) from the API session; demo role switcher only without a session. Needs: branch switcher (branch list already comes in the login response, in `session.branches`), notifications count |
 | Dashboard | `/dashboard` | mock | |
 | Call queue | `/call-queue` | mock | |
-| Leads list | `/leads` | mock | |
-| New lead | `/leads/new` | mock | |
+| Leads list | `/leads` | mock | When moved to the API: an "Unassigned" tab for users with `leads.assign` (`/leads/list` `unassigned: true` — a branch lead manager's queue), row checkboxes + "Assign to…" (`team_assignees` from `/leads/master`) → `POST /api/admin/leads/assign` `{ lead_ids, assigned_to, remark }`; lead detail shows `/leads/assignment-history` |
+| New lead | `/leads/new` | mock | When moved to the API: Assigned To = `assignees` from `POST /api/admin/leads/master` (anyone who can work leads in the branch), default = the signed-in user, sent as `assigned_to` on create only; `/leads/list` also filters by `assigned_to` |
 | Lead detail | `/leads/[id]` | mock | |
 | Projects list | `/projects` | mock | |
 | Project detail | `/projects/[id]` | mock | |
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
-| Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes). Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
+| Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes, `lead_managers`). Lead Manager dropdown = `lead_managers` with `all_branches` or this branch in `branch_ids`. Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
 | Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens |
 | Change password | `/account/change-password` | api | `POST /api/admin/account/change-password` (any role). Linked from the key icon next to Sign out in the sidebar footer (API sessions only). Supervisor app (`/m/profile`) still needs its own link when it moves to the API |
-| Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel") |
+| Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel"). The form also sets the role's data scope (own / team / all — `data_scopes` from `/roles/master`); session `user.dataScope` carries it |
 | Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |

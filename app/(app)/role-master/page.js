@@ -10,11 +10,18 @@ import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
-const EMPTY = { role_name: "", description: "", all_branches: false, permissions: [] };
+// data_scope "" = the API default for new roles (own).
+const EMPTY = { role_name: "", description: "", all_branches: false, data_scope: "", permissions: [] };
 const VIEW = "view";
 
 function fromRole(r) {
-  return { role_name: r.role_name, description: r.description || "", all_branches: r.all_branches, permissions: [...r.permissions] };
+  return {
+    role_name: r.role_name,
+    description: r.description || "",
+    all_branches: r.all_branches,
+    data_scope: r.data_scope,
+    permissions: [...r.permissions],
+  };
 }
 
 // Toggles one "module.action" permission. Granting any action also grants
@@ -123,6 +130,8 @@ export default function RoleMasterPage() {
   const list = useApiData(ROLE_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
   const master = useApiData(ROLE_API.master);
   const modules = master.data?.modules || [];
+  const dataScopes = master.data?.data_scopes || [];
+  const scopeLabel = (value) => dataScopes.find((d) => d.value === value)?.label || value;
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statusToggle = useStatusToggle(ROLE_API.status, list.reload);
@@ -173,8 +182,9 @@ export default function RoleMasterPage() {
     ) {
       return;
     }
+    const body = { ...values, data_scope: values.data_scope || undefined };
     const saved = await save.submit(() =>
-      role ? api.post(ROLE_API.update, { id: role.id, ...values }) : api.post(ROLE_API.create, values)
+      role ? api.post(ROLE_API.update, { id: role.id, ...body }) : api.post(ROLE_API.create, body)
     );
     if (saved) {
       setForm(null);
@@ -257,6 +267,28 @@ export default function RoleMasterPage() {
                 <strong>All branches</strong> — members see every branch and need no branch assignment.
               </span>
             </label>
+            <div className="wf-field" style={{ marginBottom: 16 }}>
+              <label>Records they see</label>
+              <div className="wf-scope-options" role="radiogroup" aria-label="Records they see">
+                {dataScopes.map((d) => (
+                  <label key={d.value} className={`wf-scope-option${(values.data_scope || "own") === d.value ? " active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="data_scope"
+                      value={d.value}
+                      checked={(values.data_scope || "own") === d.value}
+                      onChange={() => set("data_scope", d.value)}
+                      disabled={save.submitting}
+                    />
+                    <span>
+                      <strong>{d.label}</strong>
+                      <small>{d.description}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <FieldError>{save.fieldErrors.data_scope}</FieldError>
+            </div>
             <div className="wf-field">
               <label>Permissions</label>
               {modules.length ? (
@@ -306,7 +338,7 @@ export default function RoleMasterPage() {
         ) : (
           !list.error && (
             <DataTable
-              columns={["Role", "Description", "Branches", "Access", "Members", "Status", ""]}
+              columns={["Role", "Description", "Branches", "Records", "Access", "Members", "Status", ""]}
               emptyLabel={debouncedSearch ? "No roles match this search." : "No roles yet."}
               rows={items.map((r) => [
                 <span key="n">
@@ -320,6 +352,7 @@ export default function RoleMasterPage() {
                 </span>,
                 r.description || "—",
                 r.all_branches ? "All branches" : "Assigned",
+                scopeLabel(r.data_scope),
                 <span key="p">{accessSummary(r)}</span>,
                 r.user_count,
                 <StatusBadge key="s" active={r.status === STATUS.ACTIVE} />,
