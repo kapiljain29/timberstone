@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthCard, { AuthInput, AuthPasswordInput } from "@/components/AuthCard";
 import { ApiError, login, logout } from "@/lib/api";
-import { getWebRole, useRoleId, webRoleIdForApiRole } from "@/lib/roles";
+import { getWebRole, useRoleId, webRoleIdForApiUser } from "@/lib/roles";
 
-// Web panel sign-in (POST /api/public/auth/login). Only roles whose panel
-// runs on the API can sign in for now (super admin); others see a notice.
-// Supervisors are pointed to the Timberstone Field app instead.
+// Web panel sign-in (POST /api/public/auth/login). Every role whose
+// permissions open at least one panel section can sign in (lib/roles.js);
+// a role with none sees a notice, and Supervisors are pointed to the
+// Timberstone Field app instead.
 
 
 // Only same-site paths, so ?next= can't send the user to another site.
@@ -50,7 +51,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const { user } = await login(email.trim(), password);
-      const webRoleId = webRoleIdForApiRole(user.role);
+      const webRoleId = webRoleIdForApiUser(user);
       if (!webRoleId) {
         // Valid account, but this role's panel isn't on the API yet.
         await logout();
@@ -89,7 +90,8 @@ export default function LoginPage() {
         )}
         {notice === "not-enabled" && (
           <div className="wf-login-alert info" role="alert">
-            Web panel sign-in isn&apos;t available for your role yet. Please check back soon.
+            Your role doesn&apos;t have access to the web panel yet. Ask your administrator to give it permissions
+            under Roles &amp; Permissions.
           </div>
         )}
 

@@ -18,7 +18,7 @@ const EMPTY = {
   email: "",
   country_code: "", // "" = the list's default code
   mobile_number: "",
-  role: "",
+  role_id: "",
   department_id: "",
   designation: "",
   reporting_manager_id: "",
@@ -34,7 +34,7 @@ function fromMember(member) {
     email: member.email,
     country_code: member.country_code || "",
     mobile_number: member.mobile_number || "",
-    role: member.role,
+    role_id: member.role_id,
     department_id: member.department_id || "",
     designation: member.designation || "",
     reporting_manager_id: member.reporting_manager_id || "",
@@ -56,7 +56,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
   const roles = master?.roles || [];
   const countryCodes = master?.country_codes || [];
   const countryCode = form.country_code || defaultCountryCode(countryCodes);
-  const formRole = roles.find((r) => r.value === form.role);
+  const formRole = roles.find((r) => r.id === form.role_id);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
   // Reporting Manager options: active members except this one. A current
@@ -99,13 +99,13 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
     if (member) {
       // The API signs the member out everywhere when their role changes or
       // a branch is removed — confirm first.
-      const roleChanged = member.role !== body.role;
+      const roleChanged = member.role_id !== body.role_id;
       const branchRemoved = member.branches.some((b) => !body.branch_ids.includes(b.id));
       if (
         (roleChanged || branchRemoved) &&
         !(await confirm({
           title: `Sign ${body.name || "this member"} out everywhere?`,
-          message: `${roleChanged ? `Changing their role to ${formRole?.label || body.role}` : "Removing a branch"} signs them out on all devices. They'll need to sign in again to continue.`,
+          message: `${roleChanged ? `Changing their role to ${formRole?.role_name || "another role"}` : "Removing a branch"} signs them out on all devices. They'll need to sign in again to continue.`,
           confirmLabel: "Save and sign out",
           tone: "primary",
         }))
@@ -164,18 +164,18 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
               id="member-role"
               required
               className="wf-select"
-              value={form.role}
-              onChange={(e) => set("role", e.target.value)}
+              value={form.role_id}
+              onChange={(e) => set("role_id", e.target.value)}
               disabled={save.submitting || !master}
             >
               <option value="">{master ? "Select role…" : "Loading…"}</option>
               {roles.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
+                <option key={r.id} value={r.id}>
+                  {r.role_name}
                 </option>
               ))}
             </select>
-            <FieldError>{save.fieldErrors.role}</FieldError>
+            <FieldError>{save.fieldErrors.role_id}</FieldError>
           </div>
           <div className="wf-field">
             <label htmlFor="member-department">Department</label>

@@ -6,6 +6,7 @@ import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge }
 import { api } from "@/lib/api";
 import { DEPARTMENT_API, STATUS, useTeamMaster } from "@/lib/team";
 import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
@@ -21,6 +22,7 @@ export default function DepartmentsPage() {
   const { master, error: masterError } = useTeamMaster();
   const save = useSubmit();
   const statusToggle = useStatusToggle(DEPARTMENT_API.status, list.reload);
+  const can = useCan();
 
   const items = list.data?.items || [];
 
@@ -76,9 +78,11 @@ export default function DepartmentsPage() {
           <h1 className="wf-h1">Departments</h1>
           <p className="wf-sub">Set up the departments your team members belong to, and who heads each one.</p>
         </div>
-        <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
-          + Add Department
-        </button>
+        {can("departments.add") && (
+          <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
+            + Add Department
+          </button>
+        )}
       </div>
 
       {form && (
@@ -167,23 +171,31 @@ export default function DepartmentsPage() {
               rows={items.map((d) => [
                 <strong key="n">{d.department_name}</strong>,
                 d.head_name || "—",
-                <Link key="m" href={`/team?department=${d.id}`} className="wf-link-btn">
-                  {d.member_count} active
-                </Link>,
+                can("team.view") ? (
+                  <Link key="m" href={`/team?department=${d.id}`} className="wf-link-btn">
+                    {d.member_count} active
+                  </Link>
+                ) : (
+                  `${d.member_count} active`
+                ),
                 d.description || "—",
                 <StatusBadge key="s" active={d.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
-                  <button type="button" className="wf-link-btn" onClick={() => openForm(d)}>
-                    Edit
-                  </button>
-                  {d.status === STATUS.ACTIVE && (
+                  {can("departments.edit") && (
+                    <button type="button" className="wf-link-btn" onClick={() => openForm(d)}>
+                      Edit
+                    </button>
+                  )}
+                  {d.status === STATUS.ACTIVE && can("team.add") && (
                     <Link href={`/team/new?department=${d.id}`} className="wf-link-btn">
                       + Add member
                     </Link>
                   )}
-                  <button type="button" className="wf-link-btn" onClick={() => toggleDepartment(d)} disabled={statusToggle.submitting}>
-                    {d.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
-                  </button>
+                  {can("departments.status") && (
+                    <button type="button" className="wf-link-btn" onClick={() => toggleDepartment(d)} disabled={statusToggle.submitting}>
+                      {d.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
                 </div>,
               ])}
             />

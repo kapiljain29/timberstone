@@ -8,6 +8,7 @@ import TeamMemberForm from "@/components/TeamMemberForm";
 import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
 import { useApiData, useDebouncedValue } from "@/lib/useApi";
+import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
@@ -41,9 +42,10 @@ function TeamMembers() {
     search: debouncedSearch || undefined,
     branch_id: branch === "all" ? undefined : branch,
     department_id: deptFilter === "all" ? undefined : deptFilter,
-    role: roleFilter === "all" ? undefined : roleFilter,
+    role_id: roleFilter === "all" ? undefined : roleFilter,
     status: statusFilter === "all" ? undefined : Number(statusFilter),
   });
+  const can = useCan();
   const statusToggle = useStatusToggle(TEAM_API.status, () => {
     list.reload();
     reloadMaster(); // Department Head / Reporting Manager lists show active members only
@@ -51,7 +53,6 @@ function TeamMembers() {
 
   const items = list.data?.items || [];
   const roles = master?.roles || [];
-  const roleLabel = (value) => roles.find((r) => r.value === value)?.label || value;
   const addHref = deptFilter === "all" ? "/team/new" : `/team/new?department=${encodeURIComponent(deptFilter)}`;
 
   // Any filter change goes back to page 1.
@@ -86,9 +87,11 @@ function TeamMembers() {
             The people in each department and the branches they work in. Each member signs in with their email.
           </p>
         </div>
-        <Link href={addHref} className="wf-btn primary" style={{ marginBottom: 18 }}>
-          + Add Team Member
-        </Link>
+        {can("team.add") && (
+          <Link href={addHref} className="wf-btn primary" style={{ marginBottom: 18 }}>
+            + Add Team Member
+          </Link>
+        )}
       </div>
 
       <LoadError error={masterError} onRetry={reloadMaster} />
@@ -124,8 +127,8 @@ function TeamMembers() {
             <select className="wf-select" style={{ width: "auto" }} value={roleFilter} onChange={(e) => filter(setRoleFilter)(e.target.value)}>
               <option value="all">All Roles</option>
               {roles.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
+                <option key={r.id} value={r.id}>
+                  {r.role_name}
                 </option>
               ))}
             </select>
@@ -148,7 +151,7 @@ function TeamMembers() {
               emptyLabel="No team members match these filters."
               rows={items.map((m) => [
                 <strong key="n">{m.name}</strong>,
-                roleLabel(m.role),
+                m.role_name,
                 m.department_name || "—",
                 m.designation || "—",
                 m.reporting_manager_name || "—",
@@ -157,12 +160,16 @@ function TeamMembers() {
                 m.email,
                 <StatusBadge key="s" active={m.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
-                  <button type="button" className="wf-link-btn" onClick={() => setEditing(m)}>
-                    Edit
-                  </button>
-                  <button type="button" className="wf-link-btn" onClick={() => toggleMember(m)} disabled={statusToggle.submitting}>
-                    {m.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
-                  </button>
+                  {can("team.edit") && (
+                    <button type="button" className="wf-link-btn" onClick={() => setEditing(m)}>
+                      Edit
+                    </button>
+                  )}
+                  {can("team.status") && (
+                    <button type="button" className="wf-link-btn" onClick={() => toggleMember(m)} disabled={statusToggle.submitting}>
+                      {m.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
                 </div>,
               ])}
             />

@@ -88,6 +88,26 @@ Member`, `Save Changes`). Never spread Cancel and Submit to opposite
 edges. Only step-by-step wizards use `.wf-actions-end split` (← Back on
 the left, the step's actions grouped on the right).
 
+## CRITICAL RULE: Permissions drive the panel
+
+Every role signs in to the web panel through the API; what it sees comes
+from `session.user.permissions` ("module.action" keys from the Roles &
+Permissions master), never from role names.
+
+- **Sections:** `PANEL_ACCESS` in `lib/roles.js` maps each route to the
+  permission needed to open it (`/branches` → `branches.view`,
+  `/team/new` → `team.add`; `null` = every member; `false` = Super Admin
+  only, for screens not on permissions yet). Add a row when you add a
+  screen — the menu and the page guard (`canAccess`) both read it, and the
+  member's home page is the first section in `MEMBER_HOMES` they can open.
+- **Buttons:** wrap Add / Edit / Activate-Deactivate (and any other action)
+  in `const can = useCan()` → `{can("branches.add") && …}`; links into
+  another module check that module (`can("team.view")`). Hide what the
+  user can't do — the API still refuses it (403) if they try.
+- **Fresh:** `AppShell` calls `refreshProfile()` (`POST
+  /api/admin/account/me`) on load, so permission changes show without
+  signing in again. Super Admin always has every permission.
+
 ## Phone numbers
 
 Every phone / mobile field is a country code + national number, entered
@@ -154,7 +174,7 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 
 | Screen | Route | Status | Endpoints needed / notes |
 |---|---|---|---|
-| Web panel login | `/login` | api | `POST /api/public/auth/login`. Only `super_admin` can sign in for now; other roles get a "not available yet" notice — add them to `API_ROLE_TO_WEB` in `lib/roles.js` as their panels move to the API |
+| Web panel login | `/login` | api | `POST /api/public/auth/login`. Super Admin → full panel; every other role → "Member" panel built from its permissions (`lib/roles.js` `PANEL_ACCESS`). A role with no panel permissions gets a "no access yet" notice; Supervisors are pointed to the mobile app |
 | Forgot password | `/forgot-password` | api | `POST /api/public/auth/forgot-password` |
 | Reset password (emailed link) | `/reset-password?token=` | api | `POST /api/public/auth/verify-reset-token`, `POST /api/public/auth/reset-password` |
 | Supervisor login | `/m/login` | mock | `POST /auth/login` (exists) |
@@ -169,8 +189,9 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
 | Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes). Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
-| Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role: "sales"`) with those screens |
+| Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens |
 | Change password | `/account/change-password` | api | `POST /api/admin/account/change-password` (any role). Linked from the key icon next to Sign out in the sidebar footer (API sessions only). Supervisor app (`/m/profile`) still needs its own link when it moves to the API |
+| Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel") |
 | Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |

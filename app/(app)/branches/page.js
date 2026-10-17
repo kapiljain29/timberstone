@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { BRANCH_API, STATUS } from "@/lib/team";
 import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
@@ -39,6 +40,7 @@ export default function BranchesPage() {
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statusToggle = useStatusToggle(BRANCH_API.status, list.reload);
+  const can = useCan();
 
   const items = list.data?.items || [];
   const values = form?.values;
@@ -117,9 +119,11 @@ export default function BranchesPage() {
           <h1 className="wf-h1">Branches</h1>
           <p className="wf-sub">The branches Timberstone works from. Team members get access to the branches they are assigned to.</p>
         </div>
-        <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
-          + Add Branch
-        </button>
+        {can("branches.add") && (
+          <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
+            + Add Branch
+          </button>
+        )}
       </div>
 
       {form && (
@@ -211,17 +215,25 @@ export default function BranchesPage() {
                 b.gst_number || "—",
                 formatPhone(b.phone_country_code, b.phone),
                 b.email || "—",
-                <Link key="m" href={`/team?branch=${b.id}`} className="wf-link-btn">
-                  {b.member_count} active
-                </Link>,
+                can("team.view") ? (
+                  <Link key="m" href={`/team?branch=${b.id}`} className="wf-link-btn">
+                    {b.member_count} active
+                  </Link>
+                ) : (
+                  `${b.member_count} active`
+                ),
                 <StatusBadge key="s" active={b.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
-                  <button type="button" className="wf-link-btn" onClick={() => openForm(b)}>
-                    Edit
-                  </button>
-                  <button type="button" className="wf-link-btn" onClick={() => toggleBranch(b)} disabled={statusToggle.submitting}>
-                    {b.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
-                  </button>
+                  {can("branches.edit") && (
+                    <button type="button" className="wf-link-btn" onClick={() => openForm(b)}>
+                      Edit
+                    </button>
+                  )}
+                  {can("branches.status") && (
+                    <button type="button" className="wf-link-btn" onClick={() => toggleBranch(b)} disabled={statusToggle.submitting}>
+                      {b.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
                 </div>,
               ])}
             />

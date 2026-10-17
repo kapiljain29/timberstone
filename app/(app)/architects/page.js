@@ -17,6 +17,7 @@ import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { ARCHITECT_API, STATUS, toBranchFilterOptions } from "@/lib/team";
 import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
@@ -54,6 +55,7 @@ export default function ArchitectsPage() {
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statusToggle = useStatusToggle(ARCHITECT_API.status, list.reload);
+  const can = useCan();
 
   const items = list.data?.items || [];
   const values = form?.values;
@@ -138,9 +140,11 @@ export default function ArchitectsPage() {
           <h1 className="wf-h1">Architects</h1>
           <p className="wf-sub">Architects who refer projects. Active architects appear in the lead form&apos;s Architect dropdown.</p>
         </div>
-        <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
-          + Add Architect
-        </button>
+        {can("architects.add") && (
+          <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>
+            + Add Architect
+          </button>
+        )}
       </div>
 
       <LoadError error={master.error} onRetry={master.reload} />
@@ -244,12 +248,16 @@ export default function ArchitectsPage() {
                 a.email || "—",
                 <StatusBadge key="s" active={a.status === STATUS.ACTIVE} />,
                 <div key="x" className="wf-btn-row">
-                  <button type="button" className="wf-link-btn" onClick={() => openForm(a)}>
-                    Edit
-                  </button>
-                  <button type="button" className="wf-link-btn" onClick={() => toggleArchitect(a)} disabled={statusToggle.submitting}>
-                    {a.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
-                  </button>
+                  {can("architects.edit") && (
+                    <button type="button" className="wf-link-btn" onClick={() => openForm(a)}>
+                      Edit
+                    </button>
+                  )}
+                  {can("architects.status") && (
+                    <button type="button" className="wf-link-btn" onClick={() => toggleArchitect(a)} disabled={statusToggle.submitting}>
+                      {a.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
                 </div>,
               ])}
             />

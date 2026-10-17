@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NOTIFICATIONS } from "@/lib/data";
+import { refreshProfile } from "@/lib/api";
 import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
 
 function initials(name) {
@@ -54,6 +55,12 @@ const ICONS = {
       <rect x="3" y="14" width="7.5" height="6" rx="1.5" />
       <rect x="13.5" y="14" width="7.5" height="6" rx="1.5" />
       <path d="M12 10v2M6.75 14v-2h10.5v2" />
+    </svg>
+  ),
+  shield: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 5 6v5c0 4.4 3 8.3 7 10 4-1.7 7-5.6 7-10V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
     </svg>
   ),
   key: (
@@ -112,6 +119,7 @@ const NAV = [
       { href: "/branches", label: "Branches", icon: ICONS.branches },
       { href: "/departments", label: "Departments", icon: ICONS.team },
       { href: "/team", label: "Team Members", icon: ICONS.members },
+      { href: "/role-master", label: "Roles & Permissions", icon: ICONS.shield },
       { href: "/architects", label: "Architects", icon: ICONS.architects },
     ],
   },
@@ -142,6 +150,13 @@ export default function AppShell({ children }) {
       )
     : [];
   const allowed = role ? canAccess(role.id, pathname) : false;
+
+  // Signed-in API user: pick up role / permission / branch changes made
+  // since sign-in (menus and buttons follow the refreshed permissions).
+  const fromApi = Boolean(role?.fromApi);
+  useEffect(() => {
+    if (fromApi) refreshProfile().catch(() => {});
+  }, [fromApi]);
 
   // Signed out — send to the login page, then back here after sign-in.
   useEffect(() => {
