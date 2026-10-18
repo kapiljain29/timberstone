@@ -118,6 +118,38 @@ export function CheckboxGroup({ label, options, values = [], onChange, disabled 
   );
 }
 
+// Grid of selectable tiles — for picking several items from a longer list
+// (e.g. a product's colors). options: [{ value, label, hint?, badge? }] —
+// hint = a smaller second line, badge = e.g. <Badge>Inactive</Badge>.
+// values = the ticked `value`s (may include ones not shown, e.g. while
+// searching — they are kept). error: message under the grid.
+export function CheckboxTiles({ options, values = [], onChange, disabled = false, error }) {
+  function toggle(value) {
+    if (disabled) return;
+    onChange?.(values.includes(value) ? values.filter((v) => v !== value) : [...values, value]);
+  }
+  return (
+    <div>
+      <div className="wf-tiles" role="group">
+        {options.map((o) => {
+          const checked = values.includes(o.value);
+          return (
+            <label key={o.value} className={`wf-tile${checked ? " selected" : ""}${disabled ? " disabled" : ""}`}>
+              <input type="checkbox" checked={checked} onChange={() => toggle(o.value)} disabled={disabled} />
+              <span className="wf-tile-text">
+                <span className="wf-tile-label">{o.label}</span>
+                {o.hint && <span className="wf-tile-hint">{o.hint}</span>}
+              </span>
+              {o.badge}
+            </label>
+          );
+        })}
+      </div>
+      <FieldError>{error}</FieldError>
+    </div>
+  );
+}
+
 // Phone input: country code select + national number (digits only).
 // countryCodes = the API's country_codes; code "" shows the default code.
 // Errors: codeError / numberError from ApiError.fieldErrors.

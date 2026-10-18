@@ -83,7 +83,7 @@ export default function ProductsPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Product", "Category", ...PRODUCT_SPECS.map(([, label]) => label), "Status", ""]}
+              columns={["Product", "Category", ...PRODUCT_SPECS.map(([, label]) => label), "Colors", "Status", ""]}
               emptyLabel={filters.active ? "No products match these filters." : "No products yet. Add the first one."}
               rows={items.map((p) => [
                 <strong key="n">{p.product_name}</strong>,
@@ -100,6 +100,7 @@ export default function ProductsPage() {
                     "—"
                   )
                 ),
+                p.color_count ? `${p.color_count} color${p.color_count === 1 ? "" : "s"}` : "—",
                 <StatusBadge key="s" active={p.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
                   {can("products.edit") && (
@@ -107,6 +108,9 @@ export default function ProductsPage() {
                       Edit
                     </Link>
                   )}
+                  <Link href={`/products/colors/${p.id}`} className="wf-link-btn">
+                    {can("products.edit") ? "Colors" : "View colors"}
+                  </Link>
                   {can("products.status") && (
                     <button type="button" className="wf-link-btn" onClick={() => toggleProduct(p)} disabled={statusToggle.submitting}>
                       {p.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
