@@ -1,27 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { LEAD_STATUS_API, STATUS } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
-const STATUS_FILTERS = { all: undefined, active: STATUS.ACTIVE, inactive: STATUS.INACTIVE };
+const FILTERS = { search: "", status: "all" };
 
 export default function LeadStatusesPage() {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { id: null, name } = add; { id, name } = edit
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
   const list = useApiData(LEAD_STATUS_API.list, {
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
-    status: STATUS_FILTERS[statusFilter],
+    status: statusParam(filters.values.status),
   });
   const save = useSubmit();
   const statusToggle = useStatusToggle(LEAD_STATUS_API.status, list);
@@ -50,14 +50,6 @@ export default function LeadStatusesPage() {
       deactivate: "It will be hidden from Lead Status dropdowns, so leads can't be moved to it. Leads already in it keep it. You can activate it again later.",
       activate: "It will appear in Lead Status dropdowns again.",
     });
-  }
-
-  // Any filter change goes back to page 1.
-  function filter(setter) {
-    return (value) => {
-      setter(value);
-      setPage(1);
-    };
   }
 
   return (
@@ -106,26 +98,12 @@ export default function LeadStatusesPage() {
         </form>
       )}
 
-      <Box
-        title={`Lead Statuses (${listTotal(list)})`}
-        right={
-          <div className="wf-btn-row">
-            <input
-              className="wf-input"
-              style={{ width: 220 }}
-              type="search"
-              placeholder="Search lead statuses"
-              value={search}
-              onChange={(e) => filter(setSearch)(e.target.value)}
-            />
-            <select className="wf-select" style={{ width: "auto" }} value={statusFilter} onChange={(e) => filter(setStatusFilter)(e.target.value)}>
-              <option value="all">Any Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="lst-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search lead statuses" />
+        <StatusFilterField id="lst-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Lead Statuses (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading lead statuses…</div>
@@ -135,7 +113,7 @@ export default function LeadStatusesPage() {
               busy={list.loading}
               columns={["Lead Status", "Updated By", "Status", ""]}
               emptyLabel={
-                debouncedSearch || statusFilter !== "all" ? "No lead statuses match these filters." : "No lead statuses yet. Add the first one."
+                filters.active ? "No lead statuses match these filters." : "No lead statuses yet. Add the first one."
               }
               rows={items.map((s) => [
                 <strong key="n">{s.name}</strong>,

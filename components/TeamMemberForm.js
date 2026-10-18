@@ -1,7 +1,7 @@
 "use client";
 
 // Add / edit form for a team member — used by the Add Team Member page
-// (/team/new) and the inline Edit on the Team Members list. Saves through
+// (/team/new) and the Edit Team Member page (/team/edit/[id]). Saves through
 // the API and calls onSaved(member); onCancel() runs after the user
 // confirms discarding unsaved changes.
 
@@ -42,7 +42,7 @@ function fromMember(member) {
 }
 
 /**
- * member   — the member to edit (list row), or null to add one.
+ * member   — the member to edit (/team/details or a list row), or null to add one.
  * defaults — initial values when adding (e.g. { department_id }).
  * master   — the team master ({ departments, branches, roles, users }), null while loading.
  */
@@ -137,7 +137,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
 
   return (
     <form onSubmit={handleSave} noValidate>
-      <Box title={member ? `Edit Team Member — ${member.name}` : "Member Details"}>
+      <Box title="Member Details">
         <div className="wf-grid wf-grid-3">
           {input("name", "Full Name", { required: true, placeholder: "e.g. Karan Mathur", autoFocus: !member })}
           {input("email", "Email", { required: true, type: "email", placeholder: "name@timberstone.in" })}

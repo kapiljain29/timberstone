@@ -1,27 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { CATEGORY_API, STATUS, useCategoryOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { search: "", type: "", status: "all" }; // type: "" = all, "main", "sub"
 const emptyForm = { id: null, category_name: "", parent_id: "", description: "" };
 
 export default function CategoriesPage() {
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState(""); // "" = all, "main", "sub"
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { id: null, ... } = add; { id, ... } = edit
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
   const list = useApiData(CATEGORY_API.list, {
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
-    type: type || undefined,
+    type: filters.values.type || undefined,
+    status: statusParam(filters.values.status),
   });
   const parents = useCategoryOptions();
   const save = useSubmit();
@@ -75,10 +77,6 @@ export default function CategoriesPage() {
     });
   }
 
-  function onFilter(setter, value) {
-    setter(value);
-    setPage(1);
-  }
 
   const parentMissing = form?.parent_id && !parentOptions.some((c) => c.id === form.parent_id);
 
@@ -158,26 +156,20 @@ export default function CategoriesPage() {
         </form>
       )}
 
-      <Box
-        title={`Categories (${listTotal(list)})`}
-        right={
-          <div className="wf-btn-row">
-            <select className="wf-select" style={{ width: 170 }} value={type} onChange={(e) => onFilter(setType, e.target.value)} aria-label="Category type">
-              <option value="">All categories</option>
-              <option value="main">Main categories</option>
-              <option value="sub">Subcategories</option>
-            </select>
-            <input
-              className="wf-input"
-              style={{ width: 220 }}
-              type="search"
-              placeholder="Search categories"
-              value={search}
-              onChange={(e) => onFilter(setSearch, e.target.value)}
-            />
-          </div>
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="cat-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search categories" />
+        <div className="wf-field">
+          <label htmlFor="cat-type">Type</label>
+          <select id="cat-type" className="wf-select" value={filters.values.type} onChange={(e) => filters.set("type", e.target.value)}>
+            <option value="">All categories</option>
+            <option value="main">Main categories</option>
+            <option value="sub">Subcategories</option>
+          </select>
+        </div>
+        <StatusFilterField id="cat-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Categories (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading categories…</div>
@@ -186,7 +178,7 @@ export default function CategoriesPage() {
             <DataTable
               busy={list.loading}
               columns={["Category", "Parent", "Subcategories", "Description", "Status", ""]}
-              emptyLabel={debouncedSearch || type ? "No categories match these filters." : "No categories yet. Add the first one."}
+              emptyLabel={filters.active ? "No categories match these filters." : "No categories yet. Add the first one."}
               rows={items.map((c) => [
                 <strong key="n">{c.category_name}</strong>,
                 c.parent_name || "— Main —",

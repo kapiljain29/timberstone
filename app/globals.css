@@ -3028,6 +3028,44 @@ button {
   background: var(--brand-050);
   color: var(--brand-dark);
 }
+.wf-filter-panel > .wf-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 13px;
+  user-select: none;
+}
+.wf-filter-panel > .wf-filter-summary::-webkit-details-marker {
+  display: none;
+}
+.wf-filter-panel > .wf-filter-summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+.wf-filter-panel:not([open]) > .wf-filter-summary::after {
+  transform: rotate(-90deg);
+}
+.wf-filter-panel[open] > .wf-filter-summary {
+  margin-bottom: 14px;
+}
+.wf-filter-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-050);
+  color: var(--brand-dark);
+}
+.wf-filter-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
 .wf-toasts {
   position: fixed;
   top: 16px;

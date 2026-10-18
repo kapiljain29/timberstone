@@ -79,6 +79,19 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   the field ("Branch code is required") — never prefix the label again
   and never show a bare fragment like "is required".
 
+## List screens: Search & Filters
+
+Every list screen's search and filters sit in one collapsible
+`FilterPanel filters={filters}` (`components/ui.js`) above the table, never
+squeezed into the table box's header. It starts closed, and opens by
+itself only when the screen opens with a filter already set (e.g.
+`?department=`). State comes from `useListFilters(FILTERS)`
+(`lib/useListFilters.js`): any change goes back to page 1, `Reset` returns
+every filter (branch tabs too) to its default, and the panel header shows
+how many are active. Use `SearchField` for text, `StatusFilterField` +
+`statusParam()` for Active / Inactive (every master's list API takes
+`status`), and a labelled `<select>` in a `.wf-field` for the rest.
+
 ## Success and error messages
 
 Every form submit and action (save, activate / deactivate, …) shows the
@@ -200,7 +213,7 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
 | Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes, `lead_managers`). Lead Manager dropdown = `lead_managers` with `all_branches` or this branch in `branch_ids`. Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
-| Team members | `/team`, `/team/new` | api | `POST /api/admin/team/list`, `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add is its own page, `/team/new` (form in `components/TeamMemberForm.js`, shared with the list's inline Edit); `?department=<id>` preselects the department on both pages; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens |
+| Team members | `/team`, `/team/new`, `/team/edit/[id]` | api | `POST /api/admin/team/list` (separate `name` / `email` / `mobile` search in a filters box above the table), `/details` (one member, for the Edit page), `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add and Edit are their own pages, `/team/new` and `/team/edit/[id]` (`team.edit`; form in `components/TeamMemberForm.js`, shared by both); `?department=<id>` preselects the department on the list and on Add; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens |
 | Change password | `/account/change-password` | api | `POST /api/admin/account/change-password` (any role). Linked from the key icon next to Sign out in the sidebar footer (API sessions only). Supervisor app (`/m/profile`) still needs its own link when it moves to the API |
 | Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel"). The form also sets the role's data scope (own / team / all — `data_scopes` from `/roles/master`); session `user.dataScope` carries it |
 | Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |

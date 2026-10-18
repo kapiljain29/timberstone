@@ -206,6 +206,56 @@ export function LoadError({ error, onRetry }) {
   );
 }
 
+// Collapsible "Search & Filters" box above a list's table; the header
+// toggles it. filters = useListFilters() (lib/useListFilters.js): it starts
+// collapsed unless the screen opened with a filter set (e.g. ?department=),
+// the header shows how many filters are set, and Reset clears them.
+// children = the filter fields (SearchField, StatusFilterField, or a
+// select in a .wf-field).
+export function FilterPanel({ filters, children }) {
+  const { active, reset, openAtStart } = filters;
+  return (
+    <details className="wf-box wf-filter-panel" open={openAtStart}>
+      <summary className="wf-filter-summary">
+        <span>Search &amp; Filters</span>
+        {active > 0 && <span className="wf-filter-count">{active} active</span>}
+      </summary>
+      <div className="wf-filter-grid">{children}</div>
+      <div className="wf-actions-end">
+        <button type="button" className="wf-btn" onClick={reset} disabled={!active}>
+          Reset
+        </button>
+      </div>
+    </details>
+  );
+}
+
+// Labelled text search for a FilterPanel. Extra props go to the <input>.
+export function SearchField({ id, label = "Search", value, onChange, ...props }) {
+  return (
+    <div className="wf-field">
+      <label htmlFor={id}>{label}</label>
+      <input id={id} className="wf-input" type="search" value={value} onChange={(e) => onChange(e.target.value)} {...props} />
+    </div>
+  );
+}
+
+// Active / Inactive select for a FilterPanel. value: "all" | "1" | "0"
+// (the API's record status) — statusParam() in lib/useListFilters.js turns
+// it into the list API's `status`.
+export function StatusFilterField({ id, value, onChange }) {
+  return (
+    <div className="wf-field">
+      <label htmlFor={id}>Status</label>
+      <select id={id} className="wf-select" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="all">Any Status</option>
+        <option value="1">Active</option>
+        <option value="0">Inactive</option>
+      </select>
+    </div>
+  );
+}
+
 // Active / Inactive badge for records with status 1 / 0.
 export function StatusBadge({ active }) {
   return <Badge tone={active ? "done" : "idle"}>{active ? "Active" : "Inactive"}</Badge>;

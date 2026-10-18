@@ -6,19 +6,24 @@ import {
   BranchFilter,
   DataTable,
   FieldError,
+  FilterPanel,
   LoadError,
   Pagination,
   PhoneField,
+  SearchField,
   StatusBadge,
+  StatusFilterField,
 } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { ARCHITECT_API, STATUS, toBranchFilterOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { branch: "all", search: "", status: "all" };
 // country_code "" = the list's default code.
 const EMPTY = { architect_name: "", firm_name: "", country_code: "", mobile_number: "", email: "", city: "", branch_id: "" };
 
@@ -35,17 +40,18 @@ function fromArchitect(a) {
 }
 
 export default function ArchitectsPage() {
-  const [branch, setBranch] = useState("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
+  const branch = filters.values.branch;
   const [form, setForm] = useState(null); // null = closed; { architect, initial, values }
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
   const list = useApiData(ARCHITECT_API.list, {
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
     branch_id: branch === "all" ? undefined : branch,
+    status: statusParam(filters.values.status),
   });
   const master = useApiData(ARCHITECT_API.master);
   const branches = master.data?.branches || [];
@@ -202,29 +208,21 @@ export default function ArchitectsPage() {
         <BranchFilter
           branches={toBranchFilterOptions(branches)}
           value={branch}
-          onChange={(value) => {
-            setBranch(value);
-            setPage(1);
-          }}
+          onChange={(value) => filters.set("branch", value)}
         />
       )}
 
-      <Box
-        title={`Architect List (${listTotal(list)})`}
-        right={
-          <input
-            className="wf-input"
-            style={{ width: 240 }}
-            type="search"
-            placeholder="Search name, firm, mobile, city"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField
+          id="arch-search"
+          value={filters.values.search}
+          onChange={(v) => filters.set("search", v)}
+          placeholder="Name, firm, mobile, city"
+        />
+        <StatusFilterField id="arch-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Architect List (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading architects…</div>
@@ -233,7 +231,7 @@ export default function ArchitectsPage() {
             <DataTable
               busy={list.loading}
               columns={["Architect", "Firm", "City", "Branch", "Mobile", "Email", "Status", ""]}
-              emptyLabel={debouncedSearch || branch !== "all" ? "No architects match these filters." : "No architects yet. Add the first one."}
+              emptyLabel={filters.active ? "No architects match these filters." : "No architects yet. Add the first one."}
               rows={items.map((a) => [
                 <strong key="n">Ar. {a.architect_name}</strong>,
                 a.firm_name || "—",

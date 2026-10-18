@@ -1,22 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { LEAD_SOURCE_API, STATUS, useLeadSourceOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { search: "", status: "all" };
 const emptyForm = { id: null, lead_source_name: "", parent_id: "", short_code: "" };
 
 export default function LeadSourcesPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { id: null, ... } = add; { id, ... } = edit
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
-  const list = useApiData(LEAD_SOURCE_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const list = useApiData(LEAD_SOURCE_API.list, {
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    status: statusParam(filters.values.status),
+  });
   const parents = useLeadSourceOptions();
   const save = useSubmit();
   const statusToggle = useStatusToggle(LEAD_SOURCE_API.status, list, parents.reload);
@@ -146,22 +153,12 @@ export default function LeadSourcesPage() {
         </form>
       )}
 
-      <Box
-        title={`Lead Sources (${listTotal(list)})`}
-        right={
-          <input
-            className="wf-input"
-            style={{ width: 220 }}
-            type="search"
-            placeholder="Search lead sources"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="ls-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search lead sources" />
+        <StatusFilterField id="ls-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Lead Sources (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading lead sources…</div>
@@ -170,7 +167,7 @@ export default function LeadSourcesPage() {
             <DataTable
               busy={list.loading}
               columns={["Lead Source", "Parent", "Short Code", "Sub-sources", "Status", ""]}
-              emptyLabel={debouncedSearch ? "No lead sources match this search." : "No lead sources yet. Add the first one."}
+              emptyLabel={filters.active ? "No lead sources match these filters." : "No lead sources yet. Add the first one."}
               rows={items.map((s) => [
                 <strong key="n">{s.lead_source_name}</strong>,
                 s.parent_name || "— Main —",

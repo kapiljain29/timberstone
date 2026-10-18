@@ -2,22 +2,29 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { DEPARTMENT_API, STATUS, useTeamMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { search: "", status: "all" };
 const emptyForm = { id: null, department_name: "", head_id: "", description: "" };
 
 export default function DepartmentsPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { id: null, ... } = add; { id, ... } = edit
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
-  const list = useApiData(DEPARTMENT_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const list = useApiData(DEPARTMENT_API.list, {
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    status: statusParam(filters.values.status),
+  });
   const { master, error: masterError } = useTeamMaster();
   const save = useSubmit();
   const statusToggle = useStatusToggle(DEPARTMENT_API.status, list);
@@ -62,10 +69,6 @@ export default function DepartmentsPage() {
     });
   }
 
-  function onSearch(value) {
-    setSearch(value);
-    setPage(1);
-  }
 
   return (
     <div>
@@ -142,19 +145,12 @@ export default function DepartmentsPage() {
         </form>
       )}
 
-      <Box
-        title={`Departments (${listTotal(list)})`}
-        right={
-          <input
-            className="wf-input"
-            style={{ width: 220 }}
-            type="search"
-            placeholder="Search departments"
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-          />
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="dept-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search departments" />
+        <StatusFilterField id="dept-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Departments (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading departments…</div>
@@ -163,7 +159,7 @@ export default function DepartmentsPage() {
             <DataTable
               busy={list.loading}
               columns={["Department", "Head", "Members", "Responsibilities", "Status", ""]}
-              emptyLabel={debouncedSearch ? "No departments match this search." : "No departments yet. Add the first one."}
+              emptyLabel={filters.active ? "No departments match these filters." : "No departments yet. Add the first one."}
               rows={items.map((d) => [
                 <strong key="n">{d.department_name}</strong>,
                 d.head_name || "—",

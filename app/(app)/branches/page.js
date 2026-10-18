@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Alert, Box, DataTable, FieldError, LoadError, Pagination, PhoneField, StatusBadge } from "@/components/ui";
+import { Alert, Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, PhoneField, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { BRANCH_API, STATUS } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { search: "", status: "all" };
 // phone_country_code "" = the list's default code.
 const EMPTY = { code: "", name: "", city: "", phone_country_code: "", phone: "", email: "", gst_number: "", lead_manager_id: "", address: "" };
 
@@ -29,12 +31,17 @@ function fromBranch(b) {
 }
 
 export default function BranchesPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { branch, initial, values }
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
-  const list = useApiData(BRANCH_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const list = useApiData(BRANCH_API.list, {
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    status: statusParam(filters.values.status),
+  });
   const master = useApiData(BRANCH_API.master);
   const countryCodes = master.data?.country_codes || [];
   const leadManagers = master.data?.lead_managers || [];
@@ -212,22 +219,12 @@ export default function BranchesPage() {
         </form>
       )}
 
-      <Box
-        title={`Branches (${listTotal(list)})`}
-        right={
-          <input
-            className="wf-input"
-            style={{ width: 220 }}
-            type="search"
-            placeholder="Search name, code, city"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="branch-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search name, code, city" />
+        <StatusFilterField id="branch-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Branches (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading branches…</div>
@@ -236,7 +233,7 @@ export default function BranchesPage() {
             <DataTable
               busy={list.loading}
               columns={["Branch", "Code", "City", "GST No.", "Phone", "Email", "Lead Manager", "Members", "Status", ""]}
-              emptyLabel={debouncedSearch ? "No branches match this search." : "No branches yet. Add the first one."}
+              emptyLabel={filters.active ? "No branches match these filters." : "No branches yet. Add the first one."}
               rows={items.map((b) => [
                 <strong key="n">{b.name}</strong>,
                 b.code,

@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge } from "@/components/ui";
-import TeamMemberForm from "@/components/TeamMemberForm";
+import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { branch: "all", name: "", email: "", mobile: "", department: "all", role: "all", status: "all" };
 
 // ?department=<id> / ?branch=<id> preselect the department / branch filter
 // (links from the Departments and Branches pages, and back from Add Team
@@ -26,24 +27,27 @@ export default function TeamPage() {
 
 function TeamMembers() {
   const params = useSearchParams();
-  const [branch, setBranch] = useState(() => params.get("branch") || "all");
-  const [deptFilter, setDeptFilter] = useState(() => params.get("department") || "all");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState(null); // member being edited inline, or null
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const filters = useListFilters(FILTERS, {
+    ...(params.get("branch") && { branch: params.get("branch") }),
+    ...(params.get("department") && { department: params.get("department") }),
+  });
+  const { page, setPage } = filters;
+  const { branch, department: deptFilter } = filters.values;
+  const name = useDebouncedValue(filters.values.name.trim());
+  const email = useDebouncedValue(filters.values.email.trim());
+  const mobile = useDebouncedValue(filters.values.mobile);
 
   const { master, error: masterError, reload: reloadMaster } = useTeamMaster();
   const list = useApiData(TEAM_API.list, {
     page,
     limit: PAGE_SIZE,
-    search: debouncedSearch || undefined,
+    name: name || undefined,
+    email: email || undefined,
+    mobile: mobile || undefined,
     branch_id: branch === "all" ? undefined : branch,
     department_id: deptFilter === "all" ? undefined : deptFilter,
-    role_id: roleFilter === "all" ? undefined : roleFilter,
-    status: statusFilter === "all" ? undefined : Number(statusFilter),
+    role_id: filters.values.role === "all" ? undefined : filters.values.role,
+    status: statusParam(filters.values.status),
   });
   const can = useCan();
   // Also reload the master: Department Head / Reporting Manager lists show active members only.
@@ -53,19 +57,6 @@ function TeamMembers() {
   const roles = master?.roles || [];
   const addHref = deptFilter === "all" ? "/team/new" : `/team/new?department=${encodeURIComponent(deptFilter)}`;
 
-  // Any filter change goes back to page 1.
-  function filter(setter) {
-    return (value) => {
-      setter(value);
-      setPage(1);
-    };
-  }
-
-  function onEdited() {
-    setEditing(null);
-    list.reload();
-    reloadMaster(); // Department Head list includes members
-  }
 
   function toggleMember(m) {
     statusToggle.run(m, {
@@ -94,50 +85,54 @@ function TeamMembers() {
 
       <LoadError error={masterError} onRetry={reloadMaster} />
 
-      {editing && (
-        <TeamMemberForm key={editing.id} member={editing} master={master} onSaved={onEdited} onCancel={() => setEditing(null)} />
-      )}
 
       {master && master.branches.length > 0 && (
-        <BranchFilter branches={toBranchFilterOptions(master.branches)} value={branch} onChange={filter(setBranch)} />
+        <BranchFilter branches={toBranchFilterOptions(master.branches)} value={branch} onChange={(value) => filters.set("branch", value)} />
       )}
 
-      <Box
-        title={`Team Members (${listTotal(list)})`}
-        right={
-          <div className="wf-btn-row">
-            <input
-              className="wf-input"
-              style={{ width: 200 }}
-              type="search"
-              placeholder="Search name, email, mobile"
-              value={search}
-              onChange={(e) => filter(setSearch)(e.target.value)}
-            />
-            <select className="wf-select" style={{ width: "auto" }} value={deptFilter} onChange={(e) => filter(setDeptFilter)(e.target.value)}>
-              <option value="all">All Departments</option>
-              {(master?.departments || []).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.department_name}
-                </option>
-              ))}
-            </select>
-            <select className="wf-select" style={{ width: "auto" }} value={roleFilter} onChange={(e) => filter(setRoleFilter)(e.target.value)}>
-              <option value="all">All Roles</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.role_name}
-                </option>
-              ))}
-            </select>
-            <select className="wf-select" style={{ width: "auto" }} value={statusFilter} onChange={(e) => filter(setStatusFilter)(e.target.value)}>
-              <option value="all">Any Status</option>
-              <option value={STATUS.ACTIVE}>Active</option>
-              <option value={STATUS.INACTIVE}>Inactive</option>
-            </select>
-          </div>
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="team-search-name" label="Name" value={filters.values.name} onChange={(v) => filters.set("name", v)} placeholder="e.g. Karan" />
+        <SearchField
+          id="team-search-email"
+          label="Email"
+          value={filters.values.email}
+          onChange={(v) => filters.set("email", v)}
+          placeholder="e.g. karan@timberstone.in"
+        />
+        <SearchField
+          id="team-search-mobile"
+          label="Mobile"
+          inputMode="numeric"
+          value={filters.values.mobile}
+          onChange={(v) => filters.set("mobile", v.replace(/\D/g, ""))}
+          placeholder="Any part of the number"
+        />
+        <div className="wf-field">
+          <label htmlFor="team-filter-dept">Department</label>
+          <select id="team-filter-dept" className="wf-select" value={deptFilter} onChange={(e) => filters.set("department", e.target.value)}>
+            <option value="all">All Departments</option>
+            {(master?.departments || []).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.department_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="wf-field">
+          <label htmlFor="team-filter-role">Role</label>
+          <select id="team-filter-role" className="wf-select" value={filters.values.role} onChange={(e) => filters.set("role", e.target.value)}>
+            <option value="all">All Roles</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.role_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <StatusFilterField id="team-filter-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Team Members (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading team members…</div>
@@ -159,9 +154,9 @@ function TeamMembers() {
                 <StatusBadge key="s" active={m.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
                   {can("team.edit") && (
-                    <button type="button" className="wf-link-btn" onClick={() => setEditing(m)}>
+                    <Link href={`/team/edit/${m.id}`} className="wf-link-btn">
                       Edit
-                    </button>
+                    </Link>
                   )}
                   {can("team.status") && (
                     <button type="button" className="wf-link-btn" onClick={() => toggleMember(m)} disabled={statusToggle.submitting}>

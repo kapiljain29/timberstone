@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Badge, Box, DataTable, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ROLE_API, STATUS } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
+const FILTERS = { search: "", status: "all" };
 // data_scope "" = the API default for new roles (own).
 const EMPTY = { role_name: "", description: "", all_branches: false, data_scope: "", permissions: [] };
 const VIEW = "view";
@@ -121,12 +123,17 @@ function PermissionMatrix({ modules, permissions, onChange, disabled = false }) 
 }
 
 export default function RoleMasterPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const filters = useListFilters(FILTERS);
+  const { page, setPage } = filters;
   const [form, setForm] = useState(null); // null = closed; { role, initial, values }
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
-  const list = useApiData(ROLE_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
+  const list = useApiData(ROLE_API.list, {
+    page,
+    limit: PAGE_SIZE,
+    search: debouncedSearch || undefined,
+    status: statusParam(filters.values.status),
+  });
   const master = useApiData(ROLE_API.master);
   const modules = master.data?.modules || [];
   const dataScopes = master.data?.data_scopes || [];
@@ -311,22 +318,12 @@ export default function RoleMasterPage() {
         </form>
       )}
 
-      <Box
-        title={`Roles (${listTotal(list)})`}
-        right={
-          <input
-            className="wf-input"
-            style={{ width: 220 }}
-            type="search"
-            placeholder="Search roles"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        }
-      >
+      <FilterPanel filters={filters}>
+        <SearchField id="role-search" value={filters.values.search} onChange={(v) => filters.set("search", v)} placeholder="Search roles" />
+        <StatusFilterField id="role-status" value={filters.values.status} onChange={(v) => filters.set("status", v)} />
+      </FilterPanel>
+
+      <Box title={`Roles (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading roles…</div>
@@ -335,7 +332,7 @@ export default function RoleMasterPage() {
             <DataTable
               busy={list.loading}
               columns={["Role", "Description", "Branches", "Records", "Access", "Members", "Status", ""]}
-              emptyLabel={debouncedSearch ? "No roles match this search." : "No roles yet."}
+              emptyLabel={filters.active ? "No roles match these filters." : "No roles yet."}
               rows={items.map((r) => [
                 <span key="n">
                   <strong>{r.role_name}</strong>
