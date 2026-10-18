@@ -5,7 +5,7 @@ import { Alert, Badge, Box, DataTable, FieldError, LoadError, Pagination, Status
 import { useConfirm } from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { ROLE_API, STATUS } from "@/lib/team";
-import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
@@ -134,7 +134,7 @@ export default function RoleMasterPage() {
   const scopeLabel = (value) => dataScopes.find((d) => d.value === value)?.label || value;
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
-  const statusToggle = useStatusToggle(ROLE_API.status, list.reload);
+  const statusToggle = useStatusToggle(ROLE_API.status, list);
   const can = useCan();
 
   const items = list.data?.items || [];
@@ -316,7 +316,7 @@ export default function RoleMasterPage() {
       )}
 
       <Box
-        title={`Roles (${list.data?.pagination.total ?? "…"})`}
+        title={`Roles (${listTotal(list)})`}
         right={
           <input
             className="wf-input"
@@ -338,6 +338,7 @@ export default function RoleMasterPage() {
         ) : (
           !list.error && (
             <DataTable
+              busy={list.loading}
               columns={["Role", "Description", "Branches", "Records", "Access", "Members", "Status", ""]}
               emptyLabel={debouncedSearch ? "No roles match this search." : "No roles yet."}
               rows={items.map((r) => [

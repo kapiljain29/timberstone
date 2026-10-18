@@ -7,7 +7,7 @@ import { Alert, Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge
 import TeamMemberForm from "@/components/TeamMemberForm";
 import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
-import { useApiData, useDebouncedValue } from "@/lib/useApi";
+import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
@@ -46,10 +46,8 @@ function TeamMembers() {
     status: statusFilter === "all" ? undefined : Number(statusFilter),
   });
   const can = useCan();
-  const statusToggle = useStatusToggle(TEAM_API.status, () => {
-    list.reload();
-    reloadMaster(); // Department Head / Reporting Manager lists show active members only
-  });
+  // Also reload the master: Department Head / Reporting Manager lists show active members only.
+  const statusToggle = useStatusToggle(TEAM_API.status, list, reloadMaster);
 
   const items = list.data?.items || [];
   const roles = master?.roles || [];
@@ -105,7 +103,7 @@ function TeamMembers() {
       )}
 
       <Box
-        title={`Team Members (${list.data?.pagination.total ?? "…"})`}
+        title={`Team Members (${listTotal(list)})`}
         right={
           <div className="wf-btn-row">
             <input
@@ -147,6 +145,7 @@ function TeamMembers() {
         ) : (
           !list.error && (
             <DataTable
+              busy={list.loading}
               columns={["Name", "Role", "Department", "Designation", "Reports To", "Branches", "Mobile", "Email", "Status", ""]}
               emptyLabel="No team members match these filters."
               rows={items.map((m) => [

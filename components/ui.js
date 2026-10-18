@@ -36,12 +36,14 @@ export function UploadBox({ label }) {
   );
 }
 
-export function DataTable({ columns, rows, emptyLabel = "No records yet." }) {
+// busy: rows are being reloaded (filters changed or after a save) — they
+// are dimmed and can't be clicked until the new rows arrive.
+export function DataTable({ columns, rows, emptyLabel = "No records yet.", busy = false }) {
   if (!rows || rows.length === 0) {
-    return <div className="wf-empty">{emptyLabel}</div>;
+    return <div className="wf-empty">{busy ? "Loading…" : emptyLabel}</div>;
   }
   return (
-    <div className="wf-table-wrap">
+    <div className={`wf-table-wrap${busy ? " busy" : ""}`} aria-busy={busy || undefined}>
       <table className="wf-table">
         <thead>
           <tr>

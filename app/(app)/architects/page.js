@@ -16,7 +16,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { ARCHITECT_API, STATUS, toBranchFilterOptions } from "@/lib/team";
-import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
@@ -54,7 +54,7 @@ export default function ArchitectsPage() {
   const countryCodes = master.data?.country_codes || [];
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
-  const statusToggle = useStatusToggle(ARCHITECT_API.status, list.reload);
+  const statusToggle = useStatusToggle(ARCHITECT_API.status, list);
   const can = useCan();
 
   const items = list.data?.items || [];
@@ -215,7 +215,7 @@ export default function ArchitectsPage() {
       )}
 
       <Box
-        title={`Architect List (${list.data?.pagination.total ?? "…"})`}
+        title={`Architect List (${listTotal(list)})`}
         right={
           <input
             className="wf-input"
@@ -237,6 +237,7 @@ export default function ArchitectsPage() {
         ) : (
           !list.error && (
             <DataTable
+              busy={list.loading}
               columns={["Architect", "Firm", "City", "Branch", "Mobile", "Email", "Status", ""]}
               emptyLabel={debouncedSearch || branch !== "all" ? "No architects match these filters." : "No architects yet. Add the first one."}
               rows={items.map((a) => [

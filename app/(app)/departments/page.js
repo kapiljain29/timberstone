@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import { api } from "@/lib/api";
 import { DEPARTMENT_API, STATUS, useTeamMaster } from "@/lib/team";
-import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
@@ -21,7 +21,7 @@ export default function DepartmentsPage() {
   const list = useApiData(DEPARTMENT_API.list, { page, limit: PAGE_SIZE, search: debouncedSearch || undefined });
   const { master, error: masterError } = useTeamMaster();
   const save = useSubmit();
-  const statusToggle = useStatusToggle(DEPARTMENT_API.status, list.reload);
+  const statusToggle = useStatusToggle(DEPARTMENT_API.status, list);
   const can = useCan();
 
   const items = list.data?.items || [];
@@ -147,7 +147,7 @@ export default function DepartmentsPage() {
       )}
 
       <Box
-        title={`Departments (${list.data?.pagination.total ?? "…"})`}
+        title={`Departments (${listTotal(list)})`}
         right={
           <input
             className="wf-input"
@@ -166,6 +166,7 @@ export default function DepartmentsPage() {
         ) : (
           !list.error && (
             <DataTable
+              busy={list.loading}
               columns={["Department", "Head", "Members", "Responsibilities", "Status", ""]}
               emptyLabel={debouncedSearch ? "No departments match this search." : "No departments yet. Add the first one."}
               rows={items.map((d) => [

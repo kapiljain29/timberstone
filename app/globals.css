@@ -754,6 +754,12 @@ button {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
+  transition: opacity 0.15s;
+}
+
+.wf-table-wrap.busy {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .wf-table {

@@ -87,6 +87,17 @@ const ICONS = {
       <circle cx="12" cy="3.5" r="1" />
     </svg>
   ),
+  categories: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-6.3 6.3a1.5 1.5 0 0 1-2.1 0Z" />
+      <circle cx="8" cy="8" r="1.5" />
+    </svg>
+  ),
+  leadSources: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 4h18l-7 8.5V19l-4 1.5v-8L3 4Z" />
+    </svg>
+  ),
   roles: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="6" cy="6" r="2.5" />
@@ -121,6 +132,13 @@ const NAV = [
       { href: "/team", label: "Team Members", icon: ICONS.members },
       { href: "/role-master", label: "Roles & Permissions", icon: ICONS.shield },
       { href: "/architects", label: "Architects", icon: ICONS.architects },
+    ],
+  },
+  {
+    group: "Masters",
+    links: [
+      { href: "/categories", label: "Categories", icon: ICONS.categories },
+      { href: "/lead-sources", label: "Lead Sources", icon: ICONS.leadSources },
     ],
   },
   {

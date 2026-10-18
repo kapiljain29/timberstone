@@ -7,7 +7,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { BRANCH_API, STATUS } from "@/lib/team";
-import { useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
@@ -41,7 +41,7 @@ export default function BranchesPage() {
   const leadManagers = master.data?.lead_managers || [];
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
-  const statusToggle = useStatusToggle(BRANCH_API.status, list.reload);
+  const statusToggle = useStatusToggle(BRANCH_API.status, list);
   const can = useCan();
 
   const items = list.data?.items || [];
@@ -217,7 +217,7 @@ export default function BranchesPage() {
       )}
 
       <Box
-        title={`Branches (${list.data?.pagination.total ?? "…"})`}
+        title={`Branches (${listTotal(list)})`}
         right={
           <input
             className="wf-input"
@@ -239,6 +239,7 @@ export default function BranchesPage() {
         ) : (
           !list.error && (
             <DataTable
+              busy={list.loading}
               columns={["Branch", "Code", "City", "GST No.", "Phone", "Email", "Lead Manager", "Members", "Status", ""]}
               emptyLabel={debouncedSearch ? "No branches match this search." : "No branches yet. Add the first one."}
               rows={items.map((b) => [
