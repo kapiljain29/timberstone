@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { formatPhone } from "@/lib/phone";
-import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
+import { STATUS, TEAM_API, useBranchTabs, useTeamMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
@@ -38,13 +38,14 @@ function TeamMembers() {
   const mobile = useDebouncedValue(filters.values.mobile);
 
   const { master, error: masterError, reload: reloadMaster } = useTeamMaster();
+  const branchTabs = useBranchTabs();
   const list = useApiData(TEAM_API.list, {
     page,
     limit: PAGE_SIZE,
     name: name || undefined,
     email: email || undefined,
     mobile: mobile || undefined,
-    branch_id: branch === "all" ? undefined : branch,
+    ...branchTabs.params(branch),
     department_id: deptFilter === "all" ? undefined : deptFilter,
     role_id: filters.values.role === "all" ? undefined : filters.values.role,
     status: statusParam(filters.values.status),
@@ -86,8 +87,13 @@ function TeamMembers() {
       <LoadError error={masterError} onRetry={reloadMaster} />
 
 
-      {master && master.branches.length > 0 && (
-        <BranchFilter branches={toBranchFilterOptions(master.branches)} value={branch} onChange={(value) => filters.set("branch", value)} />
+      {branchTabs.show && (
+        <BranchFilter
+          branches={branchTabs.options}
+          allLabel={branchTabs.allLabel}
+          value={branch}
+          onChange={(value) => filters.set("branch", value)}
+        />
       )}
 
       <FilterPanel filters={filters}>

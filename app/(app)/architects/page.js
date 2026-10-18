@@ -16,7 +16,7 @@ import {
 } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
-import { ARCHITECT_API, STATUS, toBranchFilterOptions } from "@/lib/team";
+import { ARCHITECT_API, STATUS, useBranchTabs } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
@@ -45,12 +45,13 @@ export default function ArchitectsPage() {
   const branch = filters.values.branch;
   const [form, setForm] = useState(null); // null = closed; { architect, initial, values }
   const debouncedSearch = useDebouncedValue(filters.values.search.trim());
+  const branchTabs = useBranchTabs();
 
   const list = useApiData(ARCHITECT_API.list, {
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
-    branch_id: branch === "all" ? undefined : branch,
+    ...branchTabs.params(branch),
     status: statusParam(filters.values.status),
   });
   const master = useApiData(ARCHITECT_API.master);
@@ -204,9 +205,10 @@ export default function ArchitectsPage() {
         </form>
       )}
 
-      {branches.length > 0 && (
+      {branchTabs.show && (
         <BranchFilter
-          branches={toBranchFilterOptions(branches)}
+          branches={branchTabs.options}
+          allLabel={branchTabs.allLabel}
           value={branch}
           onChange={(value) => filters.set("branch", value)}
         />

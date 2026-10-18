@@ -3243,7 +3243,8 @@ button {
   color: var(--faint);
   font-size: 12px;
 }
-.wf-perm-branches {
+/* A single checkbox with a sentence beside it (e.g. Team form "All branches"). */
+.wf-check-option {
   display: flex;
   align-items: flex-start;
   gap: 8px;

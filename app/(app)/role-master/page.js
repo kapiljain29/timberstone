@@ -12,14 +12,13 @@ import { useStatusToggle } from "@/lib/useStatusToggle";
 const PAGE_SIZE = 20;
 const FILTERS = { search: "", status: "all" };
 // data_scope "" = the API default for new roles (own).
-const EMPTY = { role_name: "", description: "", all_branches: false, data_scope: "", permissions: [] };
+const EMPTY = { role_name: "", description: "", data_scope: "", permissions: [] };
 const VIEW = "view";
 
 function fromRole(r) {
   return {
     role_name: r.role_name,
     description: r.description || "",
-    all_branches: r.all_branches,
     data_scope: r.data_scope,
     permissions: [...r.permissions],
   };
@@ -259,17 +258,6 @@ export default function RoleMasterPage() {
                 <FieldError>{save.fieldErrors.description}</FieldError>
               </div>
             </div>
-            <label className="wf-perm-branches">
-              <input
-                type="checkbox"
-                checked={values.all_branches}
-                onChange={(e) => set("all_branches", e.target.checked)}
-                disabled={save.submitting}
-              />
-              <span>
-                <strong>All branches</strong> — members see every branch and need no branch assignment.
-              </span>
-            </label>
             <div className="wf-field" style={{ marginBottom: 16 }}>
               <label>Records they see</label>
               <div className="wf-scope-options" role="radiogroup" aria-label="Records they see">
@@ -331,7 +319,7 @@ export default function RoleMasterPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Role", "Description", "Branches", "Records", "Access", "Members", "Status", ""]}
+              columns={["Role", "Description", "Records", "Access", "Members", "Status", ""]}
               emptyLabel={filters.active ? "No roles match these filters." : "No roles yet."}
               rows={items.map((r) => [
                 <span key="n">
@@ -344,7 +332,6 @@ export default function RoleMasterPage() {
                   )}
                 </span>,
                 r.description || "—",
-                r.all_branches ? "All branches" : "Assigned",
                 scopeLabel(r.data_scope),
                 <span key="p">{accessSummary(r)}</span>,
                 r.user_count,

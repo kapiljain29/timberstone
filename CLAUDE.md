@@ -72,7 +72,7 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   — `app/globals.css` adds the red `*` to the label. For a group (e.g.
   `CheckboxGroup`) pass `required`. Mark only fields the API really
   requires, and update the marker when that depends on another field
-  (e.g. Branches is not shown for all-branch roles). Forms keep
+  (e.g. Branches is not shown when "All branches" is ticked). Forms keep
   `noValidate`, so the API does the checking and its messages are shown.
 - **Spacing comes from the CSS:** fields in a `.wf-grid` row are spaced by
   its gap, and rows, full-width fields, `Alert` banners, `Annotation`s and
@@ -158,6 +158,24 @@ Permissions master), never from role names.
   /api/admin/account/me`) on load, so permission changes show without
   signing in again. Super Admin always has every permission.
 
+## Branch access and branch tabs
+
+Branch access is set **per member** on the Team form (not by the role):
+"All branches" (every branch, incl. ones added later) or ticked branches.
+Super Admins always have every branch. The signed-in user's access is in
+the session — `useMyBranches()` (`lib/roles.js`) → `{ allBranches,
+branches }`, refreshed on every page load.
+
+- **Branch tabs** (`BranchFilter`) on a list screen show only the user's
+  own branches: use `useBranchTabs()` (`lib/team.js`) — never the
+  `/master` list of all branches. Spread `tabs.params(value)` into the
+  list request: the "all" tab is every branch for all-branch members and
+  "All My Branches" (`branch_ids`) for everyone else. Show the bar only
+  when `tabs.show` (more than one branch).
+- **Granting access** (Team form): only all-branch editors see the "All
+  branches" checkbox, and others are offered only their own branches — the
+  API refuses anything more (403).
+
 ## Phone numbers
 
 Every phone / mobile field is a country code + national number, entered
@@ -239,10 +257,10 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Project stage form | `/projects/[id]/stage/[slug]` | mock | |
 | Branches | `/branches` | api | `POST /api/admin/branches/list`, `/create`, `/update`, `/status`, `/master` (country codes, `lead_managers`). Lead Manager dropdown = `lead_managers` with `all_branches` or this branch in `branch_ids`. Optional GST number (GSTIN format, not unique). Members link opens `/team?branch=<id>` |
 | Departments | `/departments` | api | `POST /api/admin/departments/list`, `/create`, `/update`, `/status`; head dropdown from `POST /api/admin/team/master` (`users`) |
-| Team members | `/team`, `/team/new`, `/team/edit/[id]` | api | `POST /api/admin/team/list` (separate `name` / `email` / `mobile` search in a filters box above the table), `/details` (one member, for the Edit page), `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add and Edit are their own pages, `/team/new` and `/team/edit/[id]` (`team.edit`; form in `components/TeamMemberForm.js`, shared by both); `?department=<id>` preselects the department on the list and on Add; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens |
+| Team members | `/team`, `/team/new`, `/team/edit/[id]` | api | `POST /api/admin/team/list` (separate `name` / `email` / `mobile` search in a filters box above the table), `/details` (one member, for the Edit page), `/create`, `/update`, `/status`, `/master` (departments, branches, roles, users — `users` also feeds the optional Reporting Manager dropdown). Add and Edit are their own pages, `/team/new` and `/team/edit/[id]` (`team.edit`; form in `components/TeamMemberForm.js`, shared by both); `?department=<id>` preselects the department on the list and on Add; `?branch=<id>` preselects the list's branch filter. Lead form / Call Queue "Sales Reps" still read mock team via `getSalesReps()` in `lib/store.js` — move them to `/api/admin/team/list` (`role_id` of the Sales role) with those screens. Branch access per member: "All branches" checkbox (all-branch editors only) or ticked branches (others are offered only their own); changing it signs the member out (confirmed first). Branch tabs = `useBranchTabs()` |
 | Change password | `/account/change-password` | api | `POST /api/admin/account/change-password` (any role). Linked from the key icon next to Sign out in the sidebar footer (API sessions only). Supervisor app (`/m/profile`) still needs its own link when it moves to the API |
-| Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel"). The form also sets the role's data scope (own / team / all — `data_scopes` from `/roles/master`); session `user.dataScope` carries it |
-| Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |
+| Roles & Permissions | `/role-master` | api | `POST /api/admin/roles/list`, `/create`, `/update`, `/status`, `/master` (permission modules). Menus, page access and buttons follow `user.permissions` (see "Permissions drive the panel"). The form also sets the role's data scope (own / team / all — `data_scopes` from `/roles/master`); session `user.dataScope` carries it. Roles no longer carry branch access (moved to the member) |
+| Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()`. Branch tabs = `useBranchTabs()` (the user's branches; "All My Branches" also lists architects with no branch) |
 | Categories | `/categories` | api | `POST /api/admin/categories/list` (search, `type` main/sub), `/create`, `/update`, `/status`; Parent Category dropdown from `/categories/master` (active main categories, `useCategoryOptions()` in `lib/team.js`) |
 | Lead Sources | `/lead-sources` | api | `POST /api/admin/lead-sources/list` (search, flat main + sub), `/create`, `/update`, `/status`; Parent Lead Source dropdown from `/lead-sources/master` (`useLeadSourceOptions()` in `lib/team.js` — the New Lead form should use the same hook when it moves to the API) |
 | Lead Statuses | `/lead-statuses` | api | `POST /api/admin/lead-statuses/list` (search, `status`), `/create`, `/update` (name only), `/status`. `/lead-statuses/master` (active `{ id, name }`) is for the lead form / lead detail status dropdowns when they move to the API — they still read mock `LEAD_STATUSES` |

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Alert, Box, CheckboxGroup, FieldError, PhoneField } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { defaultCountryCode, phonePlaceholder } from "@/lib/phone";
+import { SUPER_ADMIN_SLUG, useMyBranches } from "@/lib/roles";
 import { TEAM_API } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
@@ -21,6 +22,7 @@ const EMPTY = {
   department_id: "",
   designation: "",
   reporting_manager_id: "",
+  all_branches: false,
   branch_ids: [],
   password: "",
 };
@@ -37,6 +39,7 @@ function fromMember(member) {
     department_id: member.department_id || "",
     designation: member.designation || "",
     reporting_manager_id: member.reporting_manager_id || "",
+    all_branches: member.all_branches,
     branch_ids: member.branches.map((b) => b.id),
   };
 }
@@ -57,6 +60,19 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
   const countryCode = form.country_code || defaultCountryCode(countryCodes);
   const formRole = roles.find((r) => r.id === form.role_id);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+
+  // Branch access is per member. Super Admins always have every branch.
+  // Nobody grants more than they have (the API refuses it too): only
+  // all-branch editors may tick "All branches" (or keep it on a member who
+  // has it), and others are offered only their own branches — plus the
+  // member's current ones, which they keep.
+  const me = useMyBranches();
+  const superAdminRole = formRole?.slug === SUPER_ADMIN_SLUG;
+  const allBranches = superAdminRole || form.all_branches;
+  const canGiveAllBranches = me.allBranches || Boolean(member?.all_branches);
+  const branchOptions = (master?.branches || []).filter(
+    (b) => me.allBranches || me.branches.some((mine) => mine.id === b.id) || initial.branch_ids.includes(b.id)
+  );
 
   // Reporting Manager options: active members except this one. A current
   // manager who has since been deactivated stays listed so saving keeps them.
@@ -92,19 +108,22 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
       country_code: countryCode,
       department_id: fields.department_id || null,
       reporting_manager_id: fields.reporting_manager_id || null,
-      branch_ids: formRole?.all_branches ? [] : fields.branch_ids,
+      all_branches: allBranches,
+      branch_ids: allBranches ? [] : fields.branch_ids,
     };
 
     if (member) {
-      // The API signs the member out everywhere when their role changes or
-      // a branch is removed — confirm first.
+      // The API signs the member out everywhere when their role or branch
+      // access changes (all branches on / off, a branch removed) — confirm
+      // first.
       const roleChanged = member.role_id !== body.role_id;
-      const branchRemoved = member.branches.some((b) => !body.branch_ids.includes(b.id));
+      const accessChanged =
+        member.all_branches !== body.all_branches || member.branches.some((b) => !body.branch_ids.includes(b.id));
       if (
-        (roleChanged || branchRemoved) &&
+        (roleChanged || accessChanged) &&
         !(await confirm({
           title: `Sign ${body.name || "this member"} out everywhere?`,
-          message: `${roleChanged ? `Changing their role to ${formRole?.role_name || "another role"}` : "Removing a branch"} signs them out on all devices. They'll need to sign in again to continue.`,
+          message: `${roleChanged ? `Changing their role to ${formRole?.role_name || "another role"}` : "Changing their branch access"} signs them out on all devices. They'll need to sign in again to continue.`,
           confirmLabel: "Save and sign out",
           tone: "primary",
         }))
@@ -219,23 +238,41 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
             })}
         </div>
         <div style={{ margin: "16px 0" }}>
-          {formRole?.all_branches ? (
-            <Alert tone="info">{formRole.label} can see every branch — no branch selection needed.</Alert>
+          {superAdminRole ? (
+            <Alert tone="info">Super Admins always have access to every branch.</Alert>
           ) : (
-            <CheckboxGroup
-              label="Branches"
-              required
-              options={(master?.branches || []).map((b) => ({ value: b.id, label: `${b.name} (${b.code})` }))}
-              values={form.branch_ids}
-              onChange={(ids) => set("branch_ids", ids)}
-              disabled={save.submitting}
-              error={save.fieldErrors.branch_ids || (master && !master.branches.length ? "No active branches yet." : "")}
-            />
+            <>
+              {canGiveAllBranches && (
+                <label className="wf-check-option">
+                  <input
+                    type="checkbox"
+                    checked={form.all_branches}
+                    onChange={(e) => set("all_branches", e.target.checked)}
+                    disabled={save.submitting}
+                  />
+                  <span>
+                    <strong>All branches</strong> — every branch, including branches added later.
+                  </span>
+                </label>
+              )}
+              <FieldError>{save.fieldErrors.all_branches}</FieldError>
+              {!form.all_branches && (
+                <CheckboxGroup
+                  label="Branches"
+                  required
+                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.name} (${b.code})` }))}
+                  values={form.branch_ids}
+                  onChange={(ids) => set("branch_ids", ids)}
+                  disabled={save.submitting}
+                  error={save.fieldErrors.branch_ids || (master && !branchOptions.length ? "No active branches you can assign." : "")}
+                />
+              )}
+            </>
           )}
         </div>
         <Alert tone="info">
           {member
-            ? "Changing the role or removing a branch signs this member out on all devices. Passwords are changed through \"Forgot password\" on the sign-in page."
+            ? "Changing the role or branch access signs this member out on all devices. Passwords are changed through \"Forgot password\" on the sign-in page."
             : "The member signs in to the panel with this email and password. They can change the password later through \"Forgot password\"."}
         </Alert>
         <div className="wf-actions-end">
