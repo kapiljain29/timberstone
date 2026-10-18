@@ -79,6 +79,17 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   the field ("Branch code is required") — never prefix the label again
   and never show a bare fragment like "is required".
 
+## Success and error messages
+
+Every form submit and action (save, activate / deactivate, …) shows the
+API's own message in a toast (`components/Toast.js`, mounted once in
+`app/layout.js`): green for success ("Branch created successfully"), red
+for failure. Send the call through `useSubmit().post(path, body)` — it
+shows both toasts and sets `fieldErrors`; `useStatusToggle` already does.
+Field messages still go under their fields (above); don't also repeat the
+error in a banner. Pass `{ notify: false }` only when the screen shows a
+fuller success note of its own (Change Password).
+
 ## Form buttons
 
 Every form ends with one `.wf-actions-end` row: the buttons sit together
@@ -195,6 +206,7 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Architects | `/architects` | api | `POST /api/admin/architects/list` (search, `branch_id`, `status`), `/create`, `/update`, `/status`, `/master` (branches, country codes). The wireframe's "Leads Referred" / "Booked" columns are left out until leads record their architect (`architect_id` on leads — needed by the lead form). New Lead's Architect dropdown still reads mock `getArchitects()` |
 | Categories | `/categories` | api | `POST /api/admin/categories/list` (search, `type` main/sub), `/create`, `/update`, `/status`; Parent Category dropdown from `/categories/master` (active main categories, `useCategoryOptions()` in `lib/team.js`) |
 | Lead Sources | `/lead-sources` | api | `POST /api/admin/lead-sources/list` (search, flat main + sub), `/create`, `/update`, `/status`; Parent Lead Source dropdown from `/lead-sources/master` (`useLeadSourceOptions()` in `lib/team.js` — the New Lead form should use the same hook when it moves to the API) |
+| Lead Statuses | `/lead-statuses` | api | `POST /api/admin/lead-statuses/list` (search, `status`), `/create`, `/update` (name only), `/status`. `/lead-statuses/master` (active `{ id, name }`) is for the lead form / lead detail status dropdowns when they move to the API — they still read mock `LEAD_STATUSES` |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |
 | Supervisor home | `/m` | mock | |

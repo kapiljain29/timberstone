@@ -98,6 +98,14 @@ const ICONS = {
       <path d="M3 4h18l-7 8.5V19l-4 1.5v-8L3 4Z" />
     </svg>
   ),
+  leadStatuses: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+      <path d="M7 12h3M14 12h3" />
+    </svg>
+  ),
   roles: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="6" cy="6" r="2.5" />
@@ -139,6 +147,7 @@ const NAV = [
     links: [
       { href: "/categories", label: "Categories", icon: ICONS.categories },
       { href: "/lead-sources", label: "Lead Sources", icon: ICONS.leadSources },
+      { href: "/lead-statuses", label: "Lead Statuses", icon: ICONS.leadStatuses },
     ],
   },
   {

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Badge, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Badge, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { api } from "@/lib/api";
 import { ROLE_API, STATUS } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
@@ -183,9 +182,7 @@ export default function RoleMasterPage() {
       return;
     }
     const body = { ...values, data_scope: values.data_scope || undefined };
-    const saved = await save.submit(() =>
-      role ? api.post(ROLE_API.update, { id: role.id, ...body }) : api.post(ROLE_API.create, body)
-    );
+    const saved = await save.post(role ? ROLE_API.update : ROLE_API.create, role ? { id: role.id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -227,7 +224,6 @@ export default function RoleMasterPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.role ? `Edit Role — ${form.role.role_name}` : "New Role"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-2">
               <div className="wf-field">
                 <label htmlFor="role-name">Role Name</label>
@@ -332,7 +328,6 @@ export default function RoleMasterPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading roles…</div>
         ) : (

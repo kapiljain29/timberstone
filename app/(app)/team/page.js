@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Alert, Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge } from "@/components/ui";
+import { Box, BranchFilter, DataTable, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import TeamMemberForm from "@/components/TeamMemberForm";
 import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, toBranchFilterOptions, useTeamMaster } from "@/lib/team";
@@ -139,7 +139,6 @@ function TeamMembers() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading team members…</div>
         ) : (

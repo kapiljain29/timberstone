@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
-import { api } from "@/lib/api";
+import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import { CATEGORY_API, STATUS, useCategoryOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
@@ -57,9 +56,7 @@ export default function CategoriesPage() {
     e.preventDefault();
     const { id, category_name, parent_id, description } = form;
     const body = { category_name, parent_id: parent_id || null, description };
-    const saved = await save.submit(() =>
-      id ? api.post(CATEGORY_API.update, { id, ...body }) : api.post(CATEGORY_API.create, body)
-    );
+    const saved = await save.post(id ? CATEGORY_API.update : CATEGORY_API.create, id ? { id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -103,7 +100,6 @@ export default function CategoriesPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.id ? "Edit Category" : "New Category"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
               <div className="wf-field">
                 <label htmlFor="cat-name">Category Name</label>
@@ -183,7 +179,6 @@ export default function CategoriesPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading categories…</div>
         ) : (

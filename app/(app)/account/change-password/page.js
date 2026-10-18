@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Alert, Box, FieldError } from "@/components/ui";
-import { api } from "@/lib/api";
 import { useRole } from "@/lib/roles";
 import { useSubmit } from "@/lib/useApi";
 
@@ -25,7 +24,8 @@ export default function ChangePasswordPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setDone(false);
-    const changed = await save.submit(() => api.post("/api/admin/account/change-password", form).then(() => true));
+    // The note below says more than the API's message, so no success toast.
+    const changed = await save.post("/api/admin/account/change-password", form, { notify: false });
     if (changed) {
       setForm(EMPTY);
       setDone(true);
@@ -69,7 +69,6 @@ export default function ChangePasswordPage() {
                 your other devices.
               </Alert>
             )}
-            <Alert>{save.error}</Alert>
             {field("current_password", "Current Password", "current-password")}
             {field("new_password", "New Password", "new-password", "At least 8 characters, with a letter and a number.")}
             {field("confirm_password", "Confirm New Password", "new-password")}

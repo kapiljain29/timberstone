@@ -8,7 +8,6 @@
 import { useState } from "react";
 import { Alert, Box, CheckboxGroup, FieldError, PhoneField } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { api } from "@/lib/api";
 import { defaultCountryCode, phonePlaceholder } from "@/lib/phone";
 import { TEAM_API } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
@@ -114,9 +113,7 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
       }
     }
 
-    const saved = await save.submit(() =>
-      member ? api.post(TEAM_API.update, { id: member.id, ...body }) : api.post(TEAM_API.create, { ...body, password })
-    );
+    const saved = await save.post(member ? TEAM_API.update : TEAM_API.create, member ? { id: member.id, ...body } : { ...body, password });
     if (saved) onSaved(saved);
   }
 
@@ -141,7 +138,6 @@ export default function TeamMemberForm({ member = null, defaults = {}, master, o
   return (
     <form onSubmit={handleSave} noValidate>
       <Box title={member ? `Edit Team Member — ${member.name}` : "Member Details"}>
-        <Alert>{save.error}</Alert>
         <div className="wf-grid wf-grid-3">
           {input("name", "Full Name", { required: true, placeholder: "e.g. Karan Mathur", autoFocus: !member })}
           {input("email", "Email", { required: true, type: "email", placeholder: "name@timberstone.in" })}

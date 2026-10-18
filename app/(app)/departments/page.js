@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
-import { api } from "@/lib/api";
+import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import { DEPARTMENT_API, STATUS, useTeamMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
@@ -48,9 +47,7 @@ export default function DepartmentsPage() {
     e.preventDefault();
     const { id, ...fields } = form;
     const body = { ...fields, head_id: fields.head_id || null };
-    const saved = await save.submit(() =>
-      id ? api.post(DEPARTMENT_API.update, { id, ...body }) : api.post(DEPARTMENT_API.create, body)
-    );
+    const saved = await save.post(id ? DEPARTMENT_API.update : DEPARTMENT_API.create, id ? { id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -88,7 +85,6 @@ export default function DepartmentsPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.id ? "Edit Department" : "New Department"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
               <div className="wf-field">
                 <label htmlFor="dept-name">Department Name</label>
@@ -160,7 +156,6 @@ export default function DepartmentsPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading departments…</div>
         ) : (

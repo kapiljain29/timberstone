@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Toaster } from "@/components/Toast";
 
 export const metadata = {
   title: "Timberstone ERP — Clickable Wireframe",
@@ -18,7 +19,10 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { Alert, Box, DataTable, FieldError, LoadError, Pagination, PhoneField, StatusBadge } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { BRANCH_API, STATUS } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
@@ -87,9 +86,7 @@ export default function BranchesPage() {
     e.preventDefault();
     const { branch } = form;
     const body = { ...values, phone_country_code: phoneCode, lead_manager_id: values.lead_manager_id || null };
-    const saved = await save.submit(() =>
-      branch ? api.post(BRANCH_API.update, { id: branch.id, ...body }) : api.post(BRANCH_API.create, body)
-    );
+    const saved = await save.post(branch ? BRANCH_API.update : BRANCH_API.create, branch ? { id: branch.id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -140,7 +137,6 @@ export default function BranchesPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.branch ? `Edit Branch — ${form.branch.name}` : "New Branch"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
               {input("name", "Branch Name", { required: true, placeholder: "e.g. Jaipur", autoFocus: true })}
               {input("code", "Branch Code", { required: true, placeholder: "e.g. JPR", style: { textTransform: "uppercase" }, maxLength: 20 })}
@@ -233,7 +229,6 @@ export default function BranchesPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading branches…</div>
         ) : (

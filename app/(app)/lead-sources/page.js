@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
-import { api } from "@/lib/api";
+import { Box, DataTable, FieldError, LoadError, Pagination, StatusBadge } from "@/components/ui";
 import { LEAD_SOURCE_API, STATUS, useLeadSourceOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
 import { useCan } from "@/lib/roles";
@@ -52,9 +51,7 @@ export default function LeadSourcesPage() {
     e.preventDefault();
     const { id, lead_source_name, parent_id, short_code } = form;
     const body = { lead_source_name, parent_id: parent_id || null, short_code };
-    const saved = await save.submit(() =>
-      id ? api.post(LEAD_SOURCE_API.update, { id, ...body }) : api.post(LEAD_SOURCE_API.create, body)
-    );
+    const saved = await save.post(id ? LEAD_SOURCE_API.update : LEAD_SOURCE_API.create, id ? { id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -90,7 +87,6 @@ export default function LeadSourcesPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.id ? "Edit Lead Source" : "New Lead Source"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
               <div className="wf-field">
                 <label htmlFor="ls-name">Lead Source Name</label>
@@ -167,7 +163,6 @@ export default function LeadSourcesPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading lead sources…</div>
         ) : (

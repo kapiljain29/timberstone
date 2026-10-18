@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  Alert,
   Box,
   BranchFilter,
   DataTable,
@@ -13,7 +12,6 @@ import {
   StatusBadge,
 } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { api } from "@/lib/api";
 import { defaultCountryCode, formatPhone, phonePlaceholder } from "@/lib/phone";
 import { ARCHITECT_API, STATUS, toBranchFilterOptions } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
@@ -97,9 +95,7 @@ export default function ArchitectsPage() {
     e.preventDefault();
     const { architect } = form;
     const body = { ...values, country_code: countryCode, branch_id: values.branch_id || null };
-    const saved = await save.submit(() =>
-      architect ? api.post(ARCHITECT_API.update, { id: architect.id, ...body }) : api.post(ARCHITECT_API.create, body)
-    );
+    const saved = await save.post(architect ? ARCHITECT_API.update : ARCHITECT_API.create, architect ? { id: architect.id, ...body } : body);
     if (saved) {
       setForm(null);
       list.reload();
@@ -152,7 +148,6 @@ export default function ArchitectsPage() {
       {form && (
         <form onSubmit={handleSave} noValidate>
           <Box title={form.architect ? `Edit Architect — Ar. ${form.architect.architect_name}` : "New Architect"}>
-            <Alert>{save.error}</Alert>
             <div className="wf-grid wf-grid-3">
               {input("architect_name", "Architect Name", { required: true, placeholder: "e.g. Nikhil Bansal", autoFocus: true })}
               {input("firm_name", "Firm / Studio", { placeholder: "e.g. Bansal Associates" })}
@@ -231,7 +226,6 @@ export default function ArchitectsPage() {
         }
       >
         <LoadError error={list.error} onRetry={list.reload} />
-        <Alert>{statusToggle.error}</Alert>
         {!list.data && list.loading ? (
           <div className="wf-empty">Loading architects…</div>
         ) : (
