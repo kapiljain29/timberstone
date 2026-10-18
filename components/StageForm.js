@@ -457,23 +457,25 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
 
       </fieldset>
 
-      <div className="wf-actions-end split">
-        <button className="wf-btn" disabled={!prev} onClick={() => prev && goToStage(prev.slug)}>
-          ← Back{prev ? `: ${prev.title}` : ""}
-        </button>
-        <div className="wf-btn-row">
-          <button className="wf-btn ghost" onClick={() => router.push(`${basePath}/${id}`)}>
-            View Full Stepper
+      <Box>
+        <div className="wf-actions-end split">
+          <button className="wf-btn" disabled={!prev} onClick={() => prev && goToStage(prev.slug)}>
+            ← Back{prev ? `: ${prev.title}` : ""}
           </button>
-          <button
-            className="wf-btn primary"
-            disabled={!canEdit || (stage.approval ? approval !== "yes" : false)}
-            onClick={handleComplete}
-          >
-            {isComplete ? "Update & Continue" : "Mark Complete & Continue"} →
-          </button>
+          <div className="wf-btn-row">
+            <button className="wf-btn ghost" onClick={() => router.push(`${basePath}/${id}`)}>
+              View Full Stepper
+            </button>
+            <button
+              className="wf-btn primary"
+              disabled={!canEdit || (stage.approval ? approval !== "yes" : false)}
+              onClick={handleComplete}
+            >
+              {isComplete ? "Update & Continue" : "Mark Complete & Continue"} →
+            </button>
+          </div>
         </div>
-      </div>
+      </Box>
     </div>
   );
 }

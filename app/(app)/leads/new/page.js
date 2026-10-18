@@ -152,16 +152,15 @@ export default function NewLeadPage() {
             advance payment / sales operator assignment (Step 3) are captured on the lead detail
             page after this record is created.
           </Annotation>
+          <div className="wf-actions-end">
+            <button type="button" className="wf-btn" onClick={() => router.push("/leads")}>
+              Cancel
+            </button>
+            <button type="submit" className="wf-btn primary">
+              Save Lead →
+            </button>
+          </div>
         </Box>
-
-        <div className="wf-actions-end">
-          <button type="button" className="wf-btn" onClick={() => router.push("/leads")}>
-            Cancel
-          </button>
-          <button type="submit" className="wf-btn primary">
-            Save Lead →
-          </button>
-        </div>
       </form>
     </div>
   );

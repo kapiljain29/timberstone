@@ -98,6 +98,20 @@ const ICONS = {
       <path d="M3 4h18l-7 8.5V19l-4 1.5v-8L3 4Z" />
     </svg>
   ),
+  products: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z" />
+      <path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
+    </svg>
+  ),
+  colors: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.2-9-7.2Z" />
+      <circle cx="7.5" cy="11" r="1.2" />
+      <circle cx="10.5" cy="7" r="1.2" />
+      <circle cx="15.5" cy="7.5" r="1.2" />
+    </svg>
+  ),
   leadStatuses: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="5" cy="12" r="2" />
@@ -148,6 +162,8 @@ const NAV = [
       { href: "/categories", label: "Categories", icon: ICONS.categories },
       { href: "/lead-sources", label: "Lead Sources", icon: ICONS.leadSources },
       { href: "/lead-statuses", label: "Lead Statuses", icon: ICONS.leadStatuses },
+      { href: "/colors", label: "Colors", icon: ICONS.colors },
+      { href: "/products", label: "Products", icon: ICONS.products },
     ],
   },
   {

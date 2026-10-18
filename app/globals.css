@@ -695,6 +695,13 @@ button {
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
+/* A row that is a card's only content (e.g. wizard navigation in its own
+   card): no divider or gap above it. */
+.wf-box > .wf-actions-end:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
 /* Wizard navigation: "← Back" on the left, the step's actions on the right. */
 .wf-actions-end.split {
   justify-content: space-between;

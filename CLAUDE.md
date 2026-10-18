@@ -112,6 +112,16 @@ Member`, `Save Changes`). Never spread Cancel and Submit to opposite
 edges. Only step-by-step wizards use `.wf-actions-end split` (← Back on
 the left, the step's actions grouped on the right).
 
+The `.wf-actions-end` row always goes **inside a card**: the last element
+of the form's last `<Box>`, never loose under the cards on the page
+background. A form split into several cards (e.g. `ProductForm`,
+`TeamMemberForm`) puts it at the bottom of its last card. When the last
+card changes from screen to screen (the `StageForm` wizard), the row gets
+its own `<Box>` — as a card's only content it has no divider above it.
+Buttons use the standard `.wf-btn` size — never resize them per screen.
+Sign-in pages (`/login`, `/forgot-password`, `/reset-password`,
+`/m/login`) keep their full-width `AuthCard` submit instead.
+
 ## CRITICAL RULE: Permissions drive the panel
 
 Every role signs in to the web panel through the API; what it sees comes
@@ -220,6 +230,8 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 | Categories | `/categories` | api | `POST /api/admin/categories/list` (search, `type` main/sub), `/create`, `/update`, `/status`; Parent Category dropdown from `/categories/master` (active main categories, `useCategoryOptions()` in `lib/team.js`) |
 | Lead Sources | `/lead-sources` | api | `POST /api/admin/lead-sources/list` (search, flat main + sub), `/create`, `/update`, `/status`; Parent Lead Source dropdown from `/lead-sources/master` (`useLeadSourceOptions()` in `lib/team.js` — the New Lead form should use the same hook when it moves to the API) |
 | Lead Statuses | `/lead-statuses` | api | `POST /api/admin/lead-statuses/list` (search, `status`), `/create`, `/update` (name only), `/status`. `/lead-statuses/master` (active `{ id, name }`) is for the lead form / lead detail status dropdowns when they move to the API — they still read mock `LEAD_STATUSES` |
+| Colors | `/colors` | api | `POST /api/admin/colors/list` (search by name / code, `status`), `/create`, `/update`, `/status`. Code is free text (hex, RAL …), shown as text. `/colors/master` (active `{ id, name, code }`, `useColorOptions()` in `lib/team.js`) is for product / quotation color dropdowns |
+| Products | `/products`, `/products/new`, `/products/edit/[id]` | api | `POST /api/admin/products/list` (search, `category_id`, `status`), `/details`, `/create`, `/update`, `/status`, `/master` (`categories`, plus `sub_categories` of the sent `category_id` — `useProductMaster()` in `lib/team.js`). Add and Edit are their own pages (form in `components/ProductForm.js`, discard-changes confirm on Cancel); Edit loads the product with `/details`. Spec fields (coverage, thickness, kgs per sq.ft, dimensions — `PRODUCT_SPECS`) are optional free text |
 | Notifications | `/notifications` | mock | |
 | Role-wise workflow | `/roles` | mock | |
 | Supervisor home | `/m` | mock | |
