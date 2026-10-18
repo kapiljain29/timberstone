@@ -271,16 +271,16 @@ export default function LeadDetailPage() {
             </div>
           </div>
         )}
-        <div className="wf-actions-end">
-          <button type="button" className="wf-btn" onClick={saveStep3}>
-            Save Step 3
-          </button>
-        </div>
         <Annotation>
           Once measurement is required, advance payment is recorded and a sales operator is
           assigned, the lead becomes eligible for conversion into a Project (Step 4 onward — the
           Supervisor-led execution flow).
         </Annotation>
+        <div className="wf-actions-end">
+          <button type="button" className="wf-btn" onClick={saveStep3}>
+            Save Step 3
+          </button>
+        </div>
       </Box>
       </fieldset>
     </div>

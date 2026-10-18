@@ -186,7 +186,7 @@ export default function BranchesPage() {
                 <FieldError>{save.fieldErrors.lead_manager_id}</FieldError>
               </div>
             </div>
-            <div className="wf-field" style={{ marginTop: 14 }}>
+            <div className="wf-field">
               <label htmlFor="branch-address">Address</label>
               <textarea
                 id="branch-address"

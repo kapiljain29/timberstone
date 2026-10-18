@@ -39,11 +39,6 @@ export default function ProductsPage() {
     });
   }
 
-  function specSummary(p) {
-    const parts = PRODUCT_SPECS.filter(([key]) => p[key]).map(([key, label]) => `${label}: ${p[key]}`);
-    return parts.length ? parts.join(" · ") : "—";
-  }
-
   return (
     <div>
       <div className="wf-crumb">Masters</div>
@@ -88,13 +83,23 @@ export default function ProductsPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Product", "Category", "Subcategory", "Specs", "Status", ""]}
+              columns={["Product", "Category", ...PRODUCT_SPECS.map(([, label]) => label), "Status", ""]}
               emptyLabel={filters.active ? "No products match these filters." : "No products yet. Add the first one."}
               rows={items.map((p) => [
                 <strong key="n">{p.product_name}</strong>,
-                p.category_name || "—",
-                p.sub_category_name || "—",
-                specSummary(p),
+                <div key="c">
+                  {p.category_name || "—"}
+                  {p.sub_category_name && <span className="wf-cell-sub">{p.sub_category_name}</span>}
+                </div>,
+                ...PRODUCT_SPECS.map(([key]) =>
+                  p[key] ? (
+                    <span key={key} className="wf-nowrap">
+                      {p[key]}
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                ),
                 <StatusBadge key="s" active={p.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">
                   {can("products.edit") && (

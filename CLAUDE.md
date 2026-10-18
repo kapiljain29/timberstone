@@ -74,6 +74,12 @@ shared `useConfirm()` from `components/ConfirmDialog.js` — never
   requires, and update the marker when that depends on another field
   (e.g. Branches is not shown for all-branch roles). Forms keep
   `noValidate`, so the API does the checking and its messages are shown.
+- **Spacing comes from the CSS:** fields in a `.wf-grid` row are spaced by
+  its gap, and rows, full-width fields, `Alert` banners, `Annotation`s and
+  loose buttons stacked directly in a card get the same 16px between them
+  (`app/globals.css`). Don't add inline `marginTop` / `marginBottom` to
+  space them. Notes and banners go above the `.wf-actions-end` row, never
+  under it.
 - **Show API validation messages as-is** under the field
   (`<FieldError>{fieldErrors.<param>}</FieldError>`). They already name
   the field ("Branch code is required") — never prefix the label again
@@ -94,14 +100,24 @@ how many are active. Use `SearchField` for text, `StatusFilterField` +
 
 ## Success and error messages
 
-Every form submit and action (save, activate / deactivate, …) shows the
-API's own message in a toast (`components/Toast.js`, mounted once in
-`app/layout.js`): green for success ("Branch created successfully"), red
-for failure. Send the call through `useSubmit().post(path, body)` — it
-shows both toasts and sets `fieldErrors`; `useStatusToggle` already does.
-Field messages still go under their fields (above); don't also repeat the
-error in a banner. Pass `{ notify: false }` only when the screen shows a
-fuller success note of its own (Change Password).
+Toasts (`components/Toast.js`, mounted once in `app/layout.js`) are for
+success, general errors and informative messages only — **never for form
+validation**. Send every submit through `useSubmit().post(path, body)`:
+
+- **Success:** the API's message as a green toast ("Branch created
+  successfully").
+- **Field errors** (an error with a `param`, e.g. "Category is
+  required"): shown only under the field via `fieldErrors` — no toast,
+  no banner. `useSubmit` scrolls to and focuses the first one. If no field
+  on the screen shows it, it falls back to a toast so a failed save is
+  never silent — so render a `FieldError` for every param the form sends.
+- **General errors** (no `param`: not found, no permission, server /
+  network failure): a red toast.
+- Actions without form fields use `useSubmit({ fieldErrorsInToast: true })`
+  so every error is a toast (`useStatusToggle` does).
+
+Pass `{ notify: false }` only when the screen shows a fuller success note
+of its own (Change Password).
 
 ## Form buttons
 

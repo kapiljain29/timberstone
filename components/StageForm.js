@@ -245,6 +245,10 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
               </div>
             ))}
           </div>
+          <Annotation>
+            Changing these from the default (50 / 30 / 10 / 10) requires Management approval before
+            the Work Order is confirmed.
+          </Annotation>
           <div className="wf-actions-end">
             <button type="button" className="wf-btn" onClick={() => setTerms(getWorkOrderTerms(id))}>
               Reset to Default
@@ -253,10 +257,6 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
               Save Payment Terms
             </button>
           </div>
-          <Annotation>
-            Changing these from the default (50 / 30 / 10 / 10) requires Management approval before
-            the Work Order is confirmed.
-          </Annotation>
         </Box>
       )}
 

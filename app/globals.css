@@ -568,6 +568,17 @@ button {
 .wf-grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
+/* Stacked form rows in a card (a grid row, then a full-width field or
+   another row) get the same space between them as fields inside a row.
+   Fields inside a grid, filter panel etc. are spaced by their container. */
+.wf-box > :is(.wf-grid, .wf-field) + :is(.wf-grid, .wf-field) {
+  margin-top: 16px;
+}
+/* Banners, wireframe notes and loose buttons that follow other content in
+   a card (e.g. an info Alert under the last field) get the same gap. */
+.wf-box > :not(.wf-box-title) + :is(.wf-alert, .wf-annot, .wf-btn) {
+  margin-top: 16px;
+}
 
 .wf-field {
   display: flex;
@@ -788,6 +799,17 @@ button {
   letter-spacing: 0.04em;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
+}
+/* Second, smaller line under a cell's main value (e.g. a subcategory). */
+.wf-table .wf-cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+/* Short values that shouldn't break across lines (sizes, codes). */
+.wf-table .wf-nowrap {
+  white-space: nowrap;
 }
 .wf-table tbody tr:last-child td {
   border-bottom: none;
@@ -3117,6 +3139,10 @@ button {
   font-size: 12px;
   color: var(--red-text);
   margin: 5px 0 0;
+}
+/* In a field the column's 5px gap already separates it from the input. */
+.wf-field > .wf-field-error {
+  margin-top: 0;
 }
 .wf-pager {
   display: flex;
