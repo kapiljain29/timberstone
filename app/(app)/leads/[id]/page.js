@@ -1,288 +1,269 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
-import { getLead, updateLead, convertLeadToProject, getCallLogs } from "@/lib/store";
-import { LEAD_STATUSES, branchName } from "@/lib/data";
-import { canAccess, canWorkLead, useRole } from "@/lib/roles";
+import { useParams } from "next/navigation";
+import { useState } from "react";
+import { Badge, Box, FieldError, LoadError, leadStatusTone } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmDialog";
+import LeadAssignForm from "@/components/LeadAssignForm";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { formatPhone } from "@/lib/phone";
+import { useCan } from "@/lib/roles";
+import { ALL_BRANCHES, LEAD_API, optionLabel, useLeadMaster } from "@/lib/team";
+import { useApiData, useSubmit } from "@/lib/useApi";
 
+// Lead detail. Every call goes across all the user's branches
+// (ALL_BRANCHES), so a lead opens whatever branch tab the list was on.
 export default function LeadDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
-  const [lead, setLead] = useState(null);
-  const [step2, setStep2] = useState({ roughEstimate: "", status: "Prospect", notes: "" });
-  const [step3, setStep3] = useState({ measurementRequired: "", advancePayment: "", salesOperator: "" });
-  const role = useRole();
+  const can = useCan();
+  const lead = useApiData(LEAD_API.details, { id }, { branchId: ALL_BRANCHES });
+  const statusHistory = useApiData(LEAD_API.statusHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
+  const assignmentHistory = useApiData(LEAD_API.assignmentHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
+  // Option labels, statuses and who the user may assign — for the lead's branch.
+  const { master } = useLeadMaster(lead.data ? lead.data.branch_id || ALL_BRANCHES : null);
 
-  useEffect(() => {
-    // Reads from localStorage, which is unavailable during SSR — must load post-mount.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const found = getLead(id);
-    setLead(found);
-    if (found) {
-      setStep2({
-        roughEstimate: found.roughEstimate || "",
-        status: found.status || "Prospect",
-        notes: found.notes || "",
-      });
-      setStep3({
-        measurementRequired: found.measurementRequired === true ? "yes" : found.measurementRequired === false ? "no" : "",
-        advancePayment: found.advancePayment || "",
-        salesOperator: found.salesOperator || "",
-      });
+  if (!lead.data) {
+    if (lead.error?.status === 404) {
+      return (
+        <div className="wf-noaccess">
+          <div className="wf-noaccess-icon">🔒</div>
+          <h1 className="wf-h1" style={{ justifyContent: "center" }}>
+            Lead not found
+          </h1>
+          <p className="wf-sub">It doesn&apos;t exist, or it isn&apos;t in your branches or your list of leads.</p>
+          <Link href="/leads" className="wf-btn primary">
+            Back to leads
+          </Link>
+        </div>
+      );
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [id]);
-
-  if (!lead || !role) {
-    return <div className="wf-empty">Loading lead…</div>;
+    return lead.error ? <LoadError error={lead.error} onRetry={lead.reload} /> : <div className="wf-empty">Loading lead…</div>;
   }
 
-  // A Sales rep only works the leads assigned to them.
-  if (role.id === "Sales" && lead.assignedRep !== role.user) {
-    return (
-      <div className="wf-noaccess">
-        <div className="wf-noaccess-icon">🔒</div>
-        <h1 className="wf-h1" style={{ justifyContent: "center" }}>
-          Not your lead
-        </h1>
-        <p className="wf-sub">
-          {lead.id} is assigned to {lead.assignedRep || "another rep"}. Sales reps can only open their own leads.
-        </p>
-        <Link href="/leads" className="wf-btn primary">
-          Back to my leads
-        </Link>
-      </div>
-    );
-  }
-
-  const canWork = canWorkLead(role.id);
-
-  function refresh() {
-    setLead(getLead(id));
-  }
-
-  function saveStep2() {
-    updateLead(lead.id, {
-      roughEstimate: step2.roughEstimate,
-      status: step2.status,
-      notes: step2.notes,
-    });
-    refresh();
-  }
-
-  function saveStep3() {
-    const measurementRequired = step3.measurementRequired === "yes";
-    const patch = { measurementRequired };
-    if (measurementRequired) {
-      patch.advancePayment = step3.advancePayment;
-      patch.salesOperator = step3.salesOperator;
-      if (step3.advancePayment && step3.salesOperator) {
-        patch.status = "Booked";
-      }
-    }
-    updateLead(lead.id, patch);
-    refresh();
-  }
-
-  function handleConvert() {
-    const project = convertLeadToProject(lead.id);
-    router.push(`/projects/${project.id}`);
-  }
-
-  const alreadyConverted = !!lead.convertedProjectId;
-  const callHistory = getCallLogs().filter((c) => c.leadId === lead.id).reverse();
-  const readyToConvert =
-    lead.measurementRequired === true && !!lead.advancePayment && !!lead.salesOperator;
+  const l = lead.data;
+  const answers = l.user_answers && typeof l.user_answers === "object" ? Object.entries(l.user_answers) : [];
 
   return (
     <div>
       <div className="wf-crumb">
-        <Link href="/leads" className="wf-link-btn">
-          Leads
-        </Link>{" "}
-        / {lead.id}
+        Pre-Sales / <Link href="/leads">Leads</Link>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="wf-queue-head">
         <div>
           <h1 className="wf-h1">
-            {lead.name} <Badge tone={leadStatusTone(lead.status)}>{lead.status}</Badge>
+            {l.full_name} {l.status_name && <Badge tone={leadStatusTone(l.status_name)}>{l.status_name}</Badge>}
           </h1>
           <p className="wf-sub">
-            {lead.company} · Lead ID {lead.id} · Branch: {branchName(lead.branch)} · Created {lead.createdAt}
-            {lead.productTypes && lead.productTypes.length > 0 ? ` · ${lead.productTypes.join(", ")}` : ""}
+            {[l.company_name, `Branch: ${l.branch_name || "None"}`, `Created ${formatDate(l.created_at)}${l.created_by_name ? ` by ${l.created_by_name}` : ""}`]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
-        {alreadyConverted ? (
-          <Link href={`/projects/${lead.convertedProjectId}`} className="wf-btn primary">
-            View Project →
+        {can("leads.edit") && (
+          <Link href={`/leads/edit/${l.id}`} className="wf-btn primary" style={{ marginBottom: 18 }}>
+            Edit Lead
           </Link>
-        ) : (
-          <button className="wf-btn primary" onClick={handleConvert} disabled={!readyToConvert || !canWork}>
-            Convert to Project →
-          </button>
         )}
       </div>
 
-      <Box title="Step 1 — Lead Creation">
+      <Box title="Step 1 — Lead Details">
         <div className="wf-grid wf-grid-3">
-          <div className="wf-field">
-            <label>Contact Phone</label>
-            <input className="wf-input" defaultValue={lead.phone} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Contact Email</label>
-            <input className="wf-input" defaultValue={lead.email} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Lead Source</label>
-            <input className="wf-input" defaultValue={lead.source} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Project Reference</label>
-            <input className="wf-input" defaultValue={lead.projectRef} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Product Type(s)</label>
-            <input className="wf-input" defaultValue={(lead.productTypes || []).join(", ") || "—"} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Assigned Sales Rep</label>
-            <input className="wf-input" defaultValue={lead.assignedRep || "—"} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Budget Size</label>
-            <input className="wf-input" defaultValue={lead.budgetSize || "—"} readOnly />
-          </div>
-          <div className="wf-field">
-            <label>Design Required</label>
-            <input
-              className="wf-input"
-              defaultValue={lead.designRequired === true ? "Yes" : lead.designRequired === false ? "No" : "—"}
-              readOnly
-            />
-          </div>
-          <div className="wf-field">
-            <label>Architect</label>
-            <input className="wf-input" defaultValue={lead.architect || "None / Direct Customer"} readOnly />
-          </div>
+          <Info label="Mobile" value={formatPhone(l.country_code, l.mobile_number)} />
+          <Info label="Email" value={l.email} />
+          <Info label="Company / Household" value={l.company_name} />
+          <Info label="Lead Source" value={l.lead_source_name} />
+          <Info label="Sub-Source" value={l.lead_sub_source_name} />
+          <Info label="Project Type" value={optionLabel(master?.project_types, l.project_type)} />
+          <Info label="Type of Property" value={optionLabel(master?.work_types, l.work_type)} />
+          <Info label="Estimated Area" value={optionLabel(master?.estimated_areas, l.estimated_area)} />
+          <Info label="Budget" value={optionLabel(master?.budgets, l.budget)} />
+          <Info label="Planning to Start" value={optionLabel(master?.planning_to_start, l.planning_to_start)} />
+          <Info label="Requirement in Cladding" value={l.requirement_in_cladding_categories.map((c) => c.category_name).join(", ")} />
+          <Info label="Last Updated" value={`${formatDateTime(l.updated_at)}${l.updated_by_name ? ` by ${l.updated_by_name}` : ""}`} />
         </div>
       </Box>
 
-      <Box title={`Call History (${callHistory.length})`} right={canAccess(role.id, "/call-queue") ? <Link href="/call-queue" className="wf-link-btn">Call Queue →</Link> : null}>
-        {callHistory.length === 0 ? (
-          <div className="wf-empty">No calls logged yet.</div>
-        ) : (
-          <ul className="wf-list">
-            {callHistory.map((c) => (
-              <li key={c.id}>
-                <span>
-                  <strong>
-                    {c.date} {c.time}
-                  </strong>{" "}
-                  · {c.rep} · {c.outcome}
-                  {c.nextCallback ? ` · callback ${c.nextCallback}` : ""}
-                  {c.note ? ` · “${c.note}”` : ""}
-                </span>
-                <Badge tone={c.connected ? "done" : "pending"}>{c.connected ? "Connected" : "Not connected"}</Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Box>
-
-      <Box title="Step 2 — Initial Contact & Rough Estimate" right={<span className="wf-role-tag">Marketing / Sales</span>}>
-        <div className="wf-grid wf-grid-2">
-          <div className="wf-field">
-            <label>Rough Estimate (given on call)</label>
-            <input
-              className="wf-input"
-              value={step2.roughEstimate}
-              onChange={(e) => setStep2((s) => ({ ...s, roughEstimate: e.target.value }))}
-              placeholder="₹"
-            />
+      {l.lead_gen_id && (
+        <Box title="Meta Lead Ad">
+          <div className="wf-grid wf-grid-3">
+            <Info label="Campaign" value={l.campaign_name} />
+            <Info label="Form ID" value={l.form_id} />
+            <Info label="Meta Lead ID" value={l.lead_gen_id} />
           </div>
-          <div className="wf-field">
-            <label>Lead Status</label>
-            <select className="wf-select" value={step2.status} onChange={(e) => setStep2((s) => ({ ...s, status: e.target.value }))}>
-              {LEAD_STATUSES.map((s) => (
-                <option key={s}>{s}</option>
+          {answers.length > 0 && (
+            <ul className="wf-list">
+              {answers.map(([question, answer]) => (
+                <li key={question}>
+                  <span>{question.replace(/_/g, " ")}</span>
+                  <strong>{Array.isArray(answer) ? answer.join(", ") : String(answer ?? "—")}</strong>
+                </li>
               ))}
-            </select>
-          </div>
-        </div>
-        <div className="wf-field">
-          <label>Discussion Notes</label>
-          <textarea
-            className="wf-textarea"
-            value={step2.notes}
-            onChange={(e) => setStep2((s) => ({ ...s, notes: e.target.value }))}
-            placeholder="Requirement details discussed on call..."
-          />
-        </div>
-        <div className="wf-actions-end">
-          <button type="button" className="wf-btn" onClick={saveStep2}>
-            Save Step 2
-          </button>
-        </div>
-      </Box>
-
-      {!canWork && (
-        <div className="wf-viewonly">
-          👁 View only — Step 3 (measurement booking, advance payment) and conversion are handled by Sales.
-        </div>
+            </ul>
+          )}
+        </Box>
       )}
 
-      <fieldset className="wf-readonly" disabled={!canWork}>
-      <Box title="Step 3 — Measurement Booking, Advance Payment & Sales Operator" right={<span className="wf-role-tag">Sales</span>}>
-        <div className="wf-field">
-          <label>Does the customer require an on-site measurement?</label>
-          <select
-            className="wf-select"
-            value={step3.measurementRequired}
-            onChange={(e) => setStep3((s) => ({ ...s, measurementRequired: e.target.value }))}
-          >
-            <option value="">Select…</option>
-            <option value="yes">Yes — book measurement</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-        {step3.measurementRequired === "yes" && (
-          <div className="wf-grid wf-grid-2">
-            <div className="wf-field">
-              <label>Advance Payment Received</label>
-              <input
-                className="wf-input"
-                value={step3.advancePayment}
-                onChange={(e) => setStep3((s) => ({ ...s, advancePayment: e.target.value }))}
-                placeholder="₹"
-              />
-            </div>
-            <div className="wf-field">
-              <label>Sales Operator Assigned</label>
-              <input
-                className="wf-input"
-                value={step3.salesOperator}
-                onChange={(e) => setStep3((s) => ({ ...s, salesOperator: e.target.value }))}
-                placeholder="e.g. Vivek Rane"
-              />
-            </div>
+      {can("leads.edit") && (
+        <StatusForm
+          lead={l}
+          master={master}
+          onChanged={(updated) => {
+            lead.patch(() => updated);
+            statusHistory.reload();
+          }}
+        />
+      )}
+
+      <Box title="Status History">
+        <History
+          history={statusHistory}
+          emptyLabel="No status changes yet."
+          render={(h) => (
+            <>
+              <span>
+                <strong>{formatDateTime(h.changed_at)}</strong> · {h.from_status_name || "—"} → {h.to_status_name}
+                {h.changed_by_name ? ` · by ${h.changed_by_name}` : ""}
+                {h.remark ? ` · “${h.remark}”` : ""}
+              </span>
+              <Badge tone={leadStatusTone(h.to_status_name)}>{h.to_status_name}</Badge>
+            </>
+          )}
+        />
+      </Box>
+
+      {can("leads.assign") && (
+        <LeadAssignForm
+          title="Assign to Another Team Member"
+          leadIds={[l.id]}
+          branchId={ALL_BRANCHES}
+          master={master}
+          exclude={l.assignees.map((a) => a.id)}
+          onAssigned={() => {
+            lead.reload();
+            assignmentHistory.reload();
+          }}
+        />
+      )}
+
+      <Box title={`Assigned To (${l.assignees.length})`}>
+        <p className="wf-sub">{l.assignees.map((a) => a.name).join(", ") || "Nobody yet — this lead is in its branch lead manager's queue."}</p>
+        <History
+          history={assignmentHistory}
+          emptyLabel="No assignments yet."
+          render={(h) => (
+            <span>
+              <strong>{formatDateTime(h.assigned_at)}</strong> · {h.user_name}
+              {h.assigned_by_name ? ` · assigned by ${h.assigned_by_name}` : ""}
+              {h.remark ? ` · “${h.remark}”` : ""}
+            </span>
+          )}
+        />
+      </Box>
+
+    </div>
+  );
+}
+
+// Read-only value in the details grid.
+function Info({ label, value }) {
+  return (
+    <div className="wf-field">
+      <label>{label}</label>
+      <input className="wf-input" value={value || "—"} readOnly />
+    </div>
+  );
+}
+
+// A history list (useApiData of /status-history or /assignment-history).
+function History({ history, emptyLabel, render }) {
+  if (history.error) return <LoadError error={history.error} onRetry={history.reload} />;
+  if (!history.data) return <div className="wf-empty">Loading history…</div>;
+  if (!history.data.length) return <div className="wf-empty">{emptyLabel}</div>;
+  return (
+    <ul className="wf-list">
+      {history.data.map((h) => (
+        <li key={h.id}>{render(h)}</li>
+      ))}
+    </ul>
+  );
+}
+
+// Change the lead's status (POST /leads/update-status — writes a history
+// row with the remark). Confirmed first: it is recorded and can't be undone.
+function StatusForm({ lead, master, onChanged }) {
+  const [status, setStatus] = useState("");
+  const [remark, setRemark] = useState("");
+  const save = useSubmit();
+  const [confirm, confirmDialog] = useConfirm();
+  const statuses = (master?.lead_statuses || []).filter((s) => s.id !== lead.status);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const next = statuses.find((s) => s.id === status);
+    if (
+      next &&
+      !(await confirm({
+        title: `Mark ${lead.full_name} as ${next.name}?`,
+        message: `The lead's status changes from ${lead.status_name || "none"} to ${next.name}. The change is kept in the status history.`,
+        confirmLabel: `Mark as ${next.name}`,
+        tone: "primary",
+      }))
+    ) {
+      return;
+    }
+    const updated = await save.post(LEAD_API.updateStatus, { id: lead.id, status, remark: remark.trim() || null }, { branchId: ALL_BRANCHES });
+    if (updated) {
+      setStatus("");
+      setRemark("");
+      onChanged(updated);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSave} noValidate>
+      <Box title="Change Status">
+        <div className="wf-grid wf-grid-2">
+          <div className="wf-field">
+            <label htmlFor="lead-new-status">New Status</label>
+            <select
+              id="lead-new-status"
+              required
+              className="wf-select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              disabled={save.submitting || !master}
+            >
+              <option value="">{master ? "Select status" : "Loading…"}</option>
+              {statuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <FieldError>{save.fieldErrors.status}</FieldError>
           </div>
-        )}
-        <Annotation>
-          Once measurement is required, advance payment is recorded and a sales operator is
-          assigned, the lead becomes eligible for conversion into a Project (Step 4 onward — the
-          Supervisor-led execution flow).
-        </Annotation>
+          <div className="wf-field">
+            <label htmlFor="lead-status-remark">Remark</label>
+            <input
+              id="lead-status-remark"
+              className="wf-input"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              placeholder="e.g. Customer asked to call next week"
+              maxLength={1000}
+              disabled={save.submitting}
+            />
+            <FieldError>{save.fieldErrors.remark}</FieldError>
+          </div>
+        </div>
         <div className="wf-actions-end">
-          <button type="button" className="wf-btn" onClick={saveStep3}>
-            Save Step 3
+          <button type="submit" className="wf-btn primary" disabled={save.submitting}>
+            {save.submitting ? "Saving…" : "Change Status"}
           </button>
         </div>
       </Box>
-      </fieldset>
-    </div>
+      {confirmDialog}
+    </form>
   );
 }
