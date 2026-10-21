@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NOTIFICATIONS } from "@/lib/data";
-import { refreshProfile } from "@/lib/api";
+import { api, refreshProfile } from "@/lib/api";
+import { formatDateTime } from "@/lib/format";
+import { NOTIFICATION_API, notificationsChanged, useBellNotifications } from "@/lib/notifications";
 import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
 
 function initials(name) {
@@ -17,6 +19,14 @@ function initials(name) {
 }
 
 const ICONS = {
+  design: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z" />
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+      <path d="M2 2l7.586 7.586" />
+      <circle cx="11" cy="11" r="2" />
+    </svg>
+  ),
   dashboard: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7.5" height="9" rx="1.5" />
@@ -140,6 +150,7 @@ const NAV = [
     links: [
       { href: "/call-queue", label: "Call Queue", icon: ICONS.callQueue },
       { href: "/leads", label: "Leads", icon: ICONS.leads },
+      { href: "/design-requests", label: "Design Requests", icon: ICONS.design },
     ],
   },
   {
@@ -169,7 +180,7 @@ const NAV = [
   {
     group: "Reference",
     links: [
-      { href: "/notifications", label: "Notifications", icon: ICONS.notifications, badge: NOTIFICATIONS.length },
+      { href: "/notifications", label: "Notifications", icon: ICONS.notifications },
       { href: "/roles", label: "Role-wise Workflow", icon: ICONS.roles },
     ],
   },
@@ -200,6 +211,17 @@ export default function AppShell({ children }) {
   useEffect(() => {
     if (fromApi) refreshProfile().catch(() => {});
   }, [fromApi]);
+
+  // The bell: the signed-in user's notifications from the API (demo roles
+  // without a session keep the wireframe's sample list).
+  const bell = useBellNotifications(fromApi);
+  const unread = fromApi ? bell.data?.unread || 0 : NOTIFICATIONS.length;
+
+  // Opening a notification from the bell marks it read.
+  function openNotification(n) {
+    setShowBell(false);
+    if (!n.read) api.post(NOTIFICATION_API.markRead, { ids: [n.id] }).then(notificationsChanged, () => {});
+  }
 
   // Signed out — send to the login page, then back here after sign-in.
   useEffect(() => {
@@ -267,8 +289,8 @@ export default function AppShell({ children }) {
                   >
                     <span className="wf-sidebar-link-icon">{link.icon}</span>
                     {!collapsed && <span className="wf-sidebar-link-label">{link.label}</span>}
-                    {!collapsed && !!link.badge && (
-                      <span className="wf-sidebar-link-badge">{link.badge}</span>
+                    {!collapsed && link.href === "/notifications" && unread > 0 && (
+                      <span className="wf-sidebar-link-badge">{unread}</span>
                     )}
                   </Link>
                 );
@@ -339,17 +361,31 @@ export default function AppShell({ children }) {
             )}
             <div style={{ position: "relative" }}>
               <button className="wf-bell" onClick={() => setShowBell((v) => !v)}>
-                🔔 {NOTIFICATIONS.length}
+                🔔 {unread}
               </button>
               {showBell && (
                 <div className="wf-bell-dropdown">
                   <ul className="wf-list">
-                    {NOTIFICATIONS.slice(0, 4).map((n, i) => (
-                      <li key={i}>
-                        <span>{n.text}</span>
-                        <span style={{ color: "var(--idle)", fontSize: 11 }}>{n.when}</span>
-                      </li>
-                    ))}
+                    {fromApi
+                      ? (bell.data?.items || []).map((n) => (
+                          <li key={n.id}>
+                            {n.link ? (
+                              <Link href={n.link} onClick={() => openNotification(n)}>
+                                {n.read ? n.title : <strong>{n.title}</strong>}
+                              </Link>
+                            ) : (
+                              <span>{n.read ? n.title : <strong>{n.title}</strong>}</span>
+                            )}
+                            <span style={{ color: "var(--idle)", fontSize: 11 }}>{formatDateTime(n.created_at)}</span>
+                          </li>
+                        ))
+                      : NOTIFICATIONS.slice(0, 4).map((n, i) => (
+                          <li key={i}>
+                            <span>{n.text}</span>
+                            <span style={{ color: "var(--idle)", fontSize: 11 }}>{n.when}</span>
+                          </li>
+                        ))}
+                    {fromApi && bell.data && !bell.data.items.length && <li>No notifications yet.</li>}
                   </ul>
                   <Link
                     href="/notifications"

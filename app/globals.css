@@ -647,6 +647,29 @@ button {
 .wf-upload .wf-btn {
   margin-top: 8px;
 }
+/* FileDropBox: files dragged over it, and the picked files. */
+.wf-upload.dragging {
+  border-color: var(--brand);
+  background: var(--panel);
+}
+.wf-upload.disabled {
+  opacity: 0.6;
+}
+.wf-upload-files {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  text-align: left;
+}
+.wf-upload-files li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
 
 .wf-btn {
   display: inline-flex;

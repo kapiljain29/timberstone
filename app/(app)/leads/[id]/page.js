@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge, Box, FieldError, LoadError, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import LeadAssignForm from "@/components/LeadAssignForm";
+import LeadDesign from "@/components/LeadDesign";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
@@ -103,6 +104,8 @@ export default function LeadDetailPage() {
           )}
         </Box>
       )}
+
+      {can("designs.view") && <LeadDesign lead={l} />}
 
       {can("leads.edit") && (
         <StatusForm
