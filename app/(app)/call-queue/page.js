@@ -1,202 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Box, Badge, Annotation, leadStatusTone } from "@/components/ui";
-import { getLeads, getCallLogs, getSalesReps, logCall } from "@/lib/store";
-import { useRole } from "@/lib/roles";
-import { QUEUE_STATUSES, CALL_OUTCOMES, CALLBACK_SLOTS, branchName } from "@/lib/data";
+import { useState } from "react";
+import { Badge, Box, BranchFilter, FieldError, FilterPanel, LoadError, Pagination, SearchField, TabBar, leadStatusTone } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { dateTimeLocalToIso, formatDateTime, startOfTodayIso, toDateTimeLocal } from "@/lib/format";
+import { formatPhone } from "@/lib/phone";
+import { useCan, useMyUserId } from "@/lib/roles";
+import {
+  CALL_QUEUE_API,
+  CALL_STATUS,
+  callStatusLabel,
+  callStatusTone,
+  isOpenCallStatus,
+  useBranchTabs,
+  useCallQueueMaster,
+} from "@/lib/team";
+import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useApi";
+import { useListFilters } from "@/lib/useListFilters";
 
-// Queue order: overdue callbacks first, then today's callbacks, then fresh
-// leads never called, then everything else.
-function priority(lead) {
-  const cb = lead.nextCallback || "";
-  if (cb.startsWith("Overdue")) return 0;
-  if (cb.startsWith("Today")) return 1;
-  if (!cb && !lead.callAttempts) return 2;
-  if (!cb) return 3;
-  return 4;
-}
+const PAGE_SIZE = 20;
+const FILTERS = { branch: "all", search: "", call_status: "" };
+// Queue views (the API's `view`); `count` = the /summary key for its tab.
+const VIEWS = [
+  { value: "due", label: "Call Now", count: "due", empty: "Queue clear. No calls due right now." },
+  { value: "upcoming", label: "Upcoming Callbacks", count: "upcoming", empty: "No callbacks scheduled for later." },
+  { value: "closed", label: "Closed", empty: "No closed calls yet." },
+];
 
-function isDueNow(lead) {
-  return priority(lead) <= 3;
-}
-
-const emptyCall = { outcomeId: "", nextCallback: CALLBACK_SLOTS[1], note: "" };
-
+// Leads assigned to a sales user, to call and log the outcome of. A sales
+// user works their own queue; anyone whose data scope covers other sales
+// users (team / all) can open theirs read-only.
 export default function CallQueuePage() {
-  const role = useRole();
-  const [reps, setReps] = useState([]);
-  const [pickedRep, setRep] = useState("");
-  // A Sales rep always works their own queue; Management can view any rep's.
-  const rep = role?.id === "Sales" ? role.user : pickedRep;
-  const [leads, setLeads] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const can = useCan();
+  const myId = useMyUserId();
+  const filters = useListFilters(FILTERS);
+  const { page, setPage, values } = filters;
+  const search = useDebouncedValue(values.search.trim());
+  const [view, setView] = useState(VIEWS[0].value);
+  // "" = the signed-in user's own queue.
+  const [userId, setUserId] = useState("");
+  // "Calls today" count from midnight on this device.
+  const [since] = useState(startOfTodayIso);
+  // The row whose call form is open.
   const [activeId, setActiveId] = useState(null);
-  const [call, setCall] = useState(emptyCall);
-  // Leads called in this session stay visible with their outcome, even if
-  // the outcome moved them out of the queue.
-  const [loggedIds, setLoggedIds] = useState({});
 
-  function refresh() {
-    setLeads(getLeads());
-    setLogs(getCallLogs());
-  }
-
-  useEffect(() => {
-    // Reads from localStorage, which is unavailable during SSR — must load post-mount.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const salesReps = getSalesReps();
-    setReps(salesReps);
-    setRep(salesReps[0] || "");
-    refresh();
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
-
-  const myLeads = useMemo(
-    () =>
-      leads
-        .filter((l) => l.assignedRep === rep && !l.convertedProjectId)
-        .filter((l) => QUEUE_STATUSES.includes(l.status) || loggedIds[l.id])
-        .sort((a, b) => priority(a) - priority(b)),
-    [leads, rep, loggedIds]
+  const branchTabs = useBranchTabs();
+  const branchId = branchTabs.branchId(values.branch);
+  const { master, error: masterError, reload: reloadMaster } = useCallQueueMaster(branchId);
+  const otherCallers = (master?.callers || []).filter((c) => c.id !== myId);
+  const owner = userId ? { user_id: userId } : {};
+  const summary = useApiData(CALL_QUEUE_API.summary, { ...owner, since }, { branchId });
+  const list = useApiData(
+    CALL_QUEUE_API.list,
+    { ...owner, page, limit: PAGE_SIZE, view, search: search || undefined, call_status: values.call_status || undefined },
+    { branchId }
   );
-  const dueNow = myLeads.filter((l) => isDueNow(l) || loggedIds[l.id]);
-  const upcoming = myLeads.filter((l) => !isDueNow(l) && !loggedIds[l.id]);
-  const myLogsToday = logs.filter((c) => c.rep === rep && c.date === "Today");
-  const connectedToday = myLogsToday.filter((c) => c.connected).length;
-  const pending = dueNow.filter((l) => !loggedIds[l.id]).length;
+  // Only the queue's owner logs its calls.
+  const canLog = !userId && can("leads.edit");
+  const counts = summary.data;
+  const current = VIEWS.find((v) => v.value === view);
+  const items = list.data?.items || [];
 
-  function switchRep(next) {
-    setRep(next);
+  function switchView(next) {
+    setView(next);
+    setPage(1);
     setActiveId(null);
-    setLoggedIds({});
   }
 
-  function startCall(lead) {
-    setActiveId(lead.id);
-    setCall(emptyCall);
-  }
-
-  function saveCall(lead) {
-    const outcome = CALL_OUTCOMES.find((o) => o.id === call.outcomeId);
-    if (!outcome) return;
-    logCall(lead.id, { outcome, rep, nextCallback: call.nextCallback, note: call.note });
-    setLoggedIds((m) => ({ ...m, [lead.id]: outcome.label }));
+  function switchUser(next) {
+    setUserId(next);
+    setPage(1);
     setActiveId(null);
-    refresh();
   }
 
-  const selectedOutcome = CALL_OUTCOMES.find((o) => o.id === call.outcomeId);
-
-  function renderRow(lead) {
-    const logged = loggedIds[lead.id];
-    const active = activeId === lead.id;
-    const overdue = (lead.nextCallback || "").startsWith("Overdue");
-    return (
-      <div key={lead.id} className={`wf-queue-row${active ? " active" : ""}${logged ? " logged" : ""}`}>
-        <div className="wf-queue-main">
-          <div className="wf-queue-who">
-            <Link href={`/leads/${lead.id}`} className="wf-queue-name">
-              {lead.name}
-            </Link>
-            <span className="wf-queue-meta">
-              {lead.phone} · {branchName(lead.branch)} · {(lead.productTypes || []).join(", ") || "—"} · {lead.source}
-            </span>
-          </div>
-          <div className="wf-queue-tags">
-            <Badge tone={leadStatusTone(lead.status)}>{lead.status}</Badge>
-            <span className="wf-queue-attempt">Attempt #{(lead.callAttempts || 0) + (logged ? 0 : 1)}</span>
-            <span className={`wf-queue-callback${overdue ? " overdue" : ""}`}>
-              {lead.nextCallback || (lead.callAttempts ? "No callback set" : "New lead")}
-            </span>
-          </div>
-          <div className="wf-queue-action">
-            {logged ? (
-              <Badge tone="done">Logged: {logged}</Badge>
-            ) : active ? (
-              <Badge tone="current">Calling…</Badge>
-            ) : (
-              <button type="button" className="wf-btn primary" onClick={() => startCall(lead)}>
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M5 4h3.2l1.6 4-2 1.3a10.5 10.5 0 0 0 5 5l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z" />
-                </svg>
-                Call
-              </button>
-            )}
-          </div>
-        </div>
-
-        {active && (
-          <div className="wf-queue-log">
-            {lead.notes && <div className="wf-note" style={{ marginTop: 0 }}>Last note: {lead.notes}</div>}
-            <div className="wf-grid wf-grid-3" style={{ marginTop: 10 }}>
-              <div className="wf-field">
-                <label>Call Outcome</label>
-                <select
-                  className="wf-select"
-                  value={call.outcomeId}
-                  onChange={(e) => setCall((c) => ({ ...c, outcomeId: e.target.value }))}
-                >
-                  <option value="">Select…</option>
-                  {CALL_OUTCOMES.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedOutcome?.callback && (
-                <div className="wf-field">
-                  <label>Next Callback</label>
-                  <select
-                    className="wf-select"
-                    value={call.nextCallback}
-                    onChange={(e) => setCall((c) => ({ ...c, nextCallback: e.target.value }))}
-                  >
-                    {CALLBACK_SLOTS.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="wf-field">
-                <label>Call Note</label>
-                <input
-                  className="wf-input"
-                  value={call.note}
-                  onChange={(e) => setCall((c) => ({ ...c, note: e.target.value }))}
-                  placeholder="What was discussed…"
-                />
-              </div>
-            </div>
-            <div className="wf-btn-row" style={{ justifyContent: "space-between" }}>
-              <Link href={`/leads/${lead.id}`} className="wf-link-btn">
-                Open lead (rough estimate / book measurement) →
-              </Link>
-              <div className="wf-btn-row">
-                <button type="button" className="wf-btn" onClick={() => setActiveId(null)}>
-                  Cancel
-                </button>
-                <button type="button" className="wf-btn primary" disabled={!selectedOutcome} onClick={() => saveCall(lead)}>
-                  Save Call
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+  function handleLogged() {
+    setActiveId(null);
+    list.reload();
+    summary.reload();
   }
 
   return (
@@ -204,83 +85,286 @@ export default function CallQueuePage() {
       <div className="wf-crumb">Pre-Sales</div>
       <div className="wf-queue-head">
         <div>
-          <h1 className="wf-h1">Today&apos;s Call Queue</h1>
-          <p className="wf-sub">Your assigned leads that need a call today, with overdue callbacks first.</p>
+          <h1 className="wf-h1">Call Queue</h1>
+          <p className="wf-sub">Leads assigned to you to call — overdue callbacks first, then new leads. Log every call&apos;s outcome.</p>
         </div>
-        {role?.id === "Sales" ? (
-          <span className="wf-role-tag" style={{ marginBottom: 18 }}>
-            {rep}&apos;s queue
-          </span>
-        ) : (
-          <div className="wf-field" style={{ minWidth: 200 }}>
-            <label>Viewing Sales Rep</label>
-            <select className="wf-select" value={rep} onChange={(e) => switchRep(e.target.value)}>
-              {reps.map((r) => (
-                <option key={r}>{r}</option>
+        {otherCallers.length > 0 && (
+          <div className="wf-field" style={{ minWidth: 220 }}>
+            <label htmlFor="queue-user">Viewing Queue Of</label>
+            <select id="queue-user" className="wf-select" value={userId} onChange={(e) => switchUser(e.target.value)}>
+              <option value="">My queue</option>
+              {otherCallers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
         )}
       </div>
 
+      <LoadError error={masterError} onRetry={reloadMaster} />
+
+      {branchTabs.show && (
+        <BranchFilter
+          branches={branchTabs.options}
+          allLabel={branchTabs.allLabel}
+          value={values.branch}
+          onChange={(value) => filters.set("branch", value)}
+        />
+      )}
+
       <div className="wf-cards">
-        <div className="wf-card">
-          <div className="num">{pending}</div>
-          <div className="label">To call now</div>
-        </div>
-        <div className="wf-card">
-          <div className="num">{myLogsToday.length}</div>
-          <div className="label">Calls today</div>
-        </div>
-        <div className="wf-card">
-          <div className="num" style={{ color: "var(--green-text)" }}>{connectedToday}</div>
-          <div className="label">Connected</div>
-        </div>
-        <div className="wf-card">
-          <div className="num" style={{ color: "var(--amber-text)" }}>{upcoming.length}</div>
-          <div className="label">Upcoming callbacks</div>
-        </div>
+        <SummaryCard value={counts?.due} label="To call now" />
+        <SummaryCard value={counts?.calls} label="Calls today" />
+        <SummaryCard value={counts?.connected} label="Connected today" color="var(--green-text)" />
+        <SummaryCard value={counts?.upcoming} label="Upcoming callbacks" color="var(--amber-text)" />
       </div>
+      <LoadError error={summary.error} onRetry={summary.reload} />
 
-      <Box title={`Call Now (${dueNow.length})`} right={<span className="wf-role-tag">Sales</span>}>
-        {dueNow.length === 0 ? (
-          <div className="wf-empty">Queue clear. No calls due right now.</div>
-        ) : (
-          <div className="wf-queue">{dueNow.map(renderRow)}</div>
-        )}
-        <Annotation>
-          Click-to-dial and call recording need a telephony provider (to be confirmed with the
-          client). In this wireframe, &quot;Call&quot; just opens the outcome form. The outcome you
-          save updates the lead status automatically.
-        </Annotation>
-      </Box>
-
-      <Box title={`Upcoming Callbacks (${upcoming.length})`}>
-        {upcoming.length === 0 ? (
-          <div className="wf-empty">No callbacks scheduled for later.</div>
-        ) : (
-          <div className="wf-queue">{upcoming.map(renderRow)}</div>
-        )}
-      </Box>
-
-      <Box title={`Today's Call Log (${myLogsToday.length})`}>
-        {myLogsToday.length === 0 ? (
-          <div className="wf-empty">No calls logged today.</div>
-        ) : (
-          <ul className="wf-list">
-            {[...myLogsToday].reverse().map((c) => (
-              <li key={c.id}>
-                <span>
-                  <strong>{c.time}</strong> · {c.leadName} · {c.outcome}
-                  {c.nextCallback ? ` · callback ${c.nextCallback}` : ""}
-                  {c.note ? ` · “${c.note}”` : ""}
-                </span>
-                <Badge tone={c.connected ? "done" : "pending"}>{c.connected ? "Connected" : "Not connected"}</Badge>
-              </li>
+      <FilterPanel filters={filters}>
+        <SearchField id="queue-search" value={values.search} onChange={(v) => filters.set("search", v)} placeholder="Name, mobile or company" />
+        <div className="wf-field">
+          <label htmlFor="queue-filter-status">Call Status</label>
+          <select
+            id="queue-filter-status"
+            className="wf-select"
+            value={values.call_status}
+            onChange={(e) => filters.set("call_status", e.target.value)}
+          >
+            <option value="">Any Status</option>
+            {(master?.call_statuses || []).map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
             ))}
-          </ul>
+          </select>
+        </div>
+      </FilterPanel>
+
+      <TabBar
+        label="Queue view"
+        tabs={VIEWS.map((v) => ({ value: v.value, label: v.label, tag: v.count ? counts?.[v.count] : undefined }))}
+        value={view}
+        onChange={switchView}
+      />
+
+      <Box title={`${current.label} (${listTotal(list)})`}>
+        <LoadError error={list.error} onRetry={list.reload} />
+        {!list.data && list.loading ? (
+          <div className="wf-empty">Loading call queue…</div>
+        ) : (
+          !list.error &&
+          (items.length === 0 ? (
+            <div className="wf-empty">{current.empty}</div>
+          ) : (
+            <div className="wf-queue" aria-busy={list.loading}>
+              {items.map((item) => (
+                <QueueRow
+                  key={item.id}
+                  item={item}
+                  master={master}
+                  branchId={branchId}
+                  canLog={canLog}
+                  active={activeId === item.id}
+                  onCall={() => setActiveId(item.id)}
+                  onCancel={() => setActiveId(null)}
+                  onLogged={handleLogged}
+                />
+              ))}
+            </div>
+          ))
         )}
+        <Pagination pagination={list.data?.pagination} onPage={setPage} disabled={list.loading} />
       </Box>
     </div>
+  );
+}
+
+function SummaryCard({ value, label, color }) {
+  return (
+    <div className="wf-card">
+      <div className="num" style={color ? { color } : undefined}>
+        {value ?? "…"}
+      </div>
+      <div className="label">{label}</div>
+    </div>
+  );
+}
+
+// One lead in the queue, with its call form when active.
+function QueueRow({ item, master, branchId, canLog, active, onCall, onCancel, onLogged }) {
+  const open = isOpenCallStatus(master, item.call_status);
+  const overdue = open && item.next_callback_at && new Date(item.next_callback_at) <= new Date();
+  const phone = formatPhone(item.lead_country_code, item.lead_mobile_number);
+  return (
+    <div className={`wf-queue-row${active ? " active" : ""}`}>
+      <div className="wf-queue-main">
+        <div className="wf-queue-who">
+          <Link href={`/leads/${item.lead_id}`} className="wf-queue-name">
+            {item.lead_name}
+            {item.lead_company_name ? ` · ${item.lead_company_name}` : ""}
+          </Link>
+          <span className="wf-queue-meta">
+            <a href={`tel:${item.lead_country_code}${item.lead_mobile_number}`}>{phone}</a>
+            {" · "}
+            {[item.branch_name || "No branch", item.lead_source_name, `Assigned ${formatDateTime(item.assigned_at)}`].filter(Boolean).join(" · ")}
+          </span>
+          {item.last_remark && <span className="wf-queue-meta">Last call: “{item.last_remark}”</span>}
+        </div>
+        <div className="wf-queue-tags">
+          <Badge tone={callStatusTone(master, item.call_status)}>{callStatusLabel(master, item.call_status)}</Badge>
+          {item.lead_status_name && <Badge tone={leadStatusTone(item.lead_status_name)}>{item.lead_status_name}</Badge>}
+          <span className="wf-queue-attempt">
+            {item.attempts ? `${item.attempts} call${item.attempts === 1 ? "" : "s"} · last ${formatDateTime(item.last_called_at)}` : "New lead"}
+          </span>
+          {open && item.next_callback_at && (
+            <span className={`wf-queue-callback${overdue ? " overdue" : ""}`}>
+              {overdue ? "Overdue: " : "Callback "}
+              {formatDateTime(item.next_callback_at)}
+            </span>
+          )}
+        </div>
+        {canLog && (
+          <div className="wf-queue-action">
+            {active ? (
+              <Badge tone="current">Calling…</Badge>
+            ) : (
+              <button type="button" className={`wf-btn${open ? " primary" : ""}`} onClick={onCall}>
+                {open ? "Log Call" : "Log Another Call"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {active && <LogCallForm item={item} master={master} branchId={branchId} onCancel={onCancel} onLogged={onLogged} />}
+    </div>
+  );
+}
+
+// Log a call on a queue row (POST /call-queue/log-call): outcome, callback
+// time (open outcomes; required for "Callback scheduled"), remark and,
+// optionally, the lead's new status — confirmed first, as status changes
+// are kept in the lead's history.
+function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
+  const [callStatus, setCallStatus] = useState("");
+  const [callbackAt, setCallbackAt] = useState("");
+  const [leadStatusId, setLeadStatusId] = useState("");
+  const [remark, setRemark] = useState("");
+  const save = useSubmit();
+  const [confirm, confirmDialog] = useConfirm();
+  const outcomes = (master?.call_statuses || []).filter((s) => s.value !== CALL_STATUS.PENDING);
+  const leadStatuses = (master?.lead_statuses || []).filter((s) => s.id !== item.lead_status);
+  const showCallback = Boolean(callStatus) && isOpenCallStatus(master, callStatus);
+  const [minCallback] = useState(() => toDateTimeLocal(new Date()));
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const nextStatus = leadStatuses.find((s) => s.id === leadStatusId);
+    if (
+      nextStatus &&
+      !(await confirm({
+        title: `Mark ${item.lead_name} as ${nextStatus.name}?`,
+        message: `The call is logged and the lead's status changes from ${item.lead_status_name || "none"} to ${nextStatus.name}. The change is kept in the status history.`,
+        confirmLabel: `Log call and mark as ${nextStatus.name}`,
+        tone: "primary",
+      }))
+    ) {
+      return;
+    }
+    const done = await save.post(
+      CALL_QUEUE_API.logCall,
+      {
+        id: item.id,
+        call_status: callStatus,
+        next_callback_at: showCallback ? dateTimeLocalToIso(callbackAt) : null,
+        lead_status_id: leadStatusId || null,
+        remark: remark.trim() || null,
+      },
+      { branchId }
+    );
+    if (done) onLogged();
+  }
+
+  return (
+    <form className="wf-queue-log" onSubmit={handleSave} noValidate>
+      <div className="wf-grid wf-grid-2">
+        <div className="wf-field">
+          <label htmlFor={`call-status-${item.id}`}>Call Outcome</label>
+          <select
+            id={`call-status-${item.id}`}
+            required
+            className="wf-select"
+            value={callStatus}
+            onChange={(e) => setCallStatus(e.target.value)}
+            disabled={save.submitting}
+          >
+            <option value="">Select outcome</option>
+            {outcomes.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <FieldError>{save.fieldErrors.call_status}</FieldError>
+        </div>
+        {showCallback && (
+          <div className="wf-field">
+            <label htmlFor={`call-callback-${item.id}`}>Next Callback</label>
+            <input
+              id={`call-callback-${item.id}`}
+              type="datetime-local"
+              required={callStatus === CALL_STATUS.CALLBACK}
+              className="wf-input"
+              min={minCallback}
+              value={callbackAt}
+              onChange={(e) => setCallbackAt(e.target.value)}
+              disabled={save.submitting}
+            />
+            <FieldError>{save.fieldErrors.next_callback_at}</FieldError>
+          </div>
+        )}
+        <div className="wf-field">
+          <label htmlFor={`call-lead-status-${item.id}`}>Change Lead Status</label>
+          <select
+            id={`call-lead-status-${item.id}`}
+            className="wf-select"
+            value={leadStatusId}
+            onChange={(e) => setLeadStatusId(e.target.value)}
+            disabled={save.submitting}
+          >
+            <option value="">Keep {item.lead_status_name || "current status"}</option>
+            {leadStatuses.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <FieldError>{save.fieldErrors.lead_status_id}</FieldError>
+        </div>
+        <div className="wf-field">
+          <label htmlFor={`call-remark-${item.id}`}>Remark</label>
+          <input
+            id={`call-remark-${item.id}`}
+            className="wf-input"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            placeholder="What was discussed…"
+            maxLength={1000}
+            disabled={save.submitting}
+          />
+          <FieldError>{save.fieldErrors.remark}</FieldError>
+        </div>
+      </div>
+      <div className="wf-actions-end">
+        <button type="button" className="wf-btn" onClick={onCancel} disabled={save.submitting}>
+          Cancel
+        </button>
+        <button type="submit" className="wf-btn primary" disabled={save.submitting}>
+          {save.submitting ? "Saving…" : "Save Call"}
+        </button>
+      </div>
+      {confirmDialog}
+    </form>
   );
 }

@@ -10,7 +10,16 @@ import LeadDesign from "@/components/LeadDesign";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
-import { ALL_BRANCHES, LEAD_API, optionLabel, useLeadMaster } from "@/lib/team";
+import {
+  ALL_BRANCHES,
+  CALL_QUEUE_API,
+  LEAD_API,
+  callStatusLabel,
+  callStatusTone,
+  optionLabel,
+  useCallQueueMaster,
+  useLeadMaster,
+} from "@/lib/team";
 import { useApiData, useSubmit } from "@/lib/useApi";
 
 // Lead detail. Every call goes across all the user's branches
@@ -21,6 +30,9 @@ export default function LeadDetailPage() {
   const lead = useApiData(LEAD_API.details, { id }, { branchId: ALL_BRANCHES });
   const statusHistory = useApiData(LEAD_API.statusHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
   const assignmentHistory = useApiData(LEAD_API.assignmentHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
+  const callHistory = useApiData(CALL_QUEUE_API.history, { lead_id: id }, { branchId: ALL_BRANCHES });
+  // Call status labels for the call history.
+  const { master: callMaster } = useCallQueueMaster(ALL_BRANCHES);
   // Option labels, statuses and who the user may assign — for the lead's branch.
   const { master } = useLeadMaster(lead.data ? lead.data.branch_id || ALL_BRANCHES : null);
 
@@ -164,6 +176,25 @@ export default function LeadDetailPage() {
         />
       </Box>
 
+      <Box title={`Call History${callHistory.data ? ` (${callHistory.data.length})` : ""}`}>
+        <History
+          history={callHistory}
+          emptyLabel="No calls logged yet. Calls are logged by the sales team from their Call Queue."
+          render={(c) => (
+            <>
+              <span>
+                <strong>{formatDateTime(c.called_at)}</strong>
+                {c.called_by_name ? ` · ${c.called_by_name}` : ""}
+                {c.next_callback_at ? ` · callback ${formatDateTime(c.next_callback_at)}` : ""}
+                {c.lead_status_name ? ` · status → ${c.lead_status_name}` : ""}
+                {c.remark ? ` · “${c.remark}”` : ""}
+              </span>
+              <Badge tone={callStatusTone(callMaster, c.call_status)}>{callStatusLabel(callMaster, c.call_status)}</Badge>
+            </>
+          )}
+        />
+      </Box>
+
     </div>
   );
 }
@@ -178,7 +209,8 @@ function Info({ label, value }) {
   );
 }
 
-// A history list (useApiData of /status-history or /assignment-history).
+// A history list (useApiData of /status-history, /assignment-history or
+// /call-queue/history).
 function History({ history, emptyLabel, render }) {
   if (history.error) return <LoadError error={history.error} onRetry={history.reload} />;
   if (!history.data) return <div className="wf-empty">Loading history…</div>;

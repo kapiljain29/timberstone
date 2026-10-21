@@ -321,27 +321,31 @@ export function Pagination({ pagination, onPage, disabled = false }) {
 // — parent owns the selected value so pages can filter their own data.
 export function BranchFilter({ branches, value, onChange, allLabel = "All Branches" }) {
   return (
-    <div className="wf-branch-filter" role="tablist" aria-label="Filter by branch">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "all"}
-        className={`wf-branch-filter-btn${value === "all" ? " active" : ""}`}
-        onClick={() => onChange?.("all")}
-      >
-        {allLabel}
-      </button>
-      {branches.map((b) => (
+    <TabBar
+      label="Filter by branch"
+      tabs={[{ value: "all", label: allLabel }, ...branches.map((b) => ({ value: b.id, label: b.name, tag: b.tag }))]}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
+// A row of tab buttons: tabs = [{ value, label, tag? }] (tag = small text
+// after the label, e.g. a branch code or a count).
+export function TabBar({ tabs, value, onChange, label }) {
+  return (
+    <div className="wf-branch-filter" role="tablist" aria-label={label}>
+      {tabs.map((t) => (
         <button
-          key={b.id}
+          key={t.value}
           type="button"
           role="tab"
-          aria-selected={value === b.id}
-          className={`wf-branch-filter-btn${value === b.id ? " active" : ""}`}
-          onClick={() => onChange?.(b.id)}
+          aria-selected={value === t.value}
+          className={`wf-branch-filter-btn${value === t.value ? " active" : ""}`}
+          onClick={() => onChange?.(t.value)}
         >
-          {b.name}
-          <span className="wf-branch-filter-tag">{b.tag}</span>
+          {t.label}
+          {t.tag !== undefined && t.tag !== null && <span className="wf-branch-filter-tag">{t.tag}</span>}
         </button>
       ))}
     </div>
