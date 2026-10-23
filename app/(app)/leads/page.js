@@ -27,7 +27,8 @@ const FILTERS = {
 };
 
 // ?branch=<id> preselects the branch tab; ?assigned=unassigned opens the
-// unassigned queue.
+// unassigned queue; ?status= / ?source= preselect the lead status / source
+// filters (dashboard links).
 export default function LeadsPage() {
   return (
     <Suspense fallback={<div className="wf-empty">Loading…</div>}>
@@ -41,6 +42,8 @@ function Leads() {
   const filters = useListFilters(FILTERS, {
     ...(params.get("branch") && { branch: params.get("branch") }),
     ...(params.get("assigned") && { assigned: params.get("assigned") }),
+    ...(params.get("status") && { status: params.get("status") }),
+    ...(params.get("source") && { lead_source_id: params.get("source") }),
   });
   const { page, setPage, values } = filters;
   const search = useDebouncedValue(values.search.trim());

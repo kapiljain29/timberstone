@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Box, BranchFilter, FieldError, FilterPanel, LoadError, Pagination, SearchField, TabBar, leadStatusTone } from "@/components/ui";
+import { Badge, Box, BranchFilter, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatCard, TabBar, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { dateTimeLocalToIso, formatDateTime, startOfTodayIso, toDateTimeLocal } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -115,10 +115,10 @@ export default function CallQueuePage() {
       )}
 
       <div className="wf-cards">
-        <SummaryCard value={counts?.due} label="To call now" />
-        <SummaryCard value={counts?.calls} label="Calls today" />
-        <SummaryCard value={counts?.connected} label="Connected today" color="var(--green-text)" />
-        <SummaryCard value={counts?.upcoming} label="Upcoming callbacks" color="var(--amber-text)" />
+        <StatCard value={counts?.due} label="To call now" />
+        <StatCard value={counts?.calls} label="Calls today" />
+        <StatCard value={counts?.connected} label="Connected today" color="var(--green-text)" />
+        <StatCard value={counts?.upcoming} label="Upcoming callbacks" color="var(--amber-text)" />
       </div>
       <LoadError error={summary.error} onRetry={summary.reload} />
 
@@ -177,17 +177,6 @@ export default function CallQueuePage() {
         )}
         <Pagination pagination={list.data?.pagination} onPage={setPage} disabled={list.loading} />
       </Box>
-    </div>
-  );
-}
-
-function SummaryCard({ value, label, color }) {
-  return (
-    <div className="wf-card">
-      <div className="num" style={color ? { color } : undefined}>
-        {value ?? "…"}
-      </div>
-      <div className="label">{label}</div>
     </div>
   );
 }

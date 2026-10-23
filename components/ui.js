@@ -2,6 +2,8 @@
 // Plain presentational components — no hooks, so they can be safely
 // imported from both server and client components.
 
+import Link from "next/link";
+
 export function Box({ title, right, children }) {
   return (
     <div className="wf-box">
@@ -13,6 +15,26 @@ export function Box({ title, right, children }) {
       )}
       {children}
     </div>
+  );
+}
+
+// A number with its label for a .wf-cards row ("…" while loading). With
+// `href` the card links to the list behind the number.
+export function StatCard({ value, label, color, href }) {
+  const content = (
+    <>
+      <div className="num" style={color ? { color } : undefined}>
+        {value ?? "…"}
+      </div>
+      <div className="label">{label}</div>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="wf-card link">
+      {content}
+    </Link>
+  ) : (
+    <div className="wf-card">{content}</div>
   );
 }
 

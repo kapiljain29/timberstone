@@ -859,6 +859,14 @@ button {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
 }
+.wf-card.link {
+  display: block;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.wf-card.link:hover {
+  border-color: var(--brand);
+}
 .wf-card .num {
   font-size: 26px;
   font-weight: 800;

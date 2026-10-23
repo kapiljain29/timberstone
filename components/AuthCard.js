@@ -27,9 +27,7 @@ export default function AuthCard({ children }) {
 
         <div className="wf-login-form">{children}</div>
       </div>
-      <p className="wf-login-footer">
-        <Link href="/">← Back to Role Hub</Link> · Timberstone ERP
-      </p>
+      <p className="wf-login-footer">Timberstone ERP</p>
     </div>
   );
 }
