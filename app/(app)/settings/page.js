@@ -82,7 +82,7 @@ const GROUPS = {
         title: "Send an email when…",
         note: "Password-reset emails are always sent. Turning an email off here still shows the notification in the bell.",
         fields: [
-          { key: "notify_lead_assigned", label: "A lead is assigned to a team member", type: "toggle" },
+          { key: "notify_lead_assigned", label: "A lead is assigned to a team member, or a new lead has no one to assign it to (to Super Admins)", type: "toggle" },
           { key: "notify_design_requests", label: "A design request is sent, submitted, approved or sent back for changes", type: "toggle" },
         ],
       },

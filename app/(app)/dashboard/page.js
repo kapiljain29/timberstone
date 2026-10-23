@@ -9,8 +9,8 @@ import { DASHBOARD_API, designStatusTone, useBranchTabs } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
 // The signed-in user's overview. The API returns one section per module
-// their role may see (leads, their own call queue, design requests — null
-// otherwise), already limited to their branches and data scope, so the
+// their role may see (leads, call queue — a caller's own, everyone else's
+// team-wide — and design requests; null otherwise), already limited to their branches and data scope, so the
 // screen shows whatever comes back.
 export default function DashboardPage() {
   const [branch, setBranch] = useState("all");
@@ -62,8 +62,8 @@ export default function DashboardPage() {
               )}
               {calls && (
                 <>
-                  <StatCard value={calls.due} label="To call now" href="/call-queue" />
-                  <StatCard value={calls.calls} label="Calls today" />
+                  <StatCard value={calls.due} label={calls.everyone ? "Team calls due" : "To call now"} href="/call-queue" />
+                  <StatCard value={calls.calls} label={calls.everyone ? "Team calls today" : "Calls today"} />
                   <StatCard value={calls.connected} label="Connected today" color="var(--green-text)" />
                 </>
               )}

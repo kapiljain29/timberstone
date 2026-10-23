@@ -20,6 +20,9 @@ import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useAp
 import { useListFilters } from "@/lib/useListFilters";
 
 const PAGE_SIZE = 20;
+// "Viewing Queue Of" values besides a sales user's id.
+const QUEUE_MINE = "mine";
+const QUEUE_ALL = "all";
 const FILTERS = { branch: "all", search: "", call_status: "" };
 // Queue views (the API's `view`); `count` = the /summary key for its tab.
 const VIEWS = [
@@ -30,7 +33,8 @@ const VIEWS = [
 
 // Leads assigned to a sales user, to call and log the outcome of. A sales
 // user works their own queue; anyone whose data scope covers other sales
-// users (team / all) can open theirs read-only.
+// users (team / all) can open theirs read-only, one at a time or all
+// together ("Everyone" — where non-callers such as admins start).
 export default function CallQueuePage() {
   const can = useCan();
   const myId = useMyUserId();
@@ -38,8 +42,9 @@ export default function CallQueuePage() {
   const { page, setPage, values } = filters;
   const search = useDebouncedValue(values.search.trim());
   const [view, setView] = useState(VIEWS[0].value);
-  // "" = the signed-in user's own queue.
-  const [userId, setUserId] = useState("");
+  // Whose queue: QUEUE_MINE, QUEUE_ALL or a sales user's id; null = not
+  // picked yet (see `queueOf` below).
+  const [picked, setPicked] = useState(null);
   // "Calls today" count from midnight on this device.
   const [since] = useState(startOfTodayIso);
   // The row whose call form is open.
@@ -48,16 +53,24 @@ export default function CallQueuePage() {
   const branchTabs = useBranchTabs();
   const branchId = branchTabs.branchId(values.branch);
   const { master, error: masterError, reload: reloadMaster } = useCallQueueMaster(branchId);
-  const otherCallers = (master?.callers || []).filter((c) => c.id !== myId);
-  const owner = userId ? { user_id: userId } : {};
-  const summary = useApiData(CALL_QUEUE_API.summary, { ...owner, since }, { branchId });
+  const callers = master?.callers || [];
+  const otherCallers = callers.filter((c) => c.id !== myId);
+  // Until picked: callers start on their own queue, everyone else (e.g. an
+  // admin) on every queue they can see. Waits for the master to decide
+  // (own queue if it fails to load).
+  const isCaller = callers.some((c) => c.id === myId);
+  const queueOf =
+    picked ?? (master || masterError ? (isCaller || otherCallers.length === 0 ? QUEUE_MINE : QUEUE_ALL) : null);
+  const owner = queueOf === QUEUE_ALL ? { all_users: true } : queueOf && queueOf !== QUEUE_MINE ? { user_id: queueOf } : {};
+  const queuePath = (path) => (queueOf ? path : null);
+  const summary = useApiData(queuePath(CALL_QUEUE_API.summary), { ...owner, since }, { branchId });
   const list = useApiData(
-    CALL_QUEUE_API.list,
+    queuePath(CALL_QUEUE_API.list),
     { ...owner, page, limit: PAGE_SIZE, view, search: search || undefined, call_status: values.call_status || undefined },
     { branchId }
   );
-  // Only the queue's owner logs its calls.
-  const canLog = !userId && can("leads.edit");
+  // Only the queue's owner logs its calls (QueueRow checks the row's owner).
+  const canLog = can("leads.edit");
   const counts = summary.data;
   const current = VIEWS.find((v) => v.value === view);
   const items = list.data?.items || [];
@@ -69,7 +82,7 @@ export default function CallQueuePage() {
   }
 
   function switchUser(next) {
-    setUserId(next);
+    setPicked(next);
     setPage(1);
     setActiveId(null);
   }
@@ -86,13 +99,18 @@ export default function CallQueuePage() {
       <div className="wf-queue-head">
         <div>
           <h1 className="wf-h1">Call Queue</h1>
-          <p className="wf-sub">Leads assigned to you to call — overdue callbacks first, then new leads. Log every call&apos;s outcome.</p>
+          <p className="wf-sub">
+            {queueOf === QUEUE_ALL
+              ? "Every sales queue you can see — overdue callbacks first, then new leads."
+              : "Leads assigned to you to call — overdue callbacks first, then new leads. Log every call's outcome."}
+          </p>
         </div>
         {otherCallers.length > 0 && (
           <div className="wf-field" style={{ minWidth: 220 }}>
             <label htmlFor="queue-user">Viewing Queue Of</label>
-            <select id="queue-user" className="wf-select" value={userId} onChange={(e) => switchUser(e.target.value)}>
-              <option value="">My queue</option>
+            <select id="queue-user" className="wf-select" value={queueOf || QUEUE_MINE} onChange={(e) => switchUser(e.target.value)}>
+              <option value={QUEUE_ALL}>Everyone</option>
+              <option value={QUEUE_MINE}>My queue</option>
               {otherCallers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -151,7 +169,7 @@ export default function CallQueuePage() {
 
       <Box title={`${current.label} (${listTotal(list)})`}>
         <LoadError error={list.error} onRetry={list.reload} />
-        {!list.data && list.loading ? (
+        {!list.data && (list.loading || !queueOf) ? (
           <div className="wf-empty">Loading call queue…</div>
         ) : (
           !list.error &&
@@ -165,7 +183,8 @@ export default function CallQueuePage() {
                   item={item}
                   master={master}
                   branchId={branchId}
-                  canLog={canLog}
+                  canLog={canLog && item.user_id === myId}
+                  showOwner={queueOf === QUEUE_ALL}
                   active={activeId === item.id}
                   onCall={() => setActiveId(item.id)}
                   onCancel={() => setActiveId(null)}
@@ -181,39 +200,54 @@ export default function CallQueuePage() {
   );
 }
 
-// One lead in the queue, with its call form when active.
-function QueueRow({ item, master, branchId, canLog, active, onCall, onCancel, onLogged }) {
+// One lead in the queue, with its call form when active: who to call on
+// the left, then labelled columns — when to call, the last outcome, calls
+// made — and the action; the last remark underneath.
+function QueueRow({ item, master, branchId, canLog, showOwner, active, onCall, onCancel, onLogged }) {
   const open = isOpenCallStatus(master, item.call_status);
-  const overdue = open && item.next_callback_at && new Date(item.next_callback_at) <= new Date();
+  const called = item.attempts > 0;
   const phone = formatPhone(item.lead_country_code, item.lead_mobile_number);
   return (
     <div className={`wf-queue-row${active ? " active" : ""}`}>
       <div className="wf-queue-main">
         <div className="wf-queue-who">
-          <Link href={`/leads/${item.lead_id}`} className="wf-queue-name">
-            {item.lead_name}
-            {item.lead_company_name ? ` · ${item.lead_company_name}` : ""}
-          </Link>
+          <div className="wf-queue-title">
+            <Link href={`/leads/${item.lead_id}`} className="wf-queue-name">
+              {item.lead_name}
+              {item.lead_company_name ? ` · ${item.lead_company_name}` : ""}
+            </Link>
+            {item.lead_status_name && (
+              <span title="Lead status">
+                <Badge tone={leadStatusTone(item.lead_status_name)}>{item.lead_status_name}</Badge>
+              </span>
+            )}
+          </div>
           <span className="wf-queue-meta">
-            <a href={`tel:${item.lead_country_code}${item.lead_mobile_number}`}>{phone}</a>
-            {" · "}
-            {[item.branch_name || "No branch", item.lead_source_name, `Assigned ${formatDateTime(item.assigned_at)}`].filter(Boolean).join(" · ")}
+            <a href={`tel:${item.lead_country_code}${item.lead_mobile_number}`} className="wf-queue-phone">
+              {phone}
+            </a>
+            {[item.branch_name || "No branch", item.lead_source_name, showOwner && `Assigned to ${item.user_name}`]
+              .filter(Boolean)
+              .map((part) => (
+                <span key={part}> · {part}</span>
+              ))}
           </span>
-          {item.last_remark && <span className="wf-queue-meta">Last call: “{item.last_remark}”</span>}
         </div>
-        <div className="wf-queue-tags">
-          <Badge tone={callStatusTone(master, item.call_status)}>{callStatusLabel(master, item.call_status)}</Badge>
-          {item.lead_status_name && <Badge tone={leadStatusTone(item.lead_status_name)}>{item.lead_status_name}</Badge>}
-          <span className="wf-queue-attempt">
-            {item.attempts ? `${item.attempts} call${item.attempts === 1 ? "" : "s"} · last ${formatDateTime(item.last_called_at)}` : "New lead"}
-          </span>
-          {open && item.next_callback_at && (
-            <span className={`wf-queue-callback${overdue ? " overdue" : ""}`}>
-              {overdue ? "Overdue: " : "Callback "}
-              {formatDateTime(item.next_callback_at)}
-            </span>
-          )}
-        </div>
+
+        <QueueCell label="When to call" {...whenToCall(item, open)} />
+        <QueueCell
+          label="Last outcome"
+          value={
+            called ? <Badge tone={callStatusTone(master, item.call_status)}>{callStatusLabel(master, item.call_status)}</Badge> : "Not called yet"
+          }
+          tone={called ? undefined : "muted"}
+        />
+        <QueueCell
+          label="Calls made"
+          value={called ? `${item.attempts} call${item.attempts === 1 ? "" : "s"}` : "None"}
+          sub={called ? `Last ${formatDateTime(item.last_called_at)}` : `Assigned ${formatDateTime(item.assigned_at)}`}
+        />
+
         {canLog && (
           <div className="wf-queue-action">
             {active ? (
@@ -226,7 +260,31 @@ function QueueRow({ item, master, branchId, canLog, active, onCall, onCancel, on
           </div>
         )}
       </div>
+      {item.last_remark && (
+        <p className="wf-queue-remark">
+          <span className="wf-queue-label">Last remark</span> “{item.last_remark}”
+        </p>
+      )}
       {active && <LogCallForm item={item} master={master} branchId={branchId} onCancel={onCancel} onLogged={onLogged} />}
+    </div>
+  );
+}
+
+// The "When to call" column: overdue callback, a later callback, call now
+// (no callback time) or nothing left to do (closed outcome).
+function whenToCall(item, open) {
+  if (!open) return { value: "No more calls", tone: "muted" };
+  if (!item.next_callback_at) return { value: "Call now", tone: "now", sub: item.attempts ? "Try again" : "New lead" };
+  const overdue = new Date(item.next_callback_at) <= new Date();
+  return { value: overdue ? "Overdue" : "Callback", tone: overdue ? "overdue" : "later", sub: formatDateTime(item.next_callback_at) };
+}
+
+function QueueCell({ label, value, sub, tone }) {
+  return (
+    <div className="wf-queue-cell">
+      <span className="wf-queue-label">{label}</span>
+      <span className={`wf-queue-value${tone ? ` ${tone}` : ""}`}>{value}</span>
+      {sub && <span className="wf-queue-sub">{sub}</span>}
     </div>
   );
 }
