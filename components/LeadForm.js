@@ -24,6 +24,7 @@ const EMPTY = {
   company_name: "",
   lead_source_id: "",
   lead_sub_source_id: "",
+  architect_id: "",
   requirement_in_cladding: [],
   project_type: "",
   planning_to_start: "",
@@ -77,6 +78,9 @@ export default function LeadForm({ lead = null, defaults = {}, onSaved, onCancel
   const sourceMissing = form.lead_source_id && master && !leadSources.some((s) => s.id === form.lead_source_id);
   const subMissing =
     form.lead_sub_source_id && master && !masterStale && !subSources.some((s) => s.id === form.lead_sub_source_id);
+  // Same for the architect (deactivated since, or no longer listed).
+  const architects = master?.architects || [];
+  const architectMissing = form.architect_id && master && !masterStale && !architects.some((a) => a.id === form.architect_id);
   // Same for deactivated requirement categories.
   const categoryOptions = (categories || []).map((c) => ({ value: c.id, label: c.category_name }));
   for (const c of lead?.requirement_in_cladding_categories || []) {
@@ -110,7 +114,12 @@ export default function LeadForm({ lead = null, defaults = {}, onSaved, onCancel
     // The branch goes as x-branch-id, not in the body.
     const fields = { ...form };
     delete fields.branch_id;
-    const body = { ...fields, country_code: countryCode, lead_sub_source_id: fields.lead_sub_source_id || null };
+    const body = {
+      ...fields,
+      country_code: countryCode,
+      lead_sub_source_id: fields.lead_sub_source_id || null,
+      architect_id: fields.architect_id || null,
+    };
     if (lead) {
       const saved = await save.post(LEAD_API.update, { id: lead.id, ...body }, { branchId });
       if (saved) onSaved(saved);
@@ -237,6 +246,25 @@ export default function LeadForm({ lead = null, defaults = {}, onSaved, onCancel
             </select>
             <FieldError>{save.fieldErrors.lead_sub_source_id}</FieldError>
           </div>
+          <div className="wf-field">
+            <label htmlFor="lead-architect">Architect</label>
+            <select
+              id="lead-architect"
+              className="wf-select"
+              value={form.architect_id}
+              onChange={(e) => set("architect_id", e.target.value)}
+              disabled={save.submitting || !master || masterStale}
+            >
+              <option value="">{!master || masterStale ? "Loading…" : architects.length ? "None" : "No architects yet"}</option>
+              {architectMissing && <option value={form.architect_id}>{lead?.architect_name || "Current architect"}</option>}
+              {architects.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.firm_name ? `${a.architect_name} — ${a.firm_name}` : a.architect_name}
+                </option>
+              ))}
+            </select>
+            <FieldError>{save.fieldErrors.architect_id}</FieldError>
+          </div>
           {lead ? (
             <div className="wf-field">
               <label htmlFor="lead-branch">Branch</label>
@@ -251,8 +279,8 @@ export default function LeadForm({ lead = null, defaults = {}, onSaved, onCancel
                   required
                   className="wf-select"
                   value={branchId}
-                  // The assignee list is per branch — pick again.
-                  onChange={(e) => setForm((f) => ({ ...f, branch_id: e.target.value, assigned_to: "" }))}
+                  // The assignee and architect lists are per branch — pick again.
+                  onChange={(e) => setForm((f) => ({ ...f, branch_id: e.target.value, assigned_to: "", architect_id: "" }))}
                   disabled={save.submitting || !myBranches.length}
                 >
                   {!myBranches.length && <option value={ALL_BRANCHES}>No branch</option>}

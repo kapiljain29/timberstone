@@ -97,6 +97,9 @@ export default function LeadDetailPage() {
         <DetailGroup title="Source">
           <Detail label="Lead Source">{l.lead_source_name}</Detail>
           <Detail label="Sub-Source">{l.lead_sub_source_name}</Detail>
+          <Detail label="Architect">
+            {l.architect_name && (l.architect_firm_name ? `${l.architect_name} — ${l.architect_firm_name}` : l.architect_name)}
+          </Detail>
         </DetailGroup>
         <DetailGroup title="Requirement">
           <Detail label="Project Type">{option(master?.project_types, l.project_type)}</Detail>
