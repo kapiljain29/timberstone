@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Badge, Box, FieldError, LoadError, leadStatusTone } from "@/components/ui";
+import { Badge, Box, Detail, DetailGroup, FieldError, LoadError, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
@@ -56,6 +56,9 @@ export default function LeadDetailPage() {
 
   const l = lead.data;
   const answers = l.user_answers && typeof l.user_answers === "object" ? Object.entries(l.user_answers) : [];
+  // Option label for a stored value; null when not set (shows "Not provided").
+  const option = (options, value) => (value ? optionLabel(options, value) : null);
+  const phone = formatPhone(l.country_code, l.mobile_number);
 
   return (
     <div>
@@ -68,7 +71,12 @@ export default function LeadDetailPage() {
             {l.full_name} {l.status_name && <Badge tone={leadStatusTone(l.status_name)}>{l.status_name}</Badge>}
           </h1>
           <p className="wf-sub">
-            {[l.company_name, `Branch: ${l.branch_name || "None"}`, `Created ${formatDate(l.created_at)}${l.created_by_name ? ` by ${l.created_by_name}` : ""}`]
+            {[
+              l.company_name,
+              `Branch: ${l.branch_name || "None"}`,
+              `Created ${formatDate(l.created_at)}${l.created_by_name ? ` by ${l.created_by_name}` : ""}`,
+              `Updated ${formatDateTime(l.updated_at)}${l.updated_by_name ? ` by ${l.updated_by_name}` : ""}`,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -81,38 +89,50 @@ export default function LeadDetailPage() {
       </div>
 
       <Box title="Step 1 — Lead Details">
-        <div className="wf-grid wf-grid-3">
-          <Info label="Mobile" value={formatPhone(l.country_code, l.mobile_number)} />
-          <Info label="Email" value={l.email} />
-          <Info label="Company / Household" value={l.company_name} />
-          <Info label="Lead Source" value={l.lead_source_name} />
-          <Info label="Sub-Source" value={l.lead_sub_source_name} />
-          <Info label="Project Type" value={optionLabel(master?.project_types, l.project_type)} />
-          <Info label="Type of Property" value={optionLabel(master?.work_types, l.work_type)} />
-          <Info label="Estimated Area" value={optionLabel(master?.estimated_areas, l.estimated_area)} />
-          <Info label="Budget" value={optionLabel(master?.budgets, l.budget)} />
-          <Info label="Planning to Start" value={optionLabel(master?.planning_to_start, l.planning_to_start)} />
-          <Info label="Requirement in Cladding" value={l.requirement_in_cladding_categories.map((c) => c.category_name).join(", ")} />
-          <Info label="Last Updated" value={`${formatDateTime(l.updated_at)}${l.updated_by_name ? ` by ${l.updated_by_name}` : ""}`} />
-        </div>
+        <DetailGroup title="Contact">
+          <Detail label="Mobile">{l.mobile_number && <a href={`tel:${l.country_code}${l.mobile_number}`}>{phone}</a>}</Detail>
+          <Detail label="Email">{l.email && <a href={`mailto:${l.email}`}>{l.email}</a>}</Detail>
+          <Detail label="Company / Household">{l.company_name}</Detail>
+        </DetailGroup>
+        <DetailGroup title="Source">
+          <Detail label="Lead Source">{l.lead_source_name}</Detail>
+          <Detail label="Sub-Source">{l.lead_sub_source_name}</Detail>
+        </DetailGroup>
+        <DetailGroup title="Requirement">
+          <Detail label="Project Type">{option(master?.project_types, l.project_type)}</Detail>
+          <Detail label="Type of Property">{option(master?.work_types, l.work_type)}</Detail>
+          <Detail label="Estimated Area">{option(master?.estimated_areas, l.estimated_area)}</Detail>
+          <Detail label="Budget">{option(master?.budgets, l.budget)}</Detail>
+          <Detail label="Planning to Start">{option(master?.planning_to_start, l.planning_to_start)}</Detail>
+          <Detail label="Requirement in Cladding">
+            {l.requirement_in_cladding_categories.length > 0 && (
+              <span className="wf-detail-tags">
+                {l.requirement_in_cladding_categories.map((c) => (
+                  <Badge key={c.id} tone="idle">
+                    {c.category_name}
+                  </Badge>
+                ))}
+              </span>
+            )}
+          </Detail>
+        </DetailGroup>
       </Box>
 
       {l.lead_gen_id && (
         <Box title="Meta Lead Ad">
-          <div className="wf-grid wf-grid-3">
-            <Info label="Campaign" value={l.campaign_name} />
-            <Info label="Form ID" value={l.form_id} />
-            <Info label="Meta Lead ID" value={l.lead_gen_id} />
-          </div>
+          <DetailGroup title="Campaign">
+            <Detail label="Campaign">{l.campaign_name}</Detail>
+            <Detail label="Form ID">{l.form_id}</Detail>
+            <Detail label="Meta Lead ID">{l.lead_gen_id}</Detail>
+          </DetailGroup>
           {answers.length > 0 && (
-            <ul className="wf-list">
+            <DetailGroup title="Answers on the Lead Form">
               {answers.map(([question, answer]) => (
-                <li key={question}>
-                  <span>{question.replace(/_/g, " ")}</span>
-                  <strong>{Array.isArray(answer) ? answer.join(", ") : String(answer ?? "—")}</strong>
-                </li>
+                <Detail key={question} label={question.replace(/_/g, " ")}>
+                  {Array.isArray(answer) ? answer.join(", ") : answer == null ? null : String(answer)}
+                </Detail>
               ))}
-            </ul>
+            </DetailGroup>
           )}
         </Box>
       )}
@@ -195,16 +215,6 @@ export default function LeadDetailPage() {
         />
       </Box>
 
-    </div>
-  );
-}
-
-// Read-only value in the details grid.
-function Info({ label, value }) {
-  return (
-    <div className="wf-field">
-      <label>{label}</label>
-      <input className="wf-input" value={value || "—"} readOnly />
     </div>
   );
 }

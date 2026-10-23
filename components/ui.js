@@ -38,6 +38,28 @@ export function StatCard({ value, label, color, href }) {
   );
 }
 
+// Read-only record details as label / value text (a <dl>) — never input
+// boxes, so nothing looks editable. Group related fields with
+// <DetailGroup title="Contact">; empty values show "Not provided".
+export function DetailGroup({ title, children }) {
+  return (
+    <section className="wf-detail-group">
+      {title && <h3 className="wf-detail-group-title">{title}</h3>}
+      <dl className="wf-details">{children}</dl>
+    </section>
+  );
+}
+
+export function Detail({ label, children, wide = false }) {
+  const empty = children === null || children === undefined || children === "" || (Array.isArray(children) && children.length === 0);
+  return (
+    <div className={`wf-detail${wide ? " wide" : ""}`}>
+      <dt>{label}</dt>
+      <dd className={empty ? "empty" : undefined}>{empty ? "Not provided" : children}</dd>
+    </div>
+  );
+}
+
 export function Badge({ children, tone = "idle" }) {
   return <span className={`wf-badge ${tone}`}>{children}</span>;
 }
