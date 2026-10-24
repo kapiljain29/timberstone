@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Box, BranchFilter, FieldError, FilterPanel, LoadError, Pagination, SearchField, StatCard, TabBar, leadStatusTone } from "@/components/ui";
+import { Badge, Box, BranchFilter, FieldError, FilterPanel, FutureDateTimeField, LoadError, Pagination, SearchField, StatCard, TabBar, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { dateTimeLocalToIso, formatDateTime, startOfTodayIso, toDateTimeLocal } from "@/lib/format";
+import { dateTimeLocalToIso, formatDateTime, startOfTodayIso } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan, useMyUserId } from "@/lib/roles";
 import {
@@ -205,7 +205,9 @@ export default function CallQueuePage() {
 // the left, then labelled columns — when to call, the last outcome, calls
 // made — and the action; the last remark underneath.
 function QueueRow({ item, master, branchId, canLog, showOwner, active, onCall, onCancel, onLogged }) {
-  const open = isOpenCallStatus(master, item.call_status);
+  // Still to call: an open outcome, or a next call date (callback /
+  // follow-up) whatever the last outcome.
+  const open = isOpenCallStatus(master, item.call_status) || Boolean(item.next_callback_at);
   const called = item.attempts > 0;
   const phone = formatPhone(item.lead_country_code, item.lead_mobile_number);
   return (
@@ -271,8 +273,8 @@ function QueueRow({ item, master, branchId, canLog, showOwner, active, onCall, o
   );
 }
 
-// The "When to call" column: overdue callback, a later callback, call now
-// (no callback time) or nothing left to do (closed outcome).
+// The "When to call" column: overdue callback / follow-up, a later one,
+// call now (open outcome, no date) or nothing left to do (closed outcome).
 function whenToCall(item, open) {
   if (!open) return { value: "No more calls", tone: "muted" };
   if (!item.next_callback_at) return { value: "Call now", tone: "now", sub: item.attempts ? "Try again" : "New lead" };
@@ -290,10 +292,12 @@ function QueueCell({ label, value, sub, tone }) {
   );
 }
 
-// Log a call on a queue row (POST /call-queue/log-call): outcome, callback
-// time (open outcomes; required for "Callback scheduled"), remark and,
-// optionally, the lead's new status — confirmed first, as status changes
-// are kept in the lead's history.
+// Log a call on a queue row (POST /call-queue/log-call): outcome, next
+// call date, remark and, optionally, the lead's new status — confirmed
+// first, as status changes are kept in the lead's history. The date is
+// offered for open outcomes and required for "Callback scheduled"; it is
+// the "Next Follow-up" (required) when the lead moves to a status that
+// needs one, or stays in one and the outcome would otherwise close it.
 function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
   const [callStatus, setCallStatus] = useState("");
   const [callbackAt, setCallbackAt] = useState("");
@@ -303,8 +307,12 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
   const [confirm, confirmDialog] = useConfirm();
   const outcomes = (master?.call_statuses || []).filter((s) => s.value !== CALL_STATUS.PENDING);
   const leadStatuses = (master?.lead_statuses || []).filter((s) => s.id !== item.lead_status);
-  const showCallback = Boolean(callStatus) && isOpenCallStatus(master, callStatus);
-  const [minCallback] = useState(() => toDateTimeLocal(new Date()));
+  const openOutcome = isOpenCallStatus(master, callStatus);
+  const newStatus = leadStatuses.find((s) => s.id === leadStatusId);
+  const currentStatus = (master?.lead_statuses || []).find((s) => s.id === item.lead_status);
+  const followUp = newStatus ? newStatus.needs_follow_up : Boolean(currentStatus?.needs_follow_up && callStatus && !openOutcome);
+  const showCallback = Boolean(callStatus) && (openOutcome || followUp);
+  const callbackRequired = followUp || callStatus === CALL_STATUS.CALLBACK;
 
   async function handleSave(e) {
     e.preventDefault();
@@ -357,20 +365,15 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
           <FieldError>{save.fieldErrors.call_status}</FieldError>
         </div>
         {showCallback && (
-          <div className="wf-field">
-            <label htmlFor={`call-callback-${item.id}`}>Next Callback</label>
-            <input
-              id={`call-callback-${item.id}`}
-              type="datetime-local"
-              required={callStatus === CALL_STATUS.CALLBACK}
-              className="wf-input"
-              min={minCallback}
-              value={callbackAt}
-              onChange={(e) => setCallbackAt(e.target.value)}
-              disabled={save.submitting}
-            />
-            <FieldError>{save.fieldErrors.next_callback_at}</FieldError>
-          </div>
+          <FutureDateTimeField
+            id={`call-callback-${item.id}`}
+            label={followUp ? "Next Follow-up" : "Next Callback"}
+            required={callbackRequired}
+            value={callbackAt}
+            onChange={setCallbackAt}
+            disabled={save.submitting}
+            error={save.fieldErrors.next_callback_at}
+          />
         )}
         <div className="wf-field">
           <label htmlFor={`call-lead-status-${item.id}`}>Change Lead Status</label>

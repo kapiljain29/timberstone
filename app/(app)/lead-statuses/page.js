@@ -14,7 +14,8 @@ const FILTERS = { search: "", status: "all" };
 export default function LeadStatusesPage() {
   const filters = useListFilters(FILTERS);
   const { page, setPage } = filters;
-  const [form, setForm] = useState(null); // null = closed; { id: null, name } = add; { id, name } = edit
+  // null = closed; { id: null, name, needs_follow_up } = add; with an id = edit.
+  const [form, setForm] = useState(null);
   const debouncedSearch = useDebouncedValue(filters.values.search.trim());
 
   const list = useApiData(LEAD_STATUS_API.list, {
@@ -31,13 +32,17 @@ export default function LeadStatusesPage() {
 
   function openForm(leadStatus) {
     save.reset();
-    setForm(leadStatus ? { id: leadStatus.id, name: leadStatus.name } : { id: null, name: "" });
+    setForm(
+      leadStatus
+        ? { id: leadStatus.id, name: leadStatus.name, needs_follow_up: leadStatus.needs_follow_up }
+        : { id: null, name: "", needs_follow_up: false }
+    );
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    const { id, name } = form;
-    const saved = await save.post(id ? LEAD_STATUS_API.update : LEAD_STATUS_API.create, id ? { id, name } : { name });
+    const { id, name, needs_follow_up } = form;
+    const saved = await save.post(id ? LEAD_STATUS_API.update : LEAD_STATUS_API.create, { ...(id && { id }), name, needs_follow_up });
     if (saved) {
       setForm(null);
       list.reload();
@@ -86,6 +91,21 @@ export default function LeadStatusesPage() {
                 <FieldError>{save.fieldErrors.name}</FieldError>
               </div>
             </div>
+            <div className="wf-field">
+              <label className="wf-check-option">
+                <input
+                  type="checkbox"
+                  checked={form.needs_follow_up}
+                  onChange={(e) => setForm((f) => ({ ...f, needs_follow_up: e.target.checked }))}
+                  disabled={save.submitting}
+                />
+                <span>
+                  <strong>Needs next follow-up date</strong> — moving a lead to this status asks when to call next, and the
+                  lead comes back to its callers&apos; Call Queue then (e.g. Followup, Showroom Visit Fixed).
+                </span>
+              </label>
+              <FieldError>{save.fieldErrors.needs_follow_up}</FieldError>
+            </div>
             <div className="wf-actions-end">
               <button type="button" className="wf-btn" onClick={() => setForm(null)} disabled={save.submitting}>
                 Cancel
@@ -111,12 +131,13 @@ export default function LeadStatusesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Lead Status", "Updated By", "Status", ""]}
+              columns={["Lead Status", "Next Follow-up", "Updated By", "Status", ""]}
               emptyLabel={
                 filters.active ? "No lead statuses match these filters." : "No lead statuses yet. Add the first one."
               }
               rows={items.map((s) => [
                 <strong key="n">{s.name}</strong>,
+                s.needs_follow_up ? "Asked" : "—",
                 s.updated_by_name || "—",
                 <StatusBadge key="s" active={s.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Badge, Box, Detail, DetailGroup, FieldError, LoadError, leadStatusTone } from "@/components/ui";
+import { Badge, Box, Detail, DetailGroup, FieldError, FutureDateTimeField, LoadError, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { dateTimeLocalToIso, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
 import {
@@ -74,6 +74,7 @@ export default function LeadDetailPage() {
             {[
               l.company_name,
               `Branch: ${l.branch_name || "None"}`,
+              l.next_follow_up_at && `Next follow-up ${formatDateTime(l.next_follow_up_at)}`,
               `Created ${formatDate(l.created_at)}${l.created_by_name ? ` by ${l.created_by_name}` : ""}`,
               `Updated ${formatDateTime(l.updated_at)}${l.updated_by_name ? ` by ${l.updated_by_name}` : ""}`,
             ]
@@ -162,6 +163,7 @@ export default function LeadDetailPage() {
               <span>
                 <strong>{formatDateTime(h.changed_at)}</strong> · {h.from_status_name || "—"} → {h.to_status_name}
                 {h.changed_by_name ? ` · by ${h.changed_by_name}` : ""}
+                {h.next_follow_up_at ? ` · next follow-up ${formatDateTime(h.next_follow_up_at)}` : ""}
                 {h.remark ? ` · “${h.remark}”` : ""}
               </span>
               <Badge tone={leadStatusTone(h.to_status_name)}>{h.to_status_name}</Badge>
@@ -239,18 +241,24 @@ function History({ history, emptyLabel, render }) {
 
 // Change the lead's status (POST /leads/update-status — writes a history
 // row with the remark). Confirmed first: it is recorded and can't be undone.
+// A status that needs a follow-up (needs_follow_up) also asks for the next
+// follow-up date: the lead comes back to its callers' Call Queue then. The
+// lead's current status is offered too when it needs one (reschedule).
 function StatusForm({ lead, master, onChanged }) {
   const [status, setStatus] = useState("");
+  const [followUpAt, setFollowUpAt] = useState("");
   const [remark, setRemark] = useState("");
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
-  const statuses = (master?.lead_statuses || []).filter((s) => s.id !== lead.status);
+  const statuses = (master?.lead_statuses || []).filter((s) => s.id !== lead.status || s.needs_follow_up);
+  const next = statuses.find((s) => s.id === status);
+  const reschedule = next?.id === lead.status;
 
   async function handleSave(e) {
     e.preventDefault();
-    const next = statuses.find((s) => s.id === status);
     if (
       next &&
+      !reschedule &&
       !(await confirm({
         title: `Mark ${lead.full_name} as ${next.name}?`,
         message: `The lead's status changes from ${lead.status_name || "none"} to ${next.name}. The change is kept in the status history.`,
@@ -260,9 +268,19 @@ function StatusForm({ lead, master, onChanged }) {
     ) {
       return;
     }
-    const updated = await save.post(LEAD_API.updateStatus, { id: lead.id, status, remark: remark.trim() || null }, { branchId: ALL_BRANCHES });
+    const updated = await save.post(
+      LEAD_API.updateStatus,
+      {
+        id: lead.id,
+        status,
+        next_follow_up_at: next?.needs_follow_up ? dateTimeLocalToIso(followUpAt) : null,
+        remark: remark.trim() || null,
+      },
+      { branchId: ALL_BRANCHES }
+    );
     if (updated) {
       setStatus("");
+      setFollowUpAt("");
       setRemark("");
       onChanged(updated);
     }
@@ -285,12 +303,23 @@ function StatusForm({ lead, master, onChanged }) {
               <option value="">{master ? "Select status" : "Loading…"}</option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name}
+                  {s.id === lead.status ? `${s.name} (reschedule follow-up)` : s.name}
                 </option>
               ))}
             </select>
             <FieldError>{save.fieldErrors.status}</FieldError>
           </div>
+          {next?.needs_follow_up && (
+            <FutureDateTimeField
+              id="lead-next-follow-up"
+              label="Next Follow-up"
+              required
+              value={followUpAt}
+              onChange={setFollowUpAt}
+              disabled={save.submitting}
+              error={save.fieldErrors.next_follow_up_at}
+            />
+          )}
           <div className="wf-field">
             <label htmlFor="lead-status-remark">Remark</label>
             <input
@@ -307,7 +336,7 @@ function StatusForm({ lead, master, onChanged }) {
         </div>
         <div className="wf-actions-end">
           <button type="submit" className="wf-btn primary" disabled={save.submitting}>
-            {save.submitting ? "Saving…" : "Change Status"}
+            {save.submitting ? "Saving…" : reschedule ? "Reschedule Follow-up" : "Change Status"}
           </button>
         </div>
       </Box>

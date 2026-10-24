@@ -3,6 +3,7 @@
 // imported from both server and client components.
 
 import Link from "next/link";
+import { toDateTimeLocal } from "@/lib/format";
 
 export function Box({ title, right, children }) {
   return (
@@ -245,6 +246,28 @@ export function PhoneField({
         />
       </div>
       <FieldError>{codeError || numberError}</FieldError>
+    </div>
+  );
+}
+
+// Date + time picker for a moment that must be later than now (a callback
+// or next follow-up). value / onChange use the datetime-local string — send
+// it with dateTimeLocalToIso(). Shows the field's API error under it.
+export function FutureDateTimeField({ id, label, value, onChange, required = false, disabled = false, error }) {
+  return (
+    <div className="wf-field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type="datetime-local"
+        required={required}
+        className="wf-input"
+        min={toDateTimeLocal(new Date())}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+      <FieldError>{error}</FieldError>
     </div>
   );
 }
