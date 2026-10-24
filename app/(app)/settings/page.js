@@ -84,6 +84,7 @@ const GROUPS = {
         fields: [
           { key: "notify_lead_assigned", label: "A lead is assigned to a team member, or a new lead has no one to assign it to (to Super Admins)", type: "toggle" },
           { key: "notify_design_requests", label: "A design request is sent, submitted, approved or sent back for changes", type: "toggle" },
+          { key: "notify_approvals", label: "An approval is requested (to approvers), approved or rejected (to the requester)", type: "toggle" },
         ],
       },
       {
@@ -135,6 +136,22 @@ const GROUPS = {
         onMessage: "New Meta Lead Ads leads will be fetched and added to Leads.",
         offMessage: "New Meta Lead Ads leads will stop coming into Leads until it is turned on again.",
         fields: [{ key: "meta_page_access_token", label: "Page Access Token", type: "password", secret: true, requiredWhen: "meta_enabled", full: true }],
+      },
+    ],
+  },
+  sales: {
+    sections: [
+      {
+        title: "Booking",
+        fields: [
+          {
+            key: "token_min_amount",
+            label: "Minimum Token Amount (₹)",
+            type: "number",
+            required: true,
+            hint: "Needed to mark a lead Booked (statuses with “Needs token amount”). Less needs Management approval. 0 = any amount above zero.",
+          },
+        ],
       },
     ],
   },

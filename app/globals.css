@@ -571,8 +571,16 @@ button {
 /* Stacked form rows in a card (a grid row, then a full-width field or
    another row) get the same space between them as fields inside a row.
    Fields inside a grid, filter panel etc. are spaced by their container. */
-.wf-box > :is(.wf-grid, .wf-field) + :is(.wf-grid, .wf-field) {
+.wf-box > :is(.wf-grid, .wf-field, .wf-token) + :is(.wf-grid, .wf-field, .wf-token),
+.wf-queue-log > .wf-grid + .wf-token {
   margin-top: 16px;
+}
+/* TokenFields (components/TokenFields.js): its note, fields, checkbox and
+   reason stacked with the same 16px. */
+.wf-token {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 /* Banners, wireframe notes and loose buttons that follow other content in
    a card (e.g. an info Alert under the last field) get the same gap. */

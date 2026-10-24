@@ -19,6 +19,12 @@ function initials(name) {
 }
 
 const ICONS = {
+  approvals: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3 8-8" />
+      <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" />
+    </svg>
+  ),
   design: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -141,7 +147,10 @@ const ICONS = {
 const NAV = [
   {
     group: "Overview",
-    links: [{ href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard }],
+    links: [
+      { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard },
+      { href: "/approvals", label: "Approvals", icon: ICONS.approvals },
+    ],
   },
   {
     group: "Pre-Sales",

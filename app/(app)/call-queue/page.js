@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Badge, Box, BranchFilter, FieldError, FilterPanel, FutureDateTimeField, LoadError, Pagination, SearchField, StatCard, TabBar, leadStatusTone } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
+import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatDateTime, startOfTodayIso } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan, useMyUserId } from "@/lib/roles";
@@ -303,6 +304,7 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
   const [callbackAt, setCallbackAt] = useState("");
   const [leadStatusId, setLeadStatusId] = useState("");
   const [remark, setRemark] = useState("");
+  const [token, setToken] = useState(EMPTY_TOKEN);
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const outcomes = (master?.call_statuses || []).filter((s) => s.value !== CALL_STATUS.PENDING);
@@ -317,14 +319,26 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
   async function handleSave(e) {
     e.preventDefault();
     const nextStatus = leadStatuses.find((s) => s.id === leadStatusId);
+    // A needs_token status (Booked) without the token: the call is logged
+    // and Management is asked to approve; the status stays until then.
+    const askApproval = nextStatus?.needs_token && token.bypass;
     if (
       nextStatus &&
-      !(await confirm({
-        title: `Mark ${item.lead_name} as ${nextStatus.name}?`,
-        message: `The call is logged and the lead's status changes from ${item.lead_status_name || "none"} to ${nextStatus.name}. The change is kept in the status history.`,
-        confirmLabel: `Log call and mark as ${nextStatus.name}`,
-        tone: "primary",
-      }))
+      !(await confirm(
+        askApproval
+          ? {
+              title: `Ask Management to approve booking ${item.lead_name}?`,
+              message: `The call is logged. The lead stays ${item.lead_status_name || "as it is"} until Management approves; then it becomes ${nextStatus.name}. Any token entered is recorded now.`,
+              confirmLabel: "Log call and send for approval",
+              tone: "primary",
+            }
+          : {
+              title: `Mark ${item.lead_name} as ${nextStatus.name}?`,
+              message: `The call is logged and the lead's status changes from ${item.lead_status_name || "none"} to ${nextStatus.name}. The change is kept in the status history.`,
+              confirmLabel: `Log call and mark as ${nextStatus.name}`,
+              tone: "primary",
+            }
+      ))
     ) {
       return;
     }
@@ -336,6 +350,7 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
         next_callback_at: showCallback ? dateTimeLocalToIso(callbackAt) : null,
         lead_status_id: leadStatusId || null,
         remark: remark.trim() || null,
+        ...(nextStatus?.needs_token ? tokenBody(token) : {}),
       },
       { branchId }
     );
@@ -407,6 +422,16 @@ function LogCallForm({ item, master, branchId, onCancel, onLogged }) {
           <FieldError>{save.fieldErrors.remark}</FieldError>
         </div>
       </div>
+      {newStatus?.needs_token && (
+        <TokenFields
+          idPrefix={`call-${item.id}`}
+          master={master}
+          value={token}
+          onChange={setToken}
+          errors={save.fieldErrors}
+          disabled={save.submitting}
+        />
+      )}
       <div className="wf-actions-end">
         <button type="button" className="wf-btn" onClick={onCancel} disabled={save.submitting}>
           Cancel

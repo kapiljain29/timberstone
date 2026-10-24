@@ -7,6 +7,8 @@ import { Badge, Box, Detail, DetailGroup, FieldError, FutureDateTimeField, LoadE
 import { useConfirm } from "@/components/ConfirmDialog";
 import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
+import LeadBooking from "@/components/LeadBooking";
+import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
@@ -31,6 +33,8 @@ export default function LeadDetailPage() {
   const statusHistory = useApiData(LEAD_API.statusHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
   const assignmentHistory = useApiData(LEAD_API.assignmentHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
   const callHistory = useApiData(CALL_QUEUE_API.history, { lead_id: id }, { branchId: ALL_BRANCHES });
+  // Token payments and the request to book without the full token.
+  const booking = useApiData(LEAD_API.booking, { lead_id: id }, { branchId: ALL_BRANCHES });
   // Call status labels for the call history.
   const { master: callMaster } = useCallQueueMaster(ALL_BRANCHES);
   // Option labels, statuses and who the user may assign — for the lead's branch.
@@ -147,12 +151,16 @@ export default function LeadDetailPage() {
         <StatusForm
           lead={l}
           master={master}
+          tokenPaid={booking.data?.token_paid || 0}
           onChanged={(updated) => {
             lead.patch(() => updated);
             statusHistory.reload();
+            booking.reload();
           }}
         />
       )}
+
+      <LeadBooking booking={booking} master={master} />
 
       <Box title="Status History">
         <History
@@ -244,10 +252,11 @@ function History({ history, emptyLabel, render }) {
 // A status that needs a follow-up (needs_follow_up) also asks for the next
 // follow-up date: the lead comes back to its callers' Call Queue then. The
 // lead's current status is offered too when it needs one (reschedule).
-function StatusForm({ lead, master, onChanged }) {
+function StatusForm({ lead, master, tokenPaid, onChanged }) {
   const [status, setStatus] = useState("");
   const [followUpAt, setFollowUpAt] = useState("");
   const [remark, setRemark] = useState("");
+  const [token, setToken] = useState(EMPTY_TOKEN);
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const statuses = (master?.lead_statuses || []).filter((s) => s.id !== lead.status || s.needs_follow_up);
@@ -256,15 +265,27 @@ function StatusForm({ lead, master, onChanged }) {
 
   async function handleSave(e) {
     e.preventDefault();
+    // A needs_token status (Booked) without the token: an approval request
+    // instead — the status stays until Management approves.
+    const askApproval = next?.needs_token && token.bypass;
     if (
       next &&
       !reschedule &&
-      !(await confirm({
-        title: `Mark ${lead.full_name} as ${next.name}?`,
-        message: `The lead's status changes from ${lead.status_name || "none"} to ${next.name}. The change is kept in the status history.`,
-        confirmLabel: `Mark as ${next.name}`,
-        tone: "primary",
-      }))
+      !(await confirm(
+        askApproval
+          ? {
+              title: `Ask Management to approve booking ${lead.full_name}?`,
+              message: `The lead stays ${lead.status_name || "as it is"} until Management approves; then it becomes ${next.name}. Any token entered is recorded now.`,
+              confirmLabel: "Send for Approval",
+              tone: "primary",
+            }
+          : {
+              title: `Mark ${lead.full_name} as ${next.name}?`,
+              message: `The lead's status changes from ${lead.status_name || "none"} to ${next.name}. The change is kept in the status history.`,
+              confirmLabel: `Mark as ${next.name}`,
+              tone: "primary",
+            }
+      ))
     ) {
       return;
     }
@@ -275,6 +296,7 @@ function StatusForm({ lead, master, onChanged }) {
         status,
         next_follow_up_at: next?.needs_follow_up ? dateTimeLocalToIso(followUpAt) : null,
         remark: remark.trim() || null,
+        ...(next?.needs_token ? tokenBody(token) : {}),
       },
       { branchId: ALL_BRANCHES }
     );
@@ -282,6 +304,7 @@ function StatusForm({ lead, master, onChanged }) {
       setStatus("");
       setFollowUpAt("");
       setRemark("");
+      setToken(EMPTY_TOKEN);
       onChanged(updated);
     }
   }
@@ -334,9 +357,26 @@ function StatusForm({ lead, master, onChanged }) {
             <FieldError>{save.fieldErrors.remark}</FieldError>
           </div>
         </div>
+        {next?.needs_token && (
+          <TokenFields
+            idPrefix="lead"
+            master={master}
+            value={token}
+            onChange={setToken}
+            errors={save.fieldErrors}
+            disabled={save.submitting}
+            tokenPaid={tokenPaid}
+          />
+        )}
         <div className="wf-actions-end">
           <button type="submit" className="wf-btn primary" disabled={save.submitting}>
-            {save.submitting ? "Saving…" : reschedule ? "Reschedule Follow-up" : "Change Status"}
+            {save.submitting
+              ? "Saving…"
+              : reschedule
+                ? "Reschedule Follow-up"
+                : next?.needs_token && token.bypass
+                  ? "Send for Approval"
+                  : "Change Status"}
           </button>
         </div>
       </Box>

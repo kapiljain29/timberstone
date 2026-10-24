@@ -34,15 +34,20 @@ export default function LeadStatusesPage() {
     save.reset();
     setForm(
       leadStatus
-        ? { id: leadStatus.id, name: leadStatus.name, needs_follow_up: leadStatus.needs_follow_up }
-        : { id: null, name: "", needs_follow_up: false }
+        ? { id: leadStatus.id, name: leadStatus.name, needs_follow_up: leadStatus.needs_follow_up, needs_token: leadStatus.needs_token }
+        : { id: null, name: "", needs_follow_up: false, needs_token: false }
     );
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    const { id, name, needs_follow_up } = form;
-    const saved = await save.post(id ? LEAD_STATUS_API.update : LEAD_STATUS_API.create, { ...(id && { id }), name, needs_follow_up });
+    const { id, name, needs_follow_up, needs_token } = form;
+    const saved = await save.post(id ? LEAD_STATUS_API.update : LEAD_STATUS_API.create, {
+      ...(id && { id }),
+      name,
+      needs_follow_up,
+      needs_token,
+    });
     if (saved) {
       setForm(null);
       list.reload();
@@ -106,6 +111,21 @@ export default function LeadStatusesPage() {
               </label>
               <FieldError>{save.fieldErrors.needs_follow_up}</FieldError>
             </div>
+            <div className="wf-field">
+              <label className="wf-check-option">
+                <input
+                  type="checkbox"
+                  checked={form.needs_token}
+                  onChange={(e) => setForm((f) => ({ ...f, needs_token: e.target.checked }))}
+                  disabled={save.submitting}
+                />
+                <span>
+                  <strong>Needs token amount</strong> — moving a lead to this status asks for the token received (at least the
+                  minimum in Site Settings → Sales &amp; Bookings), or Management&apos;s approval to go without it (e.g. Booked).
+                </span>
+              </label>
+              <FieldError>{save.fieldErrors.needs_token}</FieldError>
+            </div>
             <div className="wf-actions-end">
               <button type="button" className="wf-btn" onClick={() => setForm(null)} disabled={save.submitting}>
                 Cancel
@@ -131,13 +151,14 @@ export default function LeadStatusesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Lead Status", "Next Follow-up", "Updated By", "Status", ""]}
+              columns={["Lead Status", "Next Follow-up", "Token", "Updated By", "Status", ""]}
               emptyLabel={
                 filters.active ? "No lead statuses match these filters." : "No lead statuses yet. Add the first one."
               }
               rows={items.map((s) => [
                 <strong key="n">{s.name}</strong>,
                 s.needs_follow_up ? "Asked" : "—",
+                s.needs_token ? "Required" : "—",
                 s.updated_by_name || "—",
                 <StatusBadge key="s" active={s.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">

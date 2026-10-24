@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Alert, Box, FieldError, LoadError } from "@/components/ui";
+import { Alert, Box, FieldError, FutureDateTimeField, LoadError } from "@/components/ui";
 import DesignRequestView from "@/components/DesignRequestView";
 import FileDropBox from "@/components/FileDropBox";
 import { getSession } from "@/lib/api";
-import { toDateTimeInput } from "@/lib/format";
+import { dateTimeLocalToIso, toDateTimeLocal } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { SUPER_ADMIN_SLUG, useCan } from "@/lib/roles";
 import { ALL_BRANCHES, DESIGN_API, DESIGN_STATUS, designWaiting, useDesignMaster } from "@/lib/team";
@@ -90,14 +90,13 @@ export default function DesignRequestPage() {
 // /design-requests/set-eta) — before uploading, and again if it changes.
 // The person who sent the request is notified.
 function ExpectedAtForm({ request, onSaved }) {
-  const [when, setWhen] = useState(toDateTimeInput(request.expected_at));
+  const [when, setWhen] = useState(request.expected_at ? toDateTimeLocal(new Date(request.expected_at)) : "");
   const [comment, setComment] = useState("");
   const save = useSubmit();
 
   async function handleSave(e) {
     e.preventDefault();
-    // datetime-local is the browser's local time → send it as ISO (UTC).
-    const expectedAt = when ? new Date(when).toISOString() : "";
+    const expectedAt = dateTimeLocalToIso(when) || "";
     const updated = await save.post(DESIGN_API.setEta, { id: request.id, expected_at: expectedAt, comment: comment.trim() || null }, { branchId: ALL_BRANCHES });
     if (updated) {
       setComment("");
@@ -109,20 +108,15 @@ function ExpectedAtForm({ request, onSaved }) {
     <form onSubmit={handleSave} noValidate>
       <Box title="Expected Completion">
         <div className="wf-grid wf-grid-2">
-          <div className="wf-field">
-            <label htmlFor="design-expected-at">Design Ready By (date &amp; time)</label>
-            <input
-              id="design-expected-at"
-              type="datetime-local"
-              required
-              className="wf-input"
-              value={when}
-              min={toDateTimeInput(new Date())}
-              onChange={(e) => setWhen(e.target.value)}
-              disabled={save.submitting}
-            />
-            <FieldError>{save.fieldErrors.expected_at}</FieldError>
-          </div>
+          <FutureDateTimeField
+            id="design-expected-at"
+            label="Design Ready By (date & time)"
+            required
+            value={when}
+            onChange={setWhen}
+            disabled={save.submitting}
+            error={save.fieldErrors.expected_at}
+          />
           <div className="wf-field">
             <label htmlFor="design-expected-comment">Note for Sales</label>
             <input
