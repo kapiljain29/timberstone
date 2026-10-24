@@ -4,7 +4,7 @@
 
 import { Badge } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
-import { designStatusLabel, designStatusTone } from "@/lib/team";
+import { designOverdue, designStatusLabel, designStatusTone, designWaiting } from "@/lib/team";
 
 // What each thread entry means (design_request_comments.action).
 const ACTION_TEXT = {
@@ -12,11 +12,23 @@ const ACTION_TEXT = {
   submitted: "uploaded the design",
   changes_requested: "asked for changes",
   approved: "approved the design",
+  eta_set: "expects the design ready by",
 };
 
 function fileSize(bytes) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+// When the designer expects the design ready: the date, "Overdue" once it
+// has passed while still waiting, or "Not given yet".
+export function DesignExpectedAt({ request }) {
+  if (!request.expected_at) return designWaiting(request.design_status) ? <span className="wf-sub">Not given yet</span> : "—";
+  return (
+    <>
+      {formatDateTime(request.expected_at)} {designOverdue(request) && <Badge tone="idle">Overdue</Badge>}
+    </>
+  );
 }
 
 // Status badge for a request.
@@ -26,7 +38,10 @@ export function DesignStatusBadge({ master, status }) {
 
 export default function DesignRequestView({ request, master }) {
   // Files by upload round, newest round first.
-  const rounds = [...new Set(request.files.map((f) => f.round))].sort((a, b) => b - a);
+  const links = request.links || [];
+  const rounds = [...new Set([...request.files, ...links].map((f) => f.round))].sort((a, b) => b - a);
+  // Link type labels (DWG / SketchUp / 3ds Max file) from the master.
+  const linkLabel = (type) => (master?.link_types || []).find((t) => t.value === type)?.label || type;
 
   return (
     <>
@@ -34,6 +49,13 @@ export default function DesignRequestView({ request, master }) {
         <DesignStatusBadge master={master} status={request.design_status} /> Designer: <strong>{request.designer_name}</strong> · Sent by{" "}
         {request.requested_by_name || "—"} on {formatDateTime(request.created_at)}
       </p>
+
+      <div className="wf-field">
+        <label>Expected Completion</label>
+        <div>
+          <DesignExpectedAt request={request} />
+        </div>
+      </div>
 
       <div className="wf-field">
         <label>Design Brief</label>
@@ -69,6 +91,20 @@ export default function DesignRequestView({ request, master }) {
                     </a>
                   ))}
               </div>
+              {links.some((l) => l.round === round) && (
+                <ul className="wf-list">
+                  {links
+                    .filter((l) => l.round === round)
+                    .map((l) => (
+                      <li key={l.id}>
+                        <span>{linkLabel(l.link_type)}</span>
+                        <a href={l.url} target="_blank" rel="noopener noreferrer" className="wf-link-btn">
+                          Open link ↗
+                        </a>
+                      </li>
+                    ))}
+                </ul>
+              )}
             </div>
           ))
         )}
@@ -81,6 +117,7 @@ export default function DesignRequestView({ request, master }) {
             <li key={c.id}>
               <span>
                 <strong>{c.created_by_name || "Someone"}</strong> {ACTION_TEXT[c.action] || c.action}
+                {c.expected_at && <strong> {formatDateTime(c.expected_at)}</strong>}
                 {c.comment && c.action !== "requested" && (
                   <span className="wf-sub" style={{ display: "block", whiteSpace: "pre-line" }}>
                     “{c.comment}”

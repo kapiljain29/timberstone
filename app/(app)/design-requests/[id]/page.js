@@ -7,9 +7,10 @@ import { Alert, Box, FieldError, LoadError } from "@/components/ui";
 import DesignRequestView from "@/components/DesignRequestView";
 import FileDropBox from "@/components/FileDropBox";
 import { getSession } from "@/lib/api";
+import { toDateTimeInput } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { SUPER_ADMIN_SLUG, useCan } from "@/lib/roles";
-import { ALL_BRANCHES, DESIGN_API, DESIGN_STATUS, useDesignMaster } from "@/lib/team";
+import { ALL_BRANCHES, DESIGN_API, DESIGN_STATUS, designWaiting, useDesignMaster } from "@/lib/team";
 import { useApiData, useSubmit } from "@/lib/useApi";
 
 // One design request — the designer reads the brief and uploads the JPEG /
@@ -44,7 +45,7 @@ export default function DesignRequestPage() {
   // for a design or changes — the API checks the same.
   const user = getSession()?.user;
   const mine = r.assigned_to === user?.id || user?.role === SUPER_ADMIN_SLUG;
-  const waiting = [DESIGN_STATUS.PENDING, DESIGN_STATUS.CHANGES_REQUESTED].includes(r.design_status);
+  const waiting = designWaiting(r.design_status);
 
   return (
     <div>
@@ -76,30 +77,99 @@ export default function DesignRequestPage() {
       </Box>
 
       {mine && waiting && can("designs.upload") && (
+        <ExpectedAtForm key={r.expected_at || "none"} request={r} onSaved={(updated) => request.patch(() => updated)} />
+      )}
+      {mine && waiting && can("designs.upload") && (
         <UploadForm request={r} master={master} onUploaded={(updated) => request.patch(() => updated)} />
       )}
     </div>
   );
 }
 
-// The wireframe's two upload boxes — design JPEGs and DWG files — then
-// send them for review (at least one file; both go up as `files`).
-function UploadForm({ request, master, onUploaded }) {
-  const [picked, setPicked] = useState({ jpeg: [], dwg: [] });
+// The designer tells the team when the design will be ready (POST
+// /design-requests/set-eta) — before uploading, and again if it changes.
+// The person who sent the request is notified.
+function ExpectedAtForm({ request, onSaved }) {
+  const [when, setWhen] = useState(toDateTimeInput(request.expected_at));
   const [comment, setComment] = useState("");
   const save = useSubmit();
-  // File types from the master: [{ value: "jpeg", label, extensions }, …].
-  const types = master?.file_types || [];
+
+  async function handleSave(e) {
+    e.preventDefault();
+    // datetime-local is the browser's local time → send it as ISO (UTC).
+    const expectedAt = when ? new Date(when).toISOString() : "";
+    const updated = await save.post(DESIGN_API.setEta, { id: request.id, expected_at: expectedAt, comment: comment.trim() || null }, { branchId: ALL_BRANCHES });
+    if (updated) {
+      setComment("");
+      onSaved(updated);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSave} noValidate>
+      <Box title="Expected Completion">
+        <div className="wf-grid wf-grid-2">
+          <div className="wf-field">
+            <label htmlFor="design-expected-at">Design Ready By (date &amp; time)</label>
+            <input
+              id="design-expected-at"
+              type="datetime-local"
+              required
+              className="wf-input"
+              value={when}
+              min={toDateTimeInput(new Date())}
+              onChange={(e) => setWhen(e.target.value)}
+              disabled={save.submitting}
+            />
+            <FieldError>{save.fieldErrors.expected_at}</FieldError>
+          </div>
+          <div className="wf-field">
+            <label htmlFor="design-expected-comment">Note for Sales</label>
+            <input
+              id="design-expected-comment"
+              className="wf-input"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Optional — e.g. waiting for site photos"
+              maxLength={2000}
+              disabled={save.submitting}
+            />
+            <FieldError>{save.fieldErrors.comment}</FieldError>
+          </div>
+        </div>
+        <div className="wf-actions-end">
+          <button type="submit" className="wf-btn primary" disabled={save.submitting}>
+            {save.submitting ? "Saving…" : request.expected_at ? "Update Expected Date" : "Send Expected Date"}
+          </button>
+        </div>
+      </Box>
+    </form>
+  );
+}
+
+// The design JPEGs (drop box) plus optional links to the working files —
+// DWG, SketchUp, 3ds Max (`link_types` from the master) — then send them
+// for review. At least one JPEG; the links are optional.
+function UploadForm({ request, master, onUploaded }) {
+  const [jpegs, setJpegs] = useState([]);
+  const [links, setLinks] = useState({});
+  const [comment, setComment] = useState("");
+  const save = useSubmit();
+  const jpegExtensions = (master?.file_types || []).flatMap((t) => t.extensions);
+  // [{ value, label, field }] — `field` is the upload's form field name.
+  const linkTypes = master?.link_types || [];
 
   async function handleUpload(e) {
     e.preventDefault();
     const form = new FormData();
     form.append("id", request.id);
     if (comment.trim()) form.append("comment", comment.trim());
-    types.forEach((t) => (picked[t.value] || []).forEach((f) => form.append("files", f)));
+    linkTypes.forEach((t) => links[t.field]?.trim() && form.append(t.field, links[t.field].trim()));
+    jpegs.forEach((f) => form.append("files", f));
     const updated = await save.upload(DESIGN_API.upload, form, { branchId: ALL_BRANCHES });
     if (updated) {
-      setPicked({ jpeg: [], dwg: [] });
+      setJpegs([]);
+      setLinks({});
       setComment("");
       onUploaded(updated);
     }
@@ -111,21 +181,40 @@ function UploadForm({ request, master, onUploaded }) {
         {!master ? (
           <div className="wf-empty">Loading…</div>
         ) : (
-          <div className="wf-grid wf-grid-2">
-            {types.map((t) => (
+          <>
+            {/* A .wf-field like every other field, so the card's 16px row
+                spacing (app/globals.css) applies to it and its error. */}
+            <div className="wf-field">
               <FileDropBox
-                key={t.value}
-                id={`design-files-${t.value}`}
-                label={t.value === "jpeg" ? "Upload design JPEG" : `Upload ${t.label} file`}
-                extensions={t.extensions}
-                files={picked[t.value] || []}
-                onChange={(files) => setPicked((p) => ({ ...p, [t.value]: files }))}
+                id="design-files-jpeg"
+                label="Upload design JPEG"
+                extensions={jpegExtensions}
+                files={jpegs}
+                onChange={setJpegs}
                 disabled={save.submitting}
               />
-            ))}
-          </div>
+              <FieldError>{save.fieldErrors.files}</FieldError>
+            </div>
+            <div className="wf-grid wf-grid-3">
+              {linkTypes.map((t) => (
+                <div className="wf-field" key={t.field}>
+                  <label htmlFor={`design-link-${t.value}`}>{t.label} Link</label>
+                  <input
+                    id={`design-link-${t.value}`}
+                    type="url"
+                    className="wf-input"
+                    value={links[t.field] || ""}
+                    onChange={(e) => setLinks((l) => ({ ...l, [t.field]: e.target.value }))}
+                    placeholder="Optional — https://…"
+                    maxLength={2000}
+                    disabled={save.submitting}
+                  />
+                  <FieldError>{save.fieldErrors[t.field]}</FieldError>
+                </div>
+              ))}
+            </div>
+          </>
         )}
-        <FieldError>{save.fieldErrors.files}</FieldError>
         <div className="wf-field">
           <label htmlFor="design-upload-comment">Comment for Sales</label>
           <textarea

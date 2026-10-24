@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField } from "@/components/ui";
-import { DesignStatusBadge } from "@/components/DesignRequestView";
+import { DesignExpectedAt, DesignStatusBadge } from "@/components/DesignRequestView";
 import { formatDateTime } from "@/lib/format";
 import { DESIGN_API, useBranchTabs, useDesignMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
@@ -84,7 +84,7 @@ function DesignRequests() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Lead", "Branch", "Designer", "Sent By", "Uploads", "Status", "Last Update", ""]}
+              columns={["Lead", "Branch", "Designer", "Sent By", "Uploads", "Status", "Expected By", "Last Update", ""]}
               emptyLabel="No design requests match these filters."
               rows={items.map((r) => [
                 <div key="n">
@@ -96,6 +96,7 @@ function DesignRequests() {
                 r.requested_by_name || "—",
                 r.round || "—",
                 <DesignStatusBadge key="s" master={master} status={r.design_status} />,
+                <DesignExpectedAt key="e" request={r} />,
                 formatDateTime(r.updated_at),
                 <Link key="o" href={`/design-requests/${r.id}`} className="wf-link-btn">
                   Open →
