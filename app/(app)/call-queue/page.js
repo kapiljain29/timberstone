@@ -20,7 +20,7 @@ import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useAp
 import { useListFilters } from "@/lib/useListFilters";
 
 const PAGE_SIZE = 20;
-// "Viewing Queue Of" values besides a sales user's id.
+// "Viewing Queue Of" values besides a caller's id.
 const QUEUE_MINE = "mine";
 const QUEUE_ALL = "all";
 const FILTERS = { branch: "all", search: "", call_status: "" };
@@ -31,9 +31,10 @@ const VIEWS = [
   { value: "closed", label: "Closed", empty: "No closed calls yet." },
 ];
 
-// Leads assigned to a sales user, to call and log the outcome of. A sales
-// user works their own queue; anyone whose data scope covers other sales
-// users (team / all) can open theirs read-only, one at a time or all
+// Leads assigned to a caller (role with Leads → Call — sales users, and
+// sales team leads who work leads too), to call and log the outcome of. A
+// caller works their own queue; anyone whose data scope covers other
+// callers (team / all) can open theirs read-only, one at a time or all
 // together ("Everyone" — where non-callers such as admins start).
 export default function CallQueuePage() {
   const can = useCan();
@@ -42,7 +43,7 @@ export default function CallQueuePage() {
   const { page, setPage, values } = filters;
   const search = useDebouncedValue(values.search.trim());
   const [view, setView] = useState(VIEWS[0].value);
-  // Whose queue: QUEUE_MINE, QUEUE_ALL or a sales user's id; null = not
+  // Whose queue: QUEUE_MINE, QUEUE_ALL or a caller's id; null = not
   // picked yet (see `queueOf` below).
   const [picked, setPicked] = useState(null);
   // "Calls today" count from midnight on this device.
@@ -70,7 +71,7 @@ export default function CallQueuePage() {
     { branchId }
   );
   // Only the queue's owner logs its calls (QueueRow checks the row's owner).
-  const canLog = can("leads.edit");
+  const canLog = can("leads.call");
   const counts = summary.data;
   const current = VIEWS.find((v) => v.value === view);
   const items = list.data?.items || [];
