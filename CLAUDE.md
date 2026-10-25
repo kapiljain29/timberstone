@@ -277,7 +277,7 @@ layout constants, and the workflow step definitions in `lib/stages.js`
 
 | Screen | Route | Status | Endpoints needed / notes |
 |---|---|---|---|
-| Web panel login | `/login` | api | `POST /api/public/auth/login`. Super Admin → full panel; every other role → "Member" panel built from its permissions (`lib/roles.js` `PANEL_ACCESS`). A role with no panel permissions gets a "no access yet" notice; Supervisors are pointed to the mobile app |
+| Web panel login | `/login` | api | `POST /api/public/auth/login`. The sign-in pages' brand panel (`components/AuthCard.js` — also forgot / reset password) shows the logo uploaded in Site Settings → General, from the public `POST /api/public/branding` (`useBranding()` in `lib/team.js`); the "T" mark until one is uploaded. Super Admin → full panel; every other role → "Member" panel built from its permissions (`lib/roles.js` `PANEL_ACCESS`). A role with no panel permissions gets a "no access yet" notice; Supervisors are pointed to the mobile app |
 | Forgot password | `/forgot-password` | api | `POST /api/public/auth/forgot-password` |
 | Reset password (emailed link) | `/reset-password?token=` | api | `POST /api/public/auth/verify-reset-token`, `POST /api/public/auth/reset-password` |
 | Supervisor login | `/m/login` | mock | `POST /auth/login` (exists) |

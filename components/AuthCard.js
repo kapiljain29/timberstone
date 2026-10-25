@@ -2,18 +2,45 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useBranding } from "@/lib/team";
 
 // Shared layout and fields for the signed-out screens: /login,
 // /forgot-password, /reset-password.
 
 export default function AuthCard({ children }) {
+  // The logo uploaded in Site Settings → General; the "T" mark until one is
+  // uploaded (or while it loads).
+  const branding = useBranding();
   return (
     <div className="wf-login">
       <div className="wf-login-card">
         <aside className="wf-login-brand">
-          <span className="wf-login-logo">T</span>
-          <h2 className="wf-login-brand-title">Timberstone ERP</h2>
-          <p className="wf-login-brand-sub">Lead-to-Handover Platform</p>
+          {branding?.logo_url ? (
+            <>
+              {/* Shown in cream on the dark panel (one-colour logo); it
+                  already carries the name, so no title. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file on the API server */}
+              <img className="wf-login-logo-mark" src={branding.logo_url} alt={branding.app_name || "Timberstone ERP"} />
+              <p className="wf-login-brand-sub wf-login-brand-tagline">ERP · Lead-to-Handover Platform</p>
+            </>
+          ) : (
+            <>
+              <span className="wf-login-logo">T</span>
+              <h2 className="wf-login-brand-title">Timberstone ERP</h2>
+              <p className="wf-login-brand-sub">Lead-to-Handover Platform</p>
+            </>
+          )}
+
+          <div className="wf-login-brand-foot">
+            <p className="wf-login-brand-label">One platform for</p>
+            <ul className="wf-login-brand-roles">
+              <li>Leads</li>
+              <li>Call Queue</li>
+              <li>Design</li>
+              <li>Approvals</li>
+              <li>Projects</li>
+            </ul>
+          </div>
 
           {/* <Link href="/m/install" className="wf-login-brand-app">
             <span>

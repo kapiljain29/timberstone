@@ -1407,6 +1407,22 @@ button {
   align-items: center;
   justify-content: center;
 }
+/* Uploaded logo (Site Settings) in place of the "T" mark, recoloured to
+   warm cream so it reads on the dark panel (made for a one-colour logo). */
+.wf-login-logo-mark {
+  display: block;
+  align-self: flex-start;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 60px;
+  object-fit: contain;
+  filter: brightness(0) invert(1) sepia(0.25);
+}
+.wf-login-brand-sub.wf-login-brand-tagline {
+  margin-top: 14px;
+  letter-spacing: 0.02em;
+}
 .wf-login-brand-title {
   font-size: 22px;
   font-weight: 800;
@@ -1425,6 +1441,14 @@ button {
   letter-spacing: 0.08em;
   color: rgba(234, 241, 234, 0.6);
   margin: 28px 0 10px;
+}
+/* Bottom of the brand panel: what the platform covers. */
+.wf-login-brand-foot {
+  margin-top: auto;
+  padding-top: 28px;
+}
+.wf-login-brand-foot .wf-login-brand-label {
+  margin-top: 0;
 }
 .wf-login-brand-roles {
   list-style: none;
@@ -1593,6 +1617,7 @@ button {
   .wf-login-brand {
     padding: 22px 20px;
   }
+  .wf-login-brand-foot,
   .wf-login-brand-label,
   .wf-login-brand-roles {
     display: none;
