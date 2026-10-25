@@ -93,6 +93,42 @@ const GROUPS = {
       },
     ],
   },
+  push: {
+    status: ({ values: v, sources }) =>
+      !v.push_enabled
+        ? { ok: false, text: "Push notifications are turned off — alerts only show in the bell and by email." }
+        : v.vapid_public_key && sources.vapid_private_key && v.vapid_subject
+          ? { ok: true, text: "Notifications are pushed to every device where a team member turned them on." }
+          : { ok: false, text: "Add the VAPID keys and contact to start sending push notifications." },
+    test: {
+      kind: "push",
+      label: "Test on Your Devices",
+      button: "Send Test Notification",
+      hint: "Pushes a test to every device where you turned notifications on (banner at the top of the panel).",
+    },
+    sections: [
+      {
+        title: "Browser & App Push",
+        toggle: "push_enabled",
+        onMessage: "Notifications will also be pushed to team members' devices.",
+        offMessage: "No push notifications will be sent until it is turned on again. The bell and emails keep working.",
+        note: "Each team member turns notifications on for their own device from the banner in the panel. On iPhone this needs the app added to the Home Screen.",
+        fields: [
+          { key: "vapid_public_key", label: "VAPID Public Key", type: "text", requiredWhen: "push_enabled", full: true },
+          {
+            key: "vapid_private_key",
+            label: "VAPID Private Key",
+            type: "password",
+            secret: true,
+            requiredWhen: "push_enabled",
+            full: true,
+            hint: "Generate a pair with: npx web-push generate-vapid-keys. Changing the keys turns notifications off on every device until it is opened again.",
+          },
+          { key: "vapid_subject", label: "Contact", type: "text", requiredWhen: "push_enabled", hint: "mailto:you@company.com or your website URL." },
+        ],
+      },
+    ],
+  },
   whatsapp: {
     // `connected` = the number and name the API reads from Meta with the
     // saved Phone Number ID and token.
@@ -404,7 +440,7 @@ function SettingsForm({ layout, data, master, canEdit, onSaved, onDirtyChange, c
 
               {last && (
                 <>
-                  {canEdit && layout.test && (!layout.sections.some((s) => s.toggle) || data.values.wa_enabled) && (
+                  {canEdit && layout.test && layout.sections.every((s) => !s.toggle || data.values[s.toggle]) && (
                     <TestSend {...layout.test} master={master} unsaved={dirty} />
                   )}
                   {data.updated_at && (
@@ -634,8 +670,9 @@ function TemplateTable({ master, value, onChange, errors }) {
   );
 }
 
-// Sends a test email / WhatsApp message with the SAVED settings.
-// kind: "email" | "phone".
+// Sends a test email / WhatsApp message / push notification with the SAVED
+// settings. kind: "email" | "phone" | "push" (to the user's own devices —
+// no recipient to enter).
 function TestSend({ kind, label, button, hint, master, unsaved }) {
   const [to, setTo] = useState("");
   const [code, setCode] = useState("");
@@ -643,13 +680,19 @@ function TestSend({ kind, label, button, hint, master, unsaved }) {
 
   function send() {
     if (kind === "phone") test.post(SETTINGS_API.testWhatsapp, { country_code: code, mobile_number: to });
+    else if (kind === "push") test.post(SETTINGS_API.testPush, {});
     else test.post(SETTINGS_API.testEmail, { to });
   }
 
   const note = unsaved ? "Save your changes first — the test uses the saved settings." : hint || "Uses the saved settings.";
   return (
     <div className="wf-grid wf-grid-2">
-      {kind === "phone" ? (
+      {kind === "push" ? (
+        <div className="wf-field">
+          <label>{label}</label>
+          <p className="wf-login-field-hint">{note}</p>
+        </div>
+      ) : kind === "phone" ? (
         <div>
           <PhoneField
             id="settings-test-to"

@@ -4,18 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MIcon } from "@/components/MobileUI";
-import { isIosSafari, promptInstall, useCanPromptInstall, usePlatform, useStandalone } from "@/lib/install";
+import { IOS_INSTALL_STEPS, isIosSafari, promptInstall, useCanPromptInstall, usePlatform, useStandalone } from "@/lib/install";
 
 const PERKS = [
   { icon: "home", title: "Opens like an app", sub: "One tap from your home screen, full screen" },
   { icon: "bolt", title: "Fast on site", sub: "Loads quickly even on weak signal" },
   { icon: "bell", title: "Task alerts", sub: "Know when a site needs you" },
-];
-
-const IOS_STEPS = [
-  { icon: "share", title: "Tap the Share button", sub: "At the bottom of Safari" },
-  { icon: "plusSquare", title: "Tap “Add to Home Screen”", sub: "Scroll down the menu to find it" },
-  { icon: "check", title: "Tap “Add”", sub: "Top-right corner" },
 ];
 
 export default function MobileInstallPage() {
@@ -141,7 +135,7 @@ export default function MobileInstallPage() {
                   </p>
                 )}
                 <ol className="wf-minstall-steps">
-                  {IOS_STEPS.map((s, i) => (
+                  {IOS_INSTALL_STEPS.map((s, i) => (
                     <li key={s.title} className="wf-minstall-step">
                       <span className="wf-minstall-step-n">{i + 1}</span>
                       <span className="wf-minstall-step-text">

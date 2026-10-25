@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Toaster } from "@/components/Toast";
+import PwaSetup from "@/components/PwaSetup";
 
 export const metadata = {
   title: "Timberstone ERP — Clickable Wireframe",
@@ -9,6 +10,9 @@ export const metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Timberstone ERP",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
@@ -22,6 +26,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <Toaster />
+        <PwaSetup />
       </body>
     </html>
   );

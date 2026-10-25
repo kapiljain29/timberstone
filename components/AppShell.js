@@ -8,6 +8,7 @@ import { api, refreshProfile } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { NOTIFICATION_API, notificationsChanged, useBellNotifications } from "@/lib/notifications";
 import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
+import PushPrompt, { InstallAppButton } from "@/components/PushPrompt";
 
 function initials(name) {
   return name
@@ -235,8 +236,8 @@ export default function AppShell({ children }) {
     if (roleId === "") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [roleId, pathname, router]);
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await signOut();
     router.replace("/login");
   }
 
@@ -346,6 +347,7 @@ export default function AppShell({ children }) {
             ☰
           </button>
           <div className="wf-topbar-right">
+            {fromApi && <InstallAppButton />}
             {role?.fromApi && (
               <span className="wf-role-switch">
                 <span>Logged in as</span>
@@ -409,6 +411,7 @@ export default function AppShell({ children }) {
         </header>
 
         <main className="wf-main">
+          {fromApi && <PushPrompt />}
           {!role ? null : allowed ? (
             children
           ) : (

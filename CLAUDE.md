@@ -204,6 +204,33 @@ it. Lists show the number with `formatPhone(code, number)`.
 - Config lives in `.env.local` (template: `.env.example`). `NEXT_PUBLIC_*`
   values are inlined at build time and visible in the browser.
 
+## Installable app (PWA) and push notifications
+
+The whole site is **one** installable app, "Timberstone ERP" — every role,
+not only Supervisors (`app/manifest.js`, icons in `public/icons/`).
+
+- **Service worker:** `public/sw.js`, registered on every page by
+  `components/PwaSetup.js` (in `app/layout.js`). It shows pushes and opens
+  their `link` on tap. It caches **nothing** — no leads, payments or
+  customer data left on a lost or shared device. Served no-cache
+  (`next.config.mjs`).
+- **Browser side of push lives only in `lib/push.js`** (`enablePush`,
+  `syncPush`, `stopPushForDevice`, `PUSH_API`). Don't call
+  `pushManager` / `Notification.requestPermission` anywhere else.
+- **Sending:** the API pushes every `notify()` (timberstone-api
+  `notification.service.js` → `push.service.js`). Screens never send
+  pushes; add a notification on the API and it is pushed too.
+- **Permission is asked only from a click:** the `PushPrompt` banner in
+  `AppShell` ("Turn On Notifications"; on iPhone in Safari, the Add to Home
+  Screen steps — push needs the installed app there). "Not now" hides it
+  for two weeks on that browser.
+- **Sign-out goes through `signOut()`** (`lib/roles.js`): it stops push to
+  the device while the session still exists, then logs out. Never call
+  `logout()` directly for a signed-in panel user.
+- Push on/off and the VAPID keys: Site Settings → Push Notifications. Its
+  **Send Test Notification** pushes to the signed-in user's own devices —
+  the quickest way to check a browser or phone.
+
 ## CRITICAL RULE: No hardcoded data once a screen is on the API
 
 The wireframe runs on mock data (`lib/data.js` seed/constants,
