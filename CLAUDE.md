@@ -220,10 +220,18 @@ not only Supervisors (`app/manifest.js`, icons in `public/icons/`).
 - **Sending:** the API pushes every `notify()` (timberstone-api
   `notification.service.js` → `push.service.js`). Screens never send
   pushes; add a notification on the API and it is pushed too.
+- **Installing:** `components/InstallBar.js` (in `app/layout.js`) shows
+  an install bar at the top of every page until the app is installed —
+  "Install App" where the browser offers one-click install, otherwise
+  "How to Install" with the steps for that phone / browser
+  (`installGuide()` in `lib/install.js`). × hides it for that tab; the
+  permanent **Install App** link (`InstallAppLink` — sidebar footer, under
+  the Sign in button) installs or brings the bar back with its steps. Bar
+  and link are not shown in the installed app or on the `/m` screens.
 - **Permission is asked only from a click:** the `PushPrompt` banner in
-  `AppShell` ("Turn On Notifications"; on iPhone in Safari, the Add to Home
-  Screen steps — push needs the installed app there). "Not now" hides it
-  for two weeks on that browser.
+  `AppShell` ("Turn On Notifications"). Not shown on iPhone outside the
+  installed app (push needs it there — the install bar covers that). "Not
+  now" hides it for two weeks on that browser.
 - **Sign-out goes through `signOut()`** (`lib/roles.js`): it stops push to
   the device while the session still exists, then logs out. Never call
   `logout()` directly for a signed-in panel user.

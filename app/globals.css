@@ -3571,31 +3571,11 @@ button {
   color: var(--ink);
   font-size: 14px;
 }
-.wf-push-prompt-steps {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--ink);
-}
-.wf-push-prompt-steps li svg {
-  vertical-align: -3px;
-  color: var(--brand);
-}
-.wf-push-prompt-steps li span {
-  color: var(--ink-soft);
-}
 .wf-push-prompt-actions {
   display: flex;
   gap: 8px;
   align-items: center;
   flex: none;
-}
-.wf-install-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 @media (max-width: 640px) {
   .wf-push-prompt {
@@ -3605,4 +3585,147 @@ button {
     width: 100%;
     justify-content: flex-end;
   }
+}
+
+/* ---- install bar, top of every page (components/InstallBar.js) ---- */
+.wf-install-bar {
+  background: var(--brand-dark);
+  color: #fff;
+  font-size: 13px;
+  position: relative;
+  z-index: 50;
+}
+.wf-install-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+.wf-install-bar-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--cream);
+  color: var(--brand-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.wf-install-bar-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.4;
+}
+.wf-install-bar-text span {
+  color: rgba(234, 241, 234, 0.8);
+}
+.wf-install-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.wf-install-bar .wf-btn:not(.primary) {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.wf-install-bar .wf-btn.primary {
+  background: var(--cream);
+  color: var(--brand-dark);
+  border-color: var(--cream);
+}
+.wf-install-bar-close {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 22px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.wf-install-bar-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.wf-install-bar-steps {
+  padding: 0 16px 12px 58px;
+  color: rgba(234, 241, 234, 0.85);
+}
+.wf-install-bar-steps ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #fff;
+}
+.wf-install-bar-steps li svg {
+  vertical-align: -3px;
+}
+.wf-install-bar-steps li span {
+  color: rgba(234, 241, 234, 0.75);
+}
+.wf-install-bar-steps p {
+  margin: 6px 0 0;
+}
+@media (max-width: 640px) {
+  .wf-install-bar-row {
+    flex-wrap: wrap;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+  .wf-install-bar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .wf-install-bar-steps {
+    padding-left: 16px;
+  }
+}
+
+/* Permanent "Install App" links (InstallAppLink in components/InstallBar.js). */
+.wf-sidebar-install {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wf-sidebar-install:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.wf-sidebar-install.collapsed {
+  justify-content: center;
+  padding: 8px 0;
+}
+.wf-login-install-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wf-login-install-link:hover {
+  text-decoration: underline;
 }

@@ -8,7 +8,8 @@ import { api, refreshProfile } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { NOTIFICATION_API, notificationsChanged, useBellNotifications } from "@/lib/notifications";
 import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
-import PushPrompt, { InstallAppButton } from "@/components/PushPrompt";
+import PushPrompt from "@/components/PushPrompt";
+import { InstallAppLink } from "@/components/InstallBar";
 
 function initials(name) {
   return name
@@ -308,6 +309,11 @@ export default function AppShell({ children }) {
         </div>
 
         <div className="wf-sidebar-footer">
+          <InstallAppLink
+            className={`wf-sidebar-install${collapsed ? " collapsed" : ""}`}
+            label={!collapsed}
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="wf-sidebar-user">
             <span className="wf-sidebar-avatar">{role ? initials(role.user) : ""}</span>
             {!collapsed && role && (
@@ -347,7 +353,6 @@ export default function AppShell({ children }) {
             ☰
           </button>
           <div className="wf-topbar-right">
-            {fromApi && <InstallAppButton />}
             {role?.fromApi && (
               <span className="wf-role-switch">
                 <span>Logged in as</span>

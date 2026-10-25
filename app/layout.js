@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toaster } from "@/components/Toast";
 import PwaSetup from "@/components/PwaSetup";
+import InstallBar from "@/components/InstallBar";
 
 export const metadata = {
   title: "Timberstone ERP — Clickable Wireframe",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <InstallBar />
         {children}
         <Toaster />
         <PwaSetup />

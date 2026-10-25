@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthCard, { AuthInput, AuthPasswordInput } from "@/components/AuthCard";
+import { InstallAppLink } from "@/components/InstallBar";
 import { ApiError, login, logout } from "@/lib/api";
 import { getWebRole, useRoleId, webRoleIdForApiUser } from "@/lib/roles";
 
@@ -126,6 +127,7 @@ export default function LoginPage() {
         <button type="submit" className="wf-btn primary wf-login-submit" disabled={submitting}>
           {submitting ? "Signing in…" : "Sign in"}
         </button>
+        <InstallAppLink className="wf-login-install-link" />
       </form>
     </AuthCard>
   );

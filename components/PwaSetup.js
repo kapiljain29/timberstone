@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { getSession } from "@/lib/api";
 import { registerServiceWorker, stopPushForDevice, syncPush } from "@/lib/push";
 // Loaded on every page so it catches the browser's one-time install offer
-// (beforeinstallprompt) for the Install App button.
+// (beforeinstallprompt) for the install bar's Install App button.
 import "@/lib/install";
 import { useMyUserId } from "@/lib/roles";
 
