@@ -7,6 +7,7 @@
 // hands the lead to the Operation Head, who is notified. Once moved, the
 // card shows the site's code, name and Operation Head (lead.site).
 
+import Link from "next/link";
 import { useState } from "react";
 import { Box, Detail, DetailGroup, FieldError } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -23,7 +24,16 @@ export default function LeadSite({ lead, onMoved }) {
 
   if (lead.site) {
     return (
-      <Box title={`Site ${lead.site.site_code}`}>
+      <Box
+        title={`Site ${lead.site.site_code}`}
+        right={
+          can("sites.view") ? (
+            <Link href={`/sites/${lead.site.id}`} className="wf-link-btn">
+              Open Site →
+            </Link>
+          ) : null
+        }
+      >
         <DetailGroup>
           <Detail label="Site Name">{lead.site.site_name}</Detail>
           <Detail label="Operation Head">{lead.site.operation_head_name || "—"}</Detail>
