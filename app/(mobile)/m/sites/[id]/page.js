@@ -3,46 +3,46 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getProject, getProgress } from "@/lib/store";
+import { getSite, getProgress } from "@/lib/store";
 import { STAGES, getStage, ownsStep } from "@/lib/stages";
-import { MIcon, MProgress, MSectionTitle, projectPercent } from "@/components/MobileUI";
+import { MIcon, MProgress, MSectionTitle, sitePercent } from "@/components/MobileUI";
 
-export default function MobileProjectDetailPage() {
+export default function MobileSiteDetailPage() {
   const { id } = useParams();
-  const [project, setProject] = useState(null);
+  const [site, setSite] = useState(null);
   const [progress, setProgress] = useState(null);
 
   // Reads from localStorage, which is unavailable during SSR — must load post-mount.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setProject(getProject(id));
+    setSite(getSite(id));
     setProgress(getProgress(id));
   }, [id]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (!project || !progress) {
-    return <div className="wf-empty">Loading project…</div>;
+  if (!site || !progress) {
+    return <div className="wf-empty">Loading site…</div>;
   }
 
-  const pct = projectPercent(progress);
+  const pct = sitePercent(progress);
   const currentStage = getStage(progress.current) || STAGES[STAGES.length - 1];
   const isClosed = progress.completed.length === STAGES.length;
 
   return (
     <div>
-      <Link href="/m/projects" className="wf-mback">
+      <Link href="/m/sites" className="wf-mback">
         <MIcon name="back" size={16} /> My Sites
       </Link>
 
       <div className="wf-mproj-hero">
-        <div className="wf-mproj-hero-id">{project.id}</div>
-        <h1 className="wf-mproj-hero-title">{project.projectName}</h1>
+        <div className="wf-mproj-hero-id">{site.id}</div>
+        <h1 className="wf-mproj-hero-title">{site.siteName}</h1>
         <div className="wf-mproj-hero-meta">
           <span>
-            <MIcon name="pin" size={13} /> {project.customer}
+            <MIcon name="pin" size={13} /> {site.customer}
           </span>
           <span>
-            <MIcon name="rupee" size={13} /> {project.value}
+            <MIcon name="rupee" size={13} /> {site.value}
           </span>
         </div>
         <div className="wf-mproj-hero-progress">
@@ -56,10 +56,10 @@ export default function MobileProjectDetailPage() {
 
       {isClosed ? (
         <div className="wf-mnext done">
-          <MIcon name="check" /> Project closed
+          <MIcon name="check" /> Site closed
         </div>
       ) : (
-        <Link href={`/m/projects/${project.id}/step/${currentStage.slug}`} className="wf-mnext">
+        <Link href={`/m/sites/${site.id}/step/${currentStage.slug}`} className="wf-mnext">
           <span className="wf-mnext-label">
             Up next · Step {currentStage.number}
             <strong>{currentStage.title}</strong>
@@ -95,7 +95,7 @@ export default function MobileProjectDetailPage() {
             </>
           );
           return unlocked ? (
-            <Link key={stage.slug} href={`/m/projects/${id}/step/${stage.slug}`} className={`wf-mtimeline-row ${cls}`}>
+            <Link key={stage.slug} href={`/m/sites/${id}/step/${stage.slug}`} className={`wf-mtimeline-row ${cls}`}>
               {row}
             </Link>
           ) : (

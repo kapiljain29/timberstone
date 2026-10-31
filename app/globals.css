@@ -1806,7 +1806,7 @@ button {
 
 /* ==========================================================================
    Supervisor Mobile App — routes under /m.
-   Same STAGES data + the same StageForm renderer as the desktop Projects
+   Same STAGES data + the same StageForm renderer as the desktop Sites
    module (components/StageForm.js); only the chrome differs: a phone frame,
    app bar and bottom tab bar, plus narrow-viewport overrides for the shared
    wf-* form classes. On a real phone (<=480px) the decorative bezel
@@ -2323,7 +2323,7 @@ button {
   color: #2f5d8a;
 }
 
-/* ---- project card ---- */
+/* ---- site card ---- */
 .wf-mproj {
   display: block;
   background: var(--panel);
@@ -2465,7 +2465,7 @@ button {
   box-shadow: none;
 }
 
-/* ---- project detail ---- */
+/* ---- site detail ---- */
 .wf-mback {
   display: inline-flex;
   align-items: center;

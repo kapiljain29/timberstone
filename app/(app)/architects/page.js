@@ -141,7 +141,7 @@ export default function ArchitectsPage() {
       <div className="wf-queue-head">
         <div>
           <h1 className="wf-h1">Architects</h1>
-          <p className="wf-sub">Architects who refer projects. Active architects appear in the lead form&apos;s Architect dropdown.</p>
+          <p className="wf-sub">Architects who refer sites. Active architects appear in the lead form&apos;s Architect dropdown.</p>
         </div>
         {can("architects.add") && (
           <button type="button" className="wf-btn primary" style={{ marginBottom: 18 }} onClick={() => openForm(null)}>

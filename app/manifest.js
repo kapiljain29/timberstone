@@ -7,7 +7,7 @@ export default function manifest() {
     id: "/",
     name: "Timberstone ERP",
     short_name: "Timberstone",
-    description: "Timberstone ERP — leads, projects, approvals and site work, from lead to handover.",
+    description: "Timberstone ERP — leads, sites, approvals and site work, from lead to handover.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MIcon, MSectionTitle } from "@/components/MobileUI";
 
 const COVERED_STEPS = [
-  { n: 4, title: "Product, Design & Sample Selection", icon: "projects" },
+  { n: 4, title: "Product, Design & Sample Selection", icon: "sites" },
   { n: 5, title: "Measurement Sheet & Final Quotation", icon: "ruler" },
   { n: 8, title: "Material Delivery & Delivery Challan", icon: "truck" },
   { n: 9, title: "Daily Site Readiness Checklist", icon: "checklist" },

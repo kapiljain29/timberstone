@@ -38,7 +38,7 @@ export default function AuthCard({ children }) {
               <li>Call Queue</li>
               <li>Design</li>
               <li>Approvals</li>
-              <li>Projects</li>
+              <li>Sites</li>
             </ul>
           </div>
 

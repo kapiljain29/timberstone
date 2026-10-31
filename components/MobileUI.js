@@ -6,7 +6,7 @@ import { STAGES } from "@/lib/stages";
 
 const PATHS = {
   home: <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19v-8.5Z" />,
-  projects: <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4.2l1.6 2h9.2a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z" />,
+  sites: <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4.2l1.6 2h9.2a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z" />,
   dsr: (
     <>
       <rect x="5" y="3.5" width="14" height="17" rx="2" />
@@ -118,23 +118,23 @@ export function MProgress({ percent }) {
   );
 }
 
-export function projectPercent(progress) {
+export function sitePercent(progress) {
   if (!progress) return 0;
   return Math.round((progress.completed.length / STAGES.length) * 100);
 }
 
-// Site card used on Home and My Projects: name, customer, current step
+// Site card used on Home and My Sites: name, customer, current step
 // chip, and a progress bar. `action` highlights steps the supervisor owns.
-export function MProjectCard({ project, progress, currentStage, href, action = false }) {
-  const pct = projectPercent(progress);
+export function MSiteCard({ site, progress, currentStage, href, action = false }) {
+  const pct = sitePercent(progress);
   const done = progress ? progress.completed.length : 0;
   return (
     <Link href={href} className={`wf-mproj${action ? " action" : ""}`}>
       <div className="wf-mproj-top">
         <div className="wf-mproj-text">
-          <div className="wf-mproj-title">{project.projectName}</div>
+          <div className="wf-mproj-title">{site.siteName}</div>
           <div className="wf-mproj-sub">
-            <MIcon name="pin" size={12} /> {project.customer}
+            <MIcon name="pin" size={12} /> {site.customer}
           </div>
         </div>
         <span className="wf-mproj-chev">

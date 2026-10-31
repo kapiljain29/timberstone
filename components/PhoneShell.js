@@ -21,7 +21,7 @@ const ONBOARDING_ROUTES = ["/m/install", "/m/login"];
 
 const TABS = [
   { href: "/m", label: "Home", icon: "home" },
-  { href: "/m/projects", label: "Projects", icon: "projects" },
+  { href: "/m/sites", label: "Sites", icon: "sites" },
   { href: "/m/dsr", label: "DSR", icon: "dsr" },
   { href: "/m/notifications", label: "Alerts", icon: "bell", badge: NOTIFICATIONS.length },
   { href: "/m/profile", label: "Profile", icon: "user" },

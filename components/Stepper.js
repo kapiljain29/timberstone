@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { PHASES, STAGES } from "@/lib/stages";
 
-export default function Stepper({ projectId, completed, current, basePath }) {
+export default function Stepper({ siteId, completed, current, basePath }) {
   return (
     <div>
       {PHASES.map((phase) => {

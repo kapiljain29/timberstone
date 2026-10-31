@@ -1,14 +1,14 @@
 "use client";
 
 // Shared stage-form renderer used by BOTH the desktop stage screen
-// (app/(app)/projects/[id]/stage/[slug]/page.js) and the Supervisor mobile
-// app (app/(mobile)/m/projects/[id]/step/[slug]/page.js). Keeping the
+// (app/(app)/sites/[id]/stage/[slug]/page.js) and the Supervisor mobile
+// app (app/(mobile)/m/sites/[id]/step/[slug]/page.js). Keeping the
 // kind-based form logic in one place means the mobile app and the desktop
 // wireframe can never drift out of sync — only the surrounding chrome
 // (sidebar+topbar vs. phone frame+tab bar) differs between the two.
 //
-// `basePath` controls where "back to project" / "back to list" links point:
-// "/projects" for desktop, "/m/projects" for the mobile app.
+// `basePath` controls where "back to site" / "back to list" links point:
+// "/sites" for desktop, "/m/sites" for the mobile app.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Box, Badge, Field, DataTable, UploadBox, Annotation } from "@/components/ui";
 import { getStage, getNextStage, getPrevStage, STAGES } from "@/lib/stages";
 import {
-  getProject,
+  getSite,
   getProgress,
   markStageComplete,
   isStageUnlocked,
@@ -33,10 +33,10 @@ import {
 } from "@/lib/store";
 import { canEditStep, useRole } from "@/lib/roles";
 
-export default function StageForm({ id, slug, basePath = "/projects" }) {
+export default function StageForm({ id, slug, basePath = "/sites" }) {
   const router = useRouter();
 
-  const [project, setProject] = useState(null);
+  const [site, setSite] = useState(null);
   const [progress, setProgress] = useState(null);
   const [values, setValues] = useState({});
   const [checks, setChecks] = useState({});
@@ -61,7 +61,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
   // Reads from localStorage, which is unavailable during SSR — must load post-mount.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setProject(getProject(id));
+    setSite(getSite(id));
     setProgress(getProgress(id));
     setValues({});
     setChecks({});
@@ -78,7 +78,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
   if (!stage) {
     return <div className="wf-empty">Unknown stage: {slug}</div>;
   }
-  if (!project || !progress) {
+  if (!site || !progress) {
     return <div className="wf-empty">Loading…</div>;
   }
 
@@ -138,7 +138,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
     <div>
       <div className="wf-crumb">
         <Link href={basePath} className="wf-link-btn">
-          {basePath.startsWith("/m") ? "My Projects" : "Projects"}
+          {basePath.startsWith("/m") ? "My Sites" : "Sites"}
         </Link>{" "}
         /{" "}
         <Link href={`${basePath}/${id}`} className="wf-link-btn">
@@ -395,7 +395,7 @@ export default function StageForm({ id, slug, basePath = "/projects" }) {
           )}
           <DataTable
             columns={["Site", "Contractor", "Labour", "Days to Complete", "Remark", "Date"]}
-            rows={dsrEntries.map((e) => [project.projectName, e.contractor, e.labour, e.daysToComplete, e.remark, e.date])}
+            rows={dsrEntries.map((e) => [site.siteName, e.contractor, e.labour, e.daysToComplete, e.remark, e.date])}
             emptyLabel="No DSR entries submitted yet."
           />
         </Box>

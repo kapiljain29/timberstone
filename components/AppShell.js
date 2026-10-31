@@ -56,7 +56,7 @@ const ICONS = {
       <path d="M5 4h3.2l1.6 4-2 1.3a10.5 10.5 0 0 0 5 5l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2Z" />
     </svg>
   ),
-  projects: (
+  sites: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h4.2l1.6 2h9.2a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z" />
     </svg>
@@ -163,8 +163,8 @@ const NAV = [
     ],
   },
   {
-    group: "Project Execution",
-    links: [{ href: "/projects", label: "Projects", icon: ICONS.projects }],
+    group: "Site Execution",
+    links: [{ href: "/sites", label: "Sites", icon: ICONS.sites }],
   },
   {
     group: "Admin",
