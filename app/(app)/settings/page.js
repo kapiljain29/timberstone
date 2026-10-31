@@ -85,6 +85,7 @@ const GROUPS = {
           { key: "notify_lead_assigned", label: "A lead is assigned to a team member, or a new lead has no one to assign it to (to Super Admins)", type: "toggle" },
           { key: "notify_design_requests", label: "A design request is sent, submitted, approved or sent back for changes", type: "toggle" },
           { key: "notify_approvals", label: "An approval is requested (to approvers), approved or rejected (to the requester)", type: "toggle" },
+          { key: "notify_site_assigned", label: "A booked lead is moved to Site (to its Operation Head)", type: "toggle" },
         ],
       },
       {

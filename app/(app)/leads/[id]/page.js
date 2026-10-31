@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
 import LeadBooking from "@/components/LeadBooking";
+import LeadSite from "@/components/LeadSite";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -167,6 +168,8 @@ export default function LeadDetailPage() {
       )}
 
       <LeadBooking booking={booking} master={master} />
+
+      <LeadSite lead={l} onMoved={lead.reload} />
 
       <Box title="Status History">
         <History
