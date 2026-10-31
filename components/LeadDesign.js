@@ -4,8 +4,10 @@
 // write the brief (POST /design-requests/create — the designer is
 // notified); then the designer's uploads and Sales' review (approve / ask
 // for changes — /design-requests/review). Shown with Design Requests →
-// View; sending needs Add and a booked lead (`is_booked` — the form only
-// appears once the lead is Booked), reviewing needs Approve.
+// View; sending needs Add, reviewing needs Approve. The whole section
+// appears only once the lead is booked (`is_booked` — its status needs a
+// token, e.g. Booked; the API refuses requests before that) — or when the
+// lead already has design requests, so their history is never hidden.
 
 import Link from "next/link";
 import { useState } from "react";
@@ -37,6 +39,9 @@ export default function LeadDesign({ lead }) {
     lead.is_booked && can("designs.add") && requests.data && (!latest || latest.design_status === DESIGN_STATUS.APPROVED);
   const earlier = (requests.data?.items || []).slice(1);
 
+  // Not booked: nothing to show until it is (unless it has requests already).
+  if (!lead.is_booked && !latest) return null;
+
   return (
     <>
       <Box title="Design">
@@ -44,9 +49,7 @@ export default function LeadDesign({ lead }) {
         {!requests.data ? (
           !requests.error && <div className="wf-empty">Loading design…</div>
         ) : !latest ? (
-          <div className="wf-empty">
-            {lead.is_booked ? "No design requested for this lead yet." : "Design can be requested once the lead is Booked."}
-          </div>
+          <div className="wf-empty">No design requested for this lead yet.</div>
         ) : request ? (
           <DesignRequestView request={request} master={master} />
         ) : (

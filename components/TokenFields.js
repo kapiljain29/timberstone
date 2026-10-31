@@ -1,8 +1,9 @@
 "use client";
 
-// Token payment fields for a status change to a needs_token status (Booked)
-// — on the lead page's Change Status and the Call Queue's log-call form.
-// Either the token received (amount, mode, date, reference) or, ticked,
+// Booking fields for a status change to a needs_token status (Booked) — on
+// the lead page's Change Status and the Call Queue's log-call form. Always
+// the tentative area and quotation amount (required); then either the
+// token received (amount, mode, date, reference) or, ticked,
 // a reason to ask Management for approval to book without the full token
 // (any amount entered is still recorded). The API decides what is enough
 // (token_min_amount); the receipt is attached afterwards on the lead page.
@@ -14,12 +15,23 @@
 import { Alert, FieldError } from "@/components/ui";
 import { formatAmount, todayDate } from "@/lib/format";
 
-export const EMPTY_TOKEN = { amount: "", mode: "", paidOn: "", referenceNo: "", bypass: false, reason: "" };
+export const EMPTY_TOKEN = {
+  area: "",
+  quotation: "",
+  amount: "",
+  mode: "",
+  paidOn: "",
+  referenceNo: "",
+  bypass: false,
+  reason: "",
+};
 
-// The token fields of the status-change request.
+// The booking fields of the status-change request.
 export function tokenBody(token) {
   const amount = token.amount === "" ? null : Number(token.amount);
   return {
+    tentative_area: token.area === "" ? null : Number(token.area) || null,
+    tentative_quotation_amount: token.quotation === "" ? null : Number(token.quotation) || null,
     token_amount: amount || null,
     token_payment_mode: amount ? token.mode || null : null,
     token_paid_on: amount ? token.paidOn || todayDate() : null,
@@ -44,6 +56,42 @@ export default function TokenFields({ idPrefix, master, value, onChange, errors 
         A token is needed to book this lead{min ? ` — at least ${formatAmount(min)}` : ""}
         {tokenPaid ? ` (${formatAmount(tokenPaid)} received so far)` : ""}. Without it, ask Management for approval.
       </Alert>
+      <div className="wf-grid wf-grid-2">
+        <div className="wf-field">
+          <label htmlFor={id("area")}>Tentative Area (sq.ft)</label>
+          <input
+            id={id("area")}
+            type="number"
+            min="1"
+            step="any"
+            inputMode="decimal"
+            required
+            className="wf-input"
+            value={value.area}
+            onChange={(e) => set("area", e.target.value)}
+            placeholder="e.g. 850"
+            disabled={disabled}
+          />
+          <FieldError>{errors.tentative_area}</FieldError>
+        </div>
+        <div className="wf-field">
+          <label htmlFor={id("quotation")}>Tentative Quotation Amount (₹)</label>
+          <input
+            id={id("quotation")}
+            type="number"
+            min="1"
+            step="any"
+            inputMode="decimal"
+            required
+            className="wf-input"
+            value={value.quotation}
+            onChange={(e) => set("quotation", e.target.value)}
+            placeholder="e.g. 425000"
+            disabled={disabled}
+          />
+          <FieldError>{errors.tentative_quotation_amount}</FieldError>
+        </div>
+      </div>
       <div className="wf-grid wf-grid-4">
         <div className="wf-field">
           <label htmlFor={id("amount")}>Token Amount (₹)</label>

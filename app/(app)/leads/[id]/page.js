@@ -9,7 +9,7 @@ import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
 import LeadBooking from "@/components/LeadBooking";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
-import { dateTimeLocalToIso, formatDate, formatDateTime } from "@/lib/format";
+import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
 import {
@@ -111,6 +111,12 @@ export default function LeadDetailPage() {
           <Detail label="Type of Property">{option(master?.work_types, l.work_type)}</Detail>
           <Detail label="Estimated Area">{option(master?.estimated_areas, l.estimated_area)}</Detail>
           <Detail label="Budget">{option(master?.budgets, l.budget)}</Detail>
+          {l.tentative_area !== null && (
+            <Detail label="Tentative Area">{`${Number(l.tentative_area).toLocaleString("en-IN")} sq.ft`}</Detail>
+          )}
+          {l.tentative_quotation_amount !== null && (
+            <Detail label="Tentative Quotation">{formatAmount(l.tentative_quotation_amount)}</Detail>
+          )}
           <Detail label="Planning to Start">{option(master?.planning_to_start, l.planning_to_start)}</Detail>
           <Detail label="Requirement in Cladding">
             {l.requirement_in_cladding_categories.length > 0 && (
