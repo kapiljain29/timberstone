@@ -24,7 +24,7 @@ const PAGE_SIZE = 20;
 // "Viewing Queue Of" values besides a caller's id.
 const QUEUE_MINE = "mine";
 const QUEUE_ALL = "all";
-const FILTERS = { branch: "all", search: "", call_status: "" };
+const FILTERS = { branch: "all", search: "", call_status: "", lead_status_id: "" };
 // Queue views (the API's `view`); `count` = the /summary key for its tab.
 const VIEWS = [
   { value: "due", label: "Call Now", count: "due", empty: "Queue clear. No calls due right now." },
@@ -68,7 +68,15 @@ export default function CallQueuePage() {
   const summary = useApiData(queuePath(CALL_QUEUE_API.summary), { ...owner, since }, { branchId });
   const list = useApiData(
     queuePath(CALL_QUEUE_API.list),
-    { ...owner, page, limit: PAGE_SIZE, view, search: search || undefined, call_status: values.call_status || undefined },
+    {
+      ...owner,
+      page,
+      limit: PAGE_SIZE,
+      view,
+      search: search || undefined,
+      call_status: values.call_status || undefined,
+      lead_status_id: values.lead_status_id || undefined,
+    },
     { branchId }
   );
   // Only the queue's owner logs its calls (QueueRow checks the row's owner).
@@ -156,6 +164,22 @@ export default function CallQueuePage() {
             {(master?.call_statuses || []).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="wf-field">
+          <label htmlFor="queue-filter-lead-status">Lead Status</label>
+          <select
+            id="queue-filter-lead-status"
+            className="wf-select"
+            value={values.lead_status_id}
+            onChange={(e) => filters.set("lead_status_id", e.target.value)}
+          >
+            <option value="">Any Lead Status</option>
+            {(master?.lead_statuses || []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>
