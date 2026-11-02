@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField } from "@/components/ui";
 import { formatAmount, formatDate } from "@/lib/format";
-import { SITE_API, useBranchTabs, useSiteMaster } from "@/lib/team";
+import { SITE_API, supervisorNames, useBranchTabs, useSiteMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { useListFilters } from "@/lib/useListFilters";
 
@@ -31,7 +31,7 @@ export default function SitesPage() {
     <div>
       <div className="wf-crumb">Site Execution</div>
       <h1 className="wf-h1">Sites</h1>
-      <p className="wf-sub">Booked leads moved to Site, with their Operation Head.</p>
+      <p className="wf-sub">Booked leads moved to Site, with their Operation Head and supervisors.</p>
 
       {branchTabs.show && (
         <BranchFilter
@@ -75,7 +75,7 @@ export default function SitesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Site", "Customer", "Branch", "Operation Head", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
+              columns={["Site", "Customer", "Branch", "Operation Head", "Supervisors", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
               emptyLabel={filters.active ? "No sites match these filters." : "No sites yet — a Booked lead is moved to Site from its lead page."}
               rows={items.map((s) => [
                 <div key="s">
@@ -88,6 +88,7 @@ export default function SitesPage() {
                 </div>,
                 s.branch_name || "—",
                 s.operation_head_name || "—",
+                supervisorNames(s),
                 s.lead?.tentative_quotation_amount ? formatAmount(s.lead.tentative_quotation_amount) : "—",
                 formatDate(s.expected_start_date),
                 formatDate(s.created_at),

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Alert, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
+import SiteSupervisor from "@/components/SiteSupervisor";
 import { formatAmount, formatDate } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
-import { ALL_BRANCHES, SITE_API } from "@/lib/team";
+import { ALL_BRANCHES, SITE_API, supervisorNames } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
 // One site (POST /api/admin/sites/details): the site, its customer and
@@ -63,6 +64,7 @@ export default function SitePage() {
         <DetailGroup>
           <Detail label="Site Code">{s.site_code}</Detail>
           <Detail label="Operation Head">{s.operation_head_name || "—"}</Detail>
+          <Detail label="Supervisors">{supervisorNames(s, "Not assigned yet")}</Detail>
           <Detail label="Expected Start">{formatDate(s.expected_start_date)}</Detail>
           <Detail label="Site Address" wide>
             <span style={{ whiteSpace: "pre-line" }}>{s.address}</span>
@@ -73,6 +75,8 @@ export default function SitePage() {
           </Detail>
         </DetailGroup>
       </Box>
+
+      <SiteSupervisor site={s} onChanged={site.reload} />
 
       <Box title="Customer & Booking">
         <DetailGroup>

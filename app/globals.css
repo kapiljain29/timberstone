@@ -571,7 +571,7 @@ button {
 /* Stacked form rows in a card (a grid row, then a full-width field or
    another row) get the same space between them as fields inside a row.
    Fields inside a grid, filter panel etc. are spaced by their container. */
-.wf-box > :is(.wf-grid, .wf-field, .wf-token) + :is(.wf-grid, .wf-field, .wf-token),
+.wf-box > :is(.wf-grid, .wf-field, .wf-token, .wf-list) + :is(.wf-grid, .wf-field, .wf-token),
 .wf-queue-log > .wf-grid + .wf-token {
   margin-top: 16px;
 }
@@ -1041,6 +1041,10 @@ button {
 }
 .wf-list li:last-child {
   border-bottom: none;
+}
+/* Secondary text in a list row (e.g. a date), or the empty row. */
+.wf-list-muted {
+  color: var(--faint);
 }
 
 .wf-empty {
