@@ -917,6 +917,49 @@ button {
   min-width: 0;
 }
 
+/* Autocomplete (components/Autocomplete.js): the suggestion list is
+   position: fixed (placed under its input in JS) so scrolling tables don't
+   clip it. */
+.wf-autocomplete {
+  position: relative;
+  width: 100%;
+}
+.wf-autocomplete .wf-input {
+  width: 100%;
+}
+.wf-autocomplete-list {
+  position: fixed;
+  z-index: 60;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+.wf-autocomplete-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.wf-autocomplete-option.active {
+  background: var(--panel-2);
+}
+.wf-autocomplete-hint,
+.wf-autocomplete-empty {
+  color: var(--faint);
+  font-size: 12px;
+}
+.wf-autocomplete-empty {
+  padding: 8px 11px;
+}
+
 /* Quotation form: "+ Add Product" on the left, totals summary on the right
    (Subtotal → Freight → Total → GST → Rounded Off → Grand Total, as on
    the PDF). */

@@ -2,20 +2,25 @@
 
 // Tentative quotation form — create (POST /quotations/create) and every
 // update (POST /quotations/update — saved as a new revision, with the
-// reason). Lines: product (Products master), area, colour pattern (a colour
-// from the Color master, or free text such as "As per client choice"),
+// reason). Lines: category (Categories master), product (searched within
+// the category as you type), area, colour pattern (suggestions from the
+// product's colours as you type, or free text such as "As per client choice"),
 // quantity (sq.ft) and rate (₹/sq.ft); the amounts and totals shown are a
 // preview — the API calculates what is saved and generates the PDF.
 
 import { useState } from "react";
 import { Box, DataTable, FieldError } from "@/components/ui";
+import Autocomplete from "@/components/Autocomplete";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatAmount, todayDate } from "@/lib/format";
 import { QUOTATION_API, quotationTotals, useQuotationMaster } from "@/lib/quotation";
 import { ALL_BRANCHES } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
-const EMPTY_LINE = { product_id: "", area: "interior", colour_pattern: "", quantity: "", rate: "" };
+const EMPTY_LINE = { category_id: "", product_id: "", product_name: "", area: "interior", colour_pattern: "", quantity: "", rate: "" };
+
+// Always offered as a colour pattern, whatever the product.
+const CLIENT_CHOICE = { name: "As per client choice" };
 
 // Form values from a saved revision (to update it) or the lead (to create).
 function initialValues(lead, revision) {
@@ -25,7 +30,9 @@ function initialValues(lead, revision) {
       place: revision.place,
       quotation_date: todayDate(),
       items: revision.items.map((i) => ({
+        category_id: i.category_id || "",
         product_id: i.product_id,
+        product_name: i.product_name,
         area: i.area,
         colour_pattern: i.colour_pattern,
         quantity: String(i.quantity),
@@ -61,16 +68,17 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
   const updating = Boolean(quotation);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
 
-  // Products on the current version stay selectable even if deactivated since.
-  const products = [...(master?.products || [])];
+  // A line's category may since have been deactivated: keep it selectable.
+  const categories = [...(master?.categories || [])];
   for (const i of revision?.items || []) {
-    if (!products.some((p) => p.id === i.product_id)) products.push({ id: i.product_id, product_name: `${i.product_name} (inactive)` });
+    if (i.category_id && !categories.some((c) => c.id === i.category_id)) categories.push({ id: i.category_id, category_name: i.category_name });
   }
   const totals = quotationTotals(form.items, { freight: form.freight, gstRate: master?.gst_rate });
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-  const setLine = (index, key, value) =>
-    setForm((f) => ({ ...f, items: f.items.map((line, i) => (i === index ? { ...line, [key]: value } : line)) }));
+  const patchLine = (index, patch) =>
+    setForm((f) => ({ ...f, items: f.items.map((line, i) => (i === index ? { ...line, ...patch } : line)) }));
+  const setLine = (index, key, value) => patchLine(index, { [key]: value });
   const addLine = () => setForm((f) => ({ ...f, items: [...f.items, { ...EMPTY_LINE }] }));
   const removeLine = (index) => setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== index) }));
 
@@ -114,11 +122,13 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
     if (saved) onSaved(saved);
   }
 
-  const lineInput = (index, key, props) => (
+  // A line's number input; `cellKey` is its React key in the row.
+  const lineInput = (index, field, { key: cellKey, ...props }) => (
     <input
+      key={cellKey}
       className="wf-input"
-      value={form.items[index][key]}
-      onChange={(e) => setLine(index, key, e.target.value)}
+      value={form.items[index][field]}
+      onChange={(e) => setLine(index, field, e.target.value)}
       disabled={save.submitting}
       {...props}
     />
@@ -172,32 +182,42 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
 
         <div className="wf-field">
           <label className="wf-required">Products</label>
-          <datalist id="quote-colours">
-            <option value="As per client choice" />
-            {(master?.colors || []).map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
           <DataTable
-            columns={["Product", "Area's", "Colour Pattern", "Quantity (sq.ft)", "Rate per Sq.ft (₹)", "Amount", ""]}
-            widths={["26%", "12%", "18%", "12%", "12%", "13%", "7%"]}
-            align={[null, null, null, null, null, "right", "right"]}
+            columns={["Category", "Product", "Area's", "Colour Pattern", "Qty (sq.ft)", "Rate / Sq.ft (₹)", "Amount", ""]}
+            widths={["15%", "20%", "10%", "16%", "10%", "10%", "12%", "7%"]}
+            align={[null, null, null, null, null, null, "right", "right"]}
             rows={form.items.map((line, index) => [
               <select
-                key="p"
-                aria-label={`Product, line ${index + 1}`}
+                key="g"
+                aria-label={`Category, line ${index + 1}`}
                 className="wf-select"
-                value={line.product_id}
-                onChange={(e) => setLine(index, "product_id", e.target.value)}
+                value={line.category_id}
+                // A product belongs to its category — pick it again.
+                onChange={(e) => patchLine(index, { category_id: e.target.value, product_id: "", product_name: "" })}
                 disabled={save.submitting || !master}
               >
-                <option value="">{master ? "Select product" : "Loading…"}</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.product_name}
+                <option value="">{master ? "Select category" : "Loading…"}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.category_name}
                   </option>
                 ))}
               </select>,
+              <Autocomplete
+                key="p"
+                id={`quote-product-${index}`}
+                ariaLabel={`Product, line ${index + 1}`}
+                placeholder={line.category_id ? "Search product" : "Select category first"}
+                path={line.category_id ? QUOTATION_API.products : null}
+                params={{ category_id: line.category_id }}
+                text={line.product_name}
+                // Typing again un-picks the product until one is chosen.
+                onTextChange={(t) => patchLine(index, { product_name: t, product_id: "" })}
+                onPick={(p) => patchLine(index, { product_id: p.id, product_name: p.product_name })}
+                optionLabel={(p) => p.product_name}
+                emptyLabel="No products in this category match"
+                disabled={save.submitting || !line.category_id}
+              />,
               <select
                 key="a"
                 aria-label={`Area, line ${index + 1}`}
@@ -206,19 +226,29 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
                 onChange={(e) => setLine(index, "area", e.target.value)}
                 disabled={save.submitting}
               >
-                {(master?.areas || [{ value: "interior", label: "Interior" }]).map((a) => (
+                {(master?.areas || [{ value: line.area, label: "Loading…" }]).map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
                   </option>
                 ))}
               </select>,
-              lineInput(index, "colour_pattern", {
-                key: "c",
-                list: "quote-colours",
-                maxLength: 150,
-                placeholder: "e.g. 255/2",
-                "aria-label": `Colour pattern, line ${index + 1}`,
-              }),
+              <Autocomplete
+                key="c"
+                id={`quote-colour-${index}`}
+                ariaLabel={`Colour pattern, line ${index + 1}`}
+                placeholder={line.product_id ? "Search colour or type" : "Type, or pick a product"}
+                // The picked product's colours; free text is always allowed.
+                path={line.product_id ? QUOTATION_API.colors : null}
+                params={{ product_id: line.product_id }}
+                extraOptions={[CLIENT_CHOICE]}
+                text={line.colour_pattern}
+                onTextChange={(t) => setLine(index, "colour_pattern", t.slice(0, 150))}
+                onPick={(c) => setLine(index, "colour_pattern", c.name)}
+                optionLabel={(c) => c.name}
+                optionHint={(c) => c.code}
+                emptyLabel="No colours linked to this product — type it"
+                disabled={save.submitting}
+              />,
               lineInput(index, "quantity", {
                 key: "q",
                 type: "number",
