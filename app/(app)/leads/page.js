@@ -47,6 +47,7 @@ function Leads() {
   });
   const { page, setPage, values } = filters;
   const search = useDebouncedValue(values.search.trim());
+  const budget = useDebouncedValue(values.budget.trim());
   const can = useCan();
   const canAssign = can("leads.assign");
 
@@ -64,7 +65,7 @@ function Leads() {
       unassigned: values.assigned === "unassigned" || undefined,
       assigned_to: ["any", "unassigned"].includes(values.assigned) ? undefined : values.assigned,
       project_type: values.project_type || undefined,
-      budget: values.budget || undefined,
+      budget: budget || undefined,
       planning_to_start: values.planning_to_start || undefined,
       work_type: values.work_type || undefined,
     },
@@ -150,10 +151,16 @@ function Leads() {
             ))}
           </select>
         </div>
+        <SearchField
+          id="lead-filter-budget"
+          label="Budget"
+          value={values.budget}
+          onChange={(v) => filters.set("budget", v)}
+          placeholder="Contains, e.g. 10 lakhs"
+        />
         {[
           ["project_type", "Project Type", master?.project_types],
           ["work_type", "Type of Property", master?.work_types],
-          ["budget", "Budget", master?.budgets],
           ["planning_to_start", "Planning to Start", master?.planning_to_start],
         ].map(([key, label, options]) => (
           <FilterSelect key={key} id={`lead-filter-${key}`} label={label} value={values[key]} onChange={(v) => filters.set(key, v)} allLabel="Any">

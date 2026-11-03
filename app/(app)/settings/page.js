@@ -192,6 +192,26 @@ const GROUPS = {
       },
     ],
   },
+  quotation: {
+    sections: [
+      {
+        title: "Quotation Defaults",
+        fields: [
+          { key: "quotation_prefix", label: "Quotation Number Prefix", type: "text", required: true, hint: "Numbers look like TS/JPR/TQ/0001 (prefix / branch code / TQ / running number)." },
+          { key: "quotation_gst_rate", label: "GST Rate (%)", type: "number", required: true },
+        ],
+      },
+      {
+        title: "Printed on Every Quotation",
+        note: "One per line. Each quotation keeps the text in force when it was saved — editing here changes new quotations and revisions only.",
+        fields: [
+          { key: "quotation_notes", label: "Notes (in red, under the totals)", type: "textarea", full: true },
+          { key: "quotation_terms", label: "Terms & Conditions", type: "textarea", full: true },
+          { key: "quotation_bank_details", label: "RTGS / Bank Details (first line in bold)", type: "textarea", full: true },
+        ],
+      },
+    ],
+  },
   security: {
     sections: [
       {

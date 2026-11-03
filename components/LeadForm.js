@@ -333,11 +333,24 @@ export default function LeadForm({ lead = null, defaults = {}, onSaved, onCancel
       </Box>
 
       <Box title="Requirement">
+        {/* Suggestions for the free-text Estimated Area / Budget (hidden; kept
+            first so they don't break the card's field spacing). */}
+        <datalist id="lead-area-options">
+          {(master?.estimated_areas || []).map((o) => (
+            <option key={o.value} value={o.label} />
+          ))}
+        </datalist>
+        <datalist id="lead-budget-options">
+          {(master?.budgets || []).map((o) => (
+            <option key={o.value} value={o.label} />
+          ))}
+        </datalist>
         <div className="wf-grid wf-grid-3">
           {optionSelect("project_type", "Project Type", master?.project_types)}
           {optionSelect("work_type", "Type of Property", master?.work_types)}
-          {optionSelect("estimated_area", "Estimated Area", master?.estimated_areas)}
-          {optionSelect("budget", "Budget", master?.budgets)}
+          {/* Free text; the configured options are only suggestions. */}
+          {input("estimated_area", "Estimated Area", { placeholder: "e.g. 1800 sq.ft", maxLength: 150, list: "lead-area-options" })}
+          {input("budget", "Budget", { placeholder: "e.g. ₹10–15 lakhs", maxLength: 150, list: "lead-budget-options" })}
           {optionSelect("planning_to_start", "Planning to Start", master?.planning_to_start)}
         </div>
         <CheckboxGroup

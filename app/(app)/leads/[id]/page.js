@@ -9,6 +9,7 @@ import LeadAssignForm from "@/components/LeadAssignForm";
 import LeadDesign from "@/components/LeadDesign";
 import LeadBooking from "@/components/LeadBooking";
 import LeadSite from "@/components/LeadSite";
+import LeadQuotation from "@/components/LeadQuotation";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -167,6 +168,8 @@ export default function LeadDetailPage() {
         />
       )}
 
+      <LeadQuotation lead={l} onSaved={lead.reload} />
+
       <LeadBooking booking={booking} master={master} />
 
       <LeadSite lead={l} onMoved={lead.reload} />
@@ -272,6 +275,20 @@ function StatusForm({ lead, master, tokenPaid, onChanged }) {
   const next = statuses.find((s) => s.id === status);
   const reschedule = next?.id === lead.status;
 
+  // Choosing a booking status (needs_token) pre-fills the tentative area and
+  // quotation amount from the lead's tentative quotation — still editable.
+  function chooseStatus(value) {
+    setStatus(value);
+    const quote = lead.tentative_quotation;
+    if (quote && statuses.find((s) => s.id === value)?.needs_token) {
+      setToken((t) => ({
+        ...t,
+        area: t.area || String(quote.total_area),
+        quotation: t.quotation || String(quote.grand_total),
+      }));
+    }
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     // A needs_token status (Booked) without the token: an approval request
@@ -329,7 +346,7 @@ function StatusForm({ lead, master, tokenPaid, onChanged }) {
               required
               className="wf-select"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => chooseStatus(e.target.value)}
               disabled={save.submitting || !master}
             >
               <option value="">{master ? "Select status" : "Loading…"}</option>

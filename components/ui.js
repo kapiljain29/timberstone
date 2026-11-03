@@ -83,17 +83,29 @@ export function UploadBox({ label }) {
 
 // busy: rows are being reloaded (filters changed or after a save) — they
 // are dimmed and can't be clicked until the new rows arrive.
-export function DataTable({ columns, rows, emptyLabel = "No records yet.", busy = false }) {
+// widths (optional): a CSS width per column (e.g. ["26%", "12%", …]).
+// align (optional): per column, "right" for amounts — right-aligned, no wrap.
+export function DataTable({ columns, rows, emptyLabel = "No records yet.", busy = false, widths, align }) {
   if (!rows || rows.length === 0) {
     return <div className="wf-empty">{busy ? "Loading…" : emptyLabel}</div>;
   }
+  const cellClass = (j) => (align?.[j] === "right" ? "wf-num" : undefined);
   return (
     <div className={`wf-table-wrap${busy ? " busy" : ""}`} aria-busy={busy || undefined}>
       <table className="wf-table">
+        {widths && (
+          <colgroup>
+            {widths.map((w, j) => (
+              <col key={j} style={{ width: w }} />
+            ))}
+          </colgroup>
+        )}
         <thead>
           <tr>
-            {columns.map((c) => (
-              <th key={c}>{c}</th>
+            {columns.map((c, j) => (
+              <th key={j} className={cellClass(j)}>
+                {c}
+              </th>
             ))}
           </tr>
         </thead>
@@ -101,7 +113,9 @@ export function DataTable({ columns, rows, emptyLabel = "No records yet.", busy 
           {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
-                <td key={j}>{cell}</td>
+                <td key={j} className={cellClass(j)}>
+                  {cell}
+                </td>
               ))}
             </tr>
           ))}
