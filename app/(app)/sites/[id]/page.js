@@ -4,20 +4,28 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Alert, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
 import SiteSupervisor from "@/components/SiteSupervisor";
+import SiteMeasurements from "@/components/SiteMeasurements";
+import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
 import { formatAmount, formatDate } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
-import { ALL_BRANCHES, SITE_API, supervisorNames } from "@/lib/team";
+import { ALL_BRANCHES, LEAD_API, SITE_API, supervisorNames } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
 // One site (POST /api/admin/sites/details): the site, its customer and
-// what was agreed at booking. The stage-by-stage workflow (stages 4–12)
-// comes back here as each stage is built on the API.
+// what was agreed at booking, its Measurement (uploaded by the supervisors
+// from the Supervisor app) and the next step after it — the Final
+// Quotation, made right here (the lead's card, also on the lead page).
+// The rest of the stage-by-stage workflow comes back here as each stage is
+// built on the API.
 export default function SitePage() {
   const { id } = useParams();
   const can = useCan();
   const site = useApiData(SITE_API.details, { id }, { branchId: ALL_BRANCHES });
   const s = site.data;
+  // The site's lead, for the Final Quotation step (needs Leads → View).
+  const canOpenLead = can("leads.view");
+  const leadDetails = useApiData(s && canOpenLead ? LEAD_API.details : null, { id: s?.lead_id }, { branchId: ALL_BRANCHES });
 
   if (!s) {
     if (site.error?.status === 404) {
@@ -93,7 +101,22 @@ export default function SitePage() {
         </DetailGroup>
       </Box>
 
-      <Alert tone="info">The stage-by-stage workflow (stages 4–12) will appear here as each stage goes live.</Alert>
+      <SiteMeasurements siteId={s.id} />
+
+      {/* Next step after the measurement: the Final Quotation. */}
+      {canOpenLead ? (
+        leadDetails.error ? (
+          <LoadError error={leadDetails.error} onRetry={leadDetails.reload} />
+        ) : leadDetails.data ? (
+          <FinalQuotationStep lead={leadDetails.data} onSaved={leadDetails.reload} />
+        ) : (
+          <div className="wf-empty">Loading quotation…</div>
+        )
+      ) : (
+        <Alert tone="info">{finalQuotationNextStep(s.latest_measurement)}</Alert>
+      )}
+
+      <Alert tone="info">The rest of the stage-by-stage workflow will appear here as each stage goes live.</Alert>
     </div>
   );
 }

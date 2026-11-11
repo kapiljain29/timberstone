@@ -2,7 +2,7 @@
 // No hooks, so they work from both server and client components.
 
 import Link from "next/link";
-import { STAGES } from "@/lib/stages";
+import { measurementLabel } from "@/lib/format";
 
 const PATHS = {
   home: <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19v-8.5Z" />,
@@ -75,6 +75,20 @@ const PATHS = {
   ),
   download: <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" />,
   bolt: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />,
+  camera: (
+    <>
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.5-2h5.6l1.5 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z" />
+      <circle cx="12" cy="12.75" r="3.25" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="4" y="4.5" width="16" height="15" rx="2" />
+      <circle cx="9" cy="9.5" r="1.5" />
+      <path d="m4 16.5 4.5-4.5 3.5 3.5 2.5-2.5 5.5 5.5" />
+    </>
+  ),
+  phone: <path d="M6.5 4h3l1.5 4-2 1.5a10 10 0 0 0 5.5 5.5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 5 5.6 1.5 1.5 0 0 1 6.5 4Z" />,
   lock: (
     <>
       <rect x="5" y="10.5" width="14" height="10" rx="2" />
@@ -110,49 +124,30 @@ export function MSectionTitle({ children, right }) {
   );
 }
 
-export function MProgress({ percent }) {
+// Site card used on Home and My Sites (POST /api/mobile/sites/list): name,
+// customer, and the Measurement step — highlighted ("Your task") until a
+// measurement is uploaded.
+export function MSiteCard({ site, href }) {
+  const pending = !site.latest_measurement;
   return (
-    <div className="wf-mprogress">
-      <div className="wf-mprogress-fill" style={{ width: `${percent}%` }} />
-    </div>
-  );
-}
-
-export function sitePercent(progress) {
-  if (!progress) return 0;
-  return Math.round((progress.completed.length / STAGES.length) * 100);
-}
-
-// Site card used on Home and My Sites: name, customer, current step
-// chip, and a progress bar. `action` highlights steps the supervisor owns.
-export function MSiteCard({ site, progress, currentStage, href, action = false }) {
-  const pct = sitePercent(progress);
-  const done = progress ? progress.completed.length : 0;
-  return (
-    <Link href={href} className={`wf-mproj${action ? " action" : ""}`}>
+    <Link href={href} className={`wf-mproj${pending ? " action" : ""}`}>
       <div className="wf-mproj-top">
         <div className="wf-mproj-text">
-          <div className="wf-mproj-title">{site.siteName}</div>
+          <div className="wf-mproj-title">{site.site_name}</div>
           <div className="wf-mproj-sub">
-            <MIcon name="pin" size={12} /> {site.customer}
+            <MIcon name="pin" size={12} /> {[site.site_code, site.lead?.full_name].filter(Boolean).join(" · ")}
           </div>
         </div>
         <span className="wf-mproj-chev">
           <MIcon name="chevron" size={16} />
         </span>
       </div>
-      {currentStage && (
-        <div className={`wf-mproj-step${action ? " action" : ""}`}>
-          <span className="wf-mproj-step-n">{currentStage.number}</span>
-          <span className="wf-mproj-step-t">{currentStage.title}</span>
-          {action && <span className="wf-mproj-step-tag">Your task</span>}
-        </div>
-      )}
-      <div className="wf-mproj-foot">
-        <MProgress percent={pct} />
-        <span className="wf-mproj-pct">
-          {done}/{STAGES.length}
+      <div className={`wf-mproj-step${pending ? " action" : ""}`}>
+        <span className="wf-mproj-step-n">
+          <MIcon name="ruler" size={12} />
         </span>
+        <span className="wf-mproj-step-t">Measurement</span>
+        <span className="wf-mproj-step-tag">{pending ? "Your task" : measurementLabel(site.latest_measurement)}</span>
       </div>
     </Link>
   );

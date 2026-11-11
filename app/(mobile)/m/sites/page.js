@@ -1,75 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getStage, ownsStep } from "@/lib/stages";
-import { getSites, getProgress } from "@/lib/store";
+import { useState } from "react";
+import { LoadError } from "@/components/ui";
 import { MSiteCard } from "@/components/MobileUI";
+import { ALL_BRANCHES, SUPERVISOR_SITE_API } from "@/lib/team";
+import { useApiData } from "@/lib/useApi";
 
 const FILTERS = [
   { id: "all", label: "All" },
-  { id: "mine", label: "My task" },
-  { id: "waiting", label: "Waiting on others" },
+  { id: "pending", label: "To measure" },
+  { id: "measured", label: "Measured" },
 ];
 
+// The signed-in supervisor's sites (POST /api/mobile/sites/list, every
+// branch they work in), filtered by whether the measurement is uploaded.
 export default function MobileSitesPage() {
-  const [sites, setSites] = useState(null);
-  const [progressMap, setProgressMap] = useState({});
   const [filter, setFilter] = useState("all");
-
-  // Reads from localStorage, which is unavailable during SSR — must load post-mount.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    const list = getSites();
-    setSites(list);
-    const map = {};
-    list.forEach((p) => {
-      map[p.id] = getProgress(p.id);
-    });
-    setProgressMap(map);
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  if (!sites) {
-    return <div className="wf-empty">Loading…</div>;
-  }
-
-  const rows = sites
-    .map((site) => {
-      const progress = progressMap[site.id];
-      const currentStage = progress ? getStage(progress.current) : null;
-      return { site, progress, currentStage, mine: !!currentStage && ownsStep(currentStage, "Supervisor") };
-    })
-    .filter((r) => filter === "all" || (filter === "mine" ? r.mine : !r.mine));
+  const list = useApiData(SUPERVISOR_SITE_API.list, { page: 1, limit: 100 }, { branchId: ALL_BRANCHES });
+  const sites = list.data?.items || [];
+  const rows = sites.filter((s) => filter === "all" || (filter === "pending" ? !s.latest_measurement : !!s.latest_measurement));
 
   return (
     <div>
       <h1 className="wf-mtitle">My Sites</h1>
-      <p className="wf-msub">{sites.length} sites assigned to you</p>
+      <p className="wf-msub">{list.data ? `${list.data.pagination.total} sites assigned to you` : "Loading…"}</p>
 
       <div className="wf-mchips">
         {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            className={`wf-mchip${filter === f.id ? " active" : ""}`}
-            onClick={() => setFilter(f.id)}
-          >
+          <button key={f.id} type="button" className={`wf-mchip${filter === f.id ? " active" : ""}`} onClick={() => setFilter(f.id)}>
             {f.label}
           </button>
         ))}
       </div>
 
-      {rows.map(({ site, progress, currentStage, mine }) => (
-        <MSiteCard
-          key={site.id}
-          site={site}
-          progress={progress}
-          currentStage={currentStage}
-          href={`/m/sites/${site.id}`}
-          action={mine}
-        />
-      ))}
-      {rows.length === 0 && <div className="wf-empty">No sites in this filter.</div>}
+      <LoadError error={list.error} onRetry={list.reload} />
+      {list.data &&
+        rows.map((site) => (
+          <MSiteCard key={site.id} site={site} href={!site.latest_measurement ? `/m/sites/${site.id}/measurement` : `/m/sites/${site.id}`} />
+        ))}
+      {list.data && rows.length === 0 && (
+        <div className="wf-empty">{sites.length ? "No sites in this filter." : "No sites yet — they appear once a manager assigns you as a supervisor."}</div>
+      )}
     </div>
   );
 }

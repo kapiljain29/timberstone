@@ -3866,3 +3866,80 @@ button {
 .wf-login-install-link:hover {
   text-decoration: underline;
 }
+
+/* ImageGallery (components/ui.js): square thumbnails of uploaded images. */
+.wf-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.wf-gallery a {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--panel);
+}
+.wf-gallery a:hover {
+  border-color: var(--brand-light);
+}
+.wf-gallery img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* MPhotoPicker (Supervisor app): picked photos and the camera / gallery buttons. */
+.wf-mhint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.wf-mphotos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+}
+.wf-mphoto {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.wf-mphoto img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.wf-mphoto-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 16px;
+  line-height: 24px;
+  cursor: pointer;
+}
+.wf-mphoto-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.wf-mphoto-actions .wf-btn {
+  justify-content: center;
+}
+
+/* A finished step that can still be opened (Supervisor app — e.g. Measurement uploaded). */
+a.wf-mnext.done {
+  justify-content: space-between;
+}
+a.wf-mnext.done .wf-mnext-label {
+  color: var(--green-text);
+}

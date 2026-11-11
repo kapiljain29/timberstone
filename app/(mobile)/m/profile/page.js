@@ -1,38 +1,47 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MIcon, MSectionTitle } from "@/components/MobileUI";
+import { initials } from "@/lib/format";
+import { signOut, useMyBranches, useMyUser } from "@/lib/roles";
 
-const COVERED_STEPS = [
-  { n: 4, title: "Product, Design & Sample Selection", icon: "sites" },
-  { n: 5, title: "Measurement Sheet & Final Quotation", icon: "ruler" },
-  { n: 8, title: "Material Delivery & Delivery Challan", icon: "truck" },
-  { n: 9, title: "Daily Site Readiness Checklist", icon: "checklist" },
-  { n: 10, title: "Contractor Allocation", icon: "user" },
-  { n: 11, title: "Daily Supervision Report (DSR)", icon: "dsr" },
-  { n: 12, title: "Final Measurement & Closure", icon: "check" },
-];
+// The steps the Supervisor app handles so far (the others come as they are
+// built on the API).
+const APP_STEPS = [{ title: "Measurement — site photos & measurement form", icon: "ruler" }];
 
+// The signed-in supervisor (from the session) and Sign out.
 export default function MobileProfilePage() {
+  const router = useRouter();
+  const user = useMyUser();
+  const { allBranches, branches } = useMyBranches();
+
+  async function handleSignOut() {
+    await signOut();
+    router.replace("/m/login");
+  }
+
+  if (!user) return <div className="wf-empty">Loading…</div>;
+
   return (
     <div>
       <div className="wf-mprofile">
-        <span className="wf-mprofile-avatar">RK</span>
-        <div className="wf-mprofile-name">Ramesh Kadam</div>
-        <div className="wf-mprofile-role">Site Supervisor · Jaipur</div>
+        <span className="wf-mprofile-avatar">{initials(user.name)}</span>
+        <div className="wf-mprofile-name">{user.name}</div>
+        <div className="wf-mprofile-role">{[user.roleName, user.email].filter(Boolean).join(" · ")}</div>
         <div className="wf-mprofile-tags">
-          <span>Site Execution</span>
-          <span>Design Collaboration</span>
+          {allBranches ? <span>All branches</span> : branches.map((b) => <span key={b.id}>{b.name}</span>)}
         </div>
       </div>
 
-      <MSectionTitle>Steps you handle</MSectionTitle>
+      <MSectionTitle>In this app</MSectionTitle>
       <div className="wf-mlist">
-        {COVERED_STEPS.map((s) => (
-          <div key={s.n} className="wf-mlist-row">
+        {APP_STEPS.map((s) => (
+          <div key={s.title} className="wf-mlist-row">
             <span className="wf-mlist-icon">
               <MIcon name={s.icon} size={18} />
             </span>
             <span className="wf-mlist-text">{s.title}</span>
-            <span className="wf-mlist-step">Step {s.n}</span>
           </div>
         ))}
       </div>
@@ -40,9 +49,9 @@ export default function MobileProfilePage() {
       <Link href="/m/install" className="wf-mexit neutral">
         <MIcon name="download" size={18} /> Replay install flow
       </Link>
-      <Link href="/" className="wf-mexit">
-        <MIcon name="exit" size={18} /> Switch role
-      </Link>
+      <button type="button" className="wf-mexit" style={{ width: "100%", border: 0, cursor: "pointer" }} onClick={handleSignOut}>
+        <MIcon name="exit" size={18} /> Sign out
+      </button>
     </div>
   );
 }

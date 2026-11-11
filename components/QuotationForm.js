@@ -1,8 +1,8 @@
 "use client";
 
-// Tentative quotation form — create (POST /quotations/create) and every
-// update (POST /quotations/update — saved as a new revision, with the
-// reason). Lines: category (Categories master), product (searched within
+// Quotation form (tentative or final) — create (POST /quotations/create)
+// and every update (POST /quotations/update — saved as a new revision, with
+// the reason). Lines: category (Categories master), product (searched within
 // the category as you type), area, colour pattern (suggestions from the
 // product's colours as you type, or free text such as "As per client choice"),
 // quantity (sq.ft) and rate (₹/sq.ft); the amounts and totals shown are a
@@ -13,7 +13,7 @@ import { Box, DataTable, FieldError } from "@/components/ui";
 import Autocomplete from "@/components/Autocomplete";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatAmount, todayDate } from "@/lib/format";
-import { QUOTATION_API, quotationTotals, useQuotationMaster } from "@/lib/quotation";
+import { QUOTATION_API, QUOTATION_TYPES, quotationTotals, useQuotationMaster } from "@/lib/quotation";
 import { ALL_BRANCHES } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
@@ -55,11 +55,13 @@ function initialValues(lead, revision) {
 }
 
 /**
- * lead — /leads/details. quotation + revision — the quotation and its
- * current revision (with items) when updating; null to create.
- * onSaved(quotation), onCancel().
+ * lead — /leads/details. type — "tentative" / "final" (QUOTATION_TYPES).
+ * quotation + revision — the quotation and its current revision (with
+ * items) when updating. To create: quotation null, and revision = one to
+ * start from (e.g. the tentative quotation's lines for the final one) or
+ * null for a blank form. onSaved(quotation), onCancel().
  */
-export default function QuotationForm({ lead, quotation = null, revision = null, onSaved, onCancel }) {
+export default function QuotationForm({ lead, type = "tentative", quotation = null, revision = null, onSaved, onCancel }) {
   const [initial] = useState(() => initialValues(lead, revision));
   const [form, setForm] = useState(initial);
   const save = useSubmit();
@@ -116,7 +118,7 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
     };
     const saved = await save.post(
       updating ? QUOTATION_API.update : QUOTATION_API.create,
-      updating ? { ...body, id: quotation.id, remark: form.remark } : { ...body, lead_id: lead.id },
+      updating ? { ...body, id: quotation.id, remark: form.remark } : { ...body, lead_id: lead.id, quotation_type: type },
       { branchId: ALL_BRANCHES }
     );
     if (saved) onSaved(saved);
@@ -136,7 +138,7 @@ export default function QuotationForm({ lead, quotation = null, revision = null,
 
   return (
     <form onSubmit={handleSave} noValidate>
-      <Box title={updating ? `Update ${quotation.quotation_no} — saved as revision R${quotation.revision + 1}` : "New Tentative Quotation"}>
+      <Box title={updating ? `Update ${quotation.quotation_no} — saved as revision R${quotation.revision + 1}` : `New ${QUOTATION_TYPES[type].label}`}>
         <div className="wf-grid wf-grid-3">
           <div className="wf-field">
             <label htmlFor="quote-party">Party Name</label>

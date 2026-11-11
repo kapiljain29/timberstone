@@ -443,6 +443,24 @@ export function Annotation({ children }) {
   return <div className="wf-annot">NOTE (wireframe): {children}</div>;
 }
 
+/**
+ * Grid of square image thumbnails, each opening the full image in a new tab
+ * (e.g. a site's measurement photos). images = [{ id, url, original_name }].
+ */
+export function ImageGallery({ images, emptyLabel = "No images." }) {
+  if (!images?.length) return <div className="wf-empty">{emptyLabel}</div>;
+  return (
+    <div className="wf-gallery">
+      {images.map((img) => (
+        <a key={img.id} href={img.url} target="_blank" rel="noopener noreferrer" title={img.original_name}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- uploaded file on the API server */}
+          <img src={img.url} alt={img.original_name} loading="lazy" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function ProgressBar({ percent }) {
   return (
     <div className="wf-progress-track">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField } from "@/components/ui";
-import { formatAmount, formatDate } from "@/lib/format";
+import { formatAmount, formatDate, measurementLabel } from "@/lib/format";
 import { SITE_API, supervisorNames, useBranchTabs, useSiteMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { useListFilters } from "@/lib/useListFilters";
@@ -75,7 +75,7 @@ export default function SitesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Site", "Customer", "Branch", "Operation Head", "Supervisors", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
+              columns={["Site", "Customer", "Branch", "Operation Head", "Supervisors", "Measurement", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
               emptyLabel={filters.active ? "No sites match these filters." : "No sites yet — a Booked lead is moved to Site from its lead page."}
               rows={items.map((s) => [
                 <div key="s">
@@ -89,6 +89,7 @@ export default function SitesPage() {
                 s.branch_name || "—",
                 s.operation_head_name || "—",
                 supervisorNames(s),
+                measurementLabel(s.latest_measurement),
                 s.lead?.tentative_quotation_amount ? formatAmount(s.lead.tentative_quotation_amount) : "—",
                 formatDate(s.expected_start_date),
                 formatDate(s.created_at),

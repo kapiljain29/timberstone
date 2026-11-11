@@ -5,20 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NOTIFICATIONS } from "@/lib/data";
 import { api, refreshProfile } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, initials } from "@/lib/format";
 import { NOTIFICATION_API, notificationsChanged, useBellNotifications } from "@/lib/notifications";
 import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
 import PushPrompt from "@/components/PushPrompt";
 import { InstallAppLink } from "@/components/InstallBar";
-
-function initials(name) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 const ICONS = {
   approvals: (

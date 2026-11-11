@@ -1,23 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FieldError } from "@/components/ui";
 import { MIcon } from "@/components/MobileUI";
+import { login } from "@/lib/api";
 import { setOnboarded } from "@/lib/install";
-import { setRoleId } from "@/lib/roles";
+import { useMyUser } from "@/lib/roles";
+import { useSubmit } from "@/lib/useApi";
 
-// Sign-in inside the installed Supervisor app. Wireframe only: any
-// password works; the real screen will call login() from lib/api.js.
+// Sign-in inside the installed Supervisor app (POST /api/public/auth/login,
+// the same account as the web panel). Already signed in → home.
 export default function MobileLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("ramesh.kadam@timberstone.in");
+  const user = useMyUser();
+  const form = useSubmit();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  function handleSubmit(e) {
+  useEffect(() => {
+    if (user) {
+      setOnboarded(true);
+      router.replace("/m");
+    }
+  }, [user, router]);
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    setRoleId("Supervisor");
-    setOnboarded(true);
-    router.replace("/m");
+    // The session change sends the user home (effect above).
+    await form.submit(() => login(email.trim(), password));
   }
 
   return (
@@ -28,7 +39,7 @@ export default function MobileLoginPage() {
         <p className="wf-minstall-sub">Use the email and password from your manager</p>
       </div>
 
-      <form className="wf-minstall-body" onSubmit={handleSubmit}>
+      <form className="wf-minstall-body" onSubmit={handleSubmit} noValidate>
         <div className="wf-field">
           <label htmlFor="m-email">Email</label>
           <input
@@ -38,8 +49,10 @@ export default function MobileLoginPage() {
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={form.submitting}
             required
           />
+          <FieldError>{form.fieldErrors.email}</FieldError>
         </div>
         <div className="wf-field">
           <label htmlFor="m-password">Password</label>
@@ -48,13 +61,15 @@ export default function MobileLoginPage() {
             className="wf-input"
             type="password"
             autoComplete="current-password"
-            placeholder="Any password works in the demo"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={form.submitting}
+            required
           />
+          <FieldError>{form.fieldErrors.password}</FieldError>
         </div>
-        <button type="submit" className="wf-btn primary wf-minstall-cta">
-          <MIcon name="lock" size={17} /> Sign in
+        <button type="submit" className="wf-btn primary wf-minstall-cta" disabled={form.submitting}>
+          <MIcon name="lock" size={17} /> {form.submitting ? "Signing in…" : "Sign in"}
         </button>
         <p className="wf-minstall-note">
           Forgot your password? Ask your branch manager to reset it from the web panel.

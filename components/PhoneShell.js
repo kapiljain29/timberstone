@@ -6,16 +6,20 @@
 // behaves like an installed full-screen app; on desktop it renders as a
 // phone mockup so the client can review the design in a normal browser.
 //
-// First run: until the supervisor has been through install + sign-in
-// (lib/install.js), every screen redirects to /m/install. The install and
-// login screens render "bare" — no app bar or tab bar.
+// First run: until the supervisor has been through the install screen
+// (lib/install.js), every screen redirects to /m/install; after that,
+// without an API session (signed out, or the refresh token was rejected)
+// every screen redirects to /m/login. The install and login screens render
+// "bare" — no app bar or tab bar. The profile and permissions are
+// refreshed from the API once per load (refreshProfile).
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { MIcon } from "@/components/MobileUI";
-import { NOTIFICATIONS } from "@/lib/data";
+import { refreshProfile } from "@/lib/api";
 import { useOnboarded } from "@/lib/install";
+import { useMyUser } from "@/lib/roles";
 
 const ONBOARDING_ROUTES = ["/m/install", "/m/login"];
 
@@ -23,7 +27,7 @@ const TABS = [
   { href: "/m", label: "Home", icon: "home" },
   { href: "/m/sites", label: "Sites", icon: "sites" },
   { href: "/m/dsr", label: "DSR", icon: "dsr" },
-  { href: "/m/notifications", label: "Alerts", icon: "bell", badge: NOTIFICATIONS.length },
+  { href: "/m/notifications", label: "Alerts", icon: "bell" },
   { href: "/m/profile", label: "Profile", icon: "user" },
 ];
 
@@ -31,12 +35,20 @@ export default function PhoneShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const onboarded = useOnboarded();
+  const user = useMyUser();
   const bare = ONBOARDING_ROUTES.includes(pathname);
-  const blocked = !bare && onboarded !== true;
+  const blocked = !bare && (onboarded !== true || !user);
+  const signedIn = Boolean(user);
 
   useEffect(() => {
-    if (!bare && onboarded === false) router.replace("/m/install");
-  }, [bare, onboarded, router]);
+    if (bare) return;
+    if (onboarded === false) router.replace("/m/install");
+    else if (onboarded === true && user === null) router.replace("/m/login");
+  }, [bare, onboarded, user, router]);
+
+  useEffect(() => {
+    if (signedIn) refreshProfile().catch(() => {});
+  }, [signedIn]);
 
   return (
     <div className="wf-phone-page">

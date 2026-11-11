@@ -10,6 +10,8 @@ import LeadDesign from "@/components/LeadDesign";
 import LeadBooking from "@/components/LeadBooking";
 import LeadSite from "@/components/LeadSite";
 import LeadQuotation from "@/components/LeadQuotation";
+import SiteMeasurements from "@/components/SiteMeasurements";
+import FinalQuotationStep from "@/components/FinalQuotationStep";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -173,6 +175,10 @@ export default function LeadDetailPage() {
       <LeadBooking booking={booking} master={master} />
 
       <LeadSite lead={l} onMoved={lead.reload} />
+
+      {/* Once moved to Site: the supervisor's measurement, and the Final Quotation made from it. */}
+      {l.site && can("sites.view") && <SiteMeasurements siteId={l.site.id} />}
+      {l.site && <FinalQuotationStep lead={l} onSaved={lead.reload} />}
 
       <Box title="Status History">
         <History
