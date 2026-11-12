@@ -34,11 +34,15 @@ export default function LeadDetailPage() {
   const { id } = useParams();
   const can = useCan();
   const lead = useApiData(LEAD_API.details, { id }, { branchId: ALL_BRANCHES });
-  const statusHistory = useApiData(LEAD_API.statusHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
-  const assignmentHistory = useApiData(LEAD_API.assignmentHistory, { lead_id: id }, { branchId: ALL_BRANCHES });
-  const callHistory = useApiData(CALL_QUEUE_API.history, { lead_id: id }, { branchId: ALL_BRANCHES });
+  // The lead's activity — who it is assigned to, its histories and token &
+  // booking — needs Leads → View Activity; without it (e.g. Marketing) the
+  // page shows only the lead's details, and none of these are loaded.
+  const activity = can("leads.activity");
+  const statusHistory = useApiData(activity ? LEAD_API.statusHistory : null, { lead_id: id }, { branchId: ALL_BRANCHES });
+  const assignmentHistory = useApiData(activity ? LEAD_API.assignmentHistory : null, { lead_id: id }, { branchId: ALL_BRANCHES });
+  const callHistory = useApiData(activity ? CALL_QUEUE_API.history : null, { lead_id: id }, { branchId: ALL_BRANCHES });
   // Token payments and the request to book without the full token.
-  const booking = useApiData(LEAD_API.booking, { lead_id: id }, { branchId: ALL_BRANCHES });
+  const booking = useApiData(activity ? LEAD_API.booking : null, { lead_id: id }, { branchId: ALL_BRANCHES });
   // Call status labels for the call history.
   const { master: callMaster } = useCallQueueMaster(ALL_BRANCHES);
   // Option labels, statuses and who the user may assign — for the lead's branch.
@@ -172,7 +176,7 @@ export default function LeadDetailPage() {
 
       <LeadQuotation lead={l} onSaved={lead.reload} />
 
-      <LeadBooking booking={booking} master={master} />
+      {activity && <LeadBooking booking={booking} master={master} />}
 
       <LeadSite lead={l} onMoved={lead.reload} />
 
@@ -180,23 +184,25 @@ export default function LeadDetailPage() {
       {l.site && can("sites.view") && <SiteMeasurements siteId={l.site.id} />}
       {l.site && <FinalQuotationStep lead={l} onSaved={lead.reload} />}
 
-      <Box title="Status History">
-        <History
-          history={statusHistory}
-          emptyLabel="No status changes yet."
-          render={(h) => (
-            <>
-              <span>
-                <strong>{formatDateTime(h.changed_at)}</strong> · {h.from_status_name || "—"} → {h.to_status_name}
-                {h.changed_by_name ? ` · by ${h.changed_by_name}` : ""}
-                {h.next_follow_up_at ? ` · next follow-up ${formatDateTime(h.next_follow_up_at)}` : ""}
-                {h.remark ? ` · “${h.remark}”` : ""}
-              </span>
-              <Badge tone={leadStatusTone(h.to_status_name)}>{h.to_status_name}</Badge>
-            </>
-          )}
-        />
-      </Box>
+      {activity && (
+        <Box title="Status History">
+          <History
+            history={statusHistory}
+            emptyLabel="No status changes yet."
+            render={(h) => (
+              <>
+                <span>
+                  <strong>{formatDateTime(h.changed_at)}</strong> · {h.from_status_name || "—"} → {h.to_status_name}
+                  {h.changed_by_name ? ` · by ${h.changed_by_name}` : ""}
+                  {h.next_follow_up_at ? ` · next follow-up ${formatDateTime(h.next_follow_up_at)}` : ""}
+                  {h.remark ? ` · “${h.remark}”` : ""}
+                </span>
+                <Badge tone={leadStatusTone(h.to_status_name)}>{h.to_status_name}</Badge>
+              </>
+            )}
+          />
+        </Box>
+      )}
 
       {can("leads.assign") && (
         <LeadAssignForm
@@ -204,7 +210,7 @@ export default function LeadDetailPage() {
           leadIds={[l.id]}
           branchId={ALL_BRANCHES}
           master={master}
-          exclude={l.assignees.map((a) => a.id)}
+          exclude={(l.assignees || []).map((a) => a.id)}
           onAssigned={() => {
             lead.reload();
             assignmentHistory.reload();
@@ -212,40 +218,45 @@ export default function LeadDetailPage() {
         />
       )}
 
-      <Box title={`Assigned To (${l.assignees.length})`}>
-        <p className="wf-sub">{l.assignees.map((a) => a.name).join(", ") || "Nobody yet — this lead is in its branch lead manager's queue."}</p>
-        <History
-          history={assignmentHistory}
-          emptyLabel="No assignments yet."
-          render={(h) => (
-            <span>
-              <strong>{formatDateTime(h.assigned_at)}</strong> · {h.user_name}
-              {h.assigned_by_name ? ` · assigned by ${h.assigned_by_name}` : ""}
-              {h.remark ? ` · “${h.remark}”` : ""}
-            </span>
-          )}
-        />
-      </Box>
+      {activity && (
+        <>
+          <Box title={`Assigned To (${l.assignees.length})`}>
+            <p className="wf-sub">
+              {l.assignees.map((a) => a.name).join(", ") || "Nobody yet — this lead is in its branch lead manager's queue."}
+            </p>
+            <History
+              history={assignmentHistory}
+              emptyLabel="No assignments yet."
+              render={(h) => (
+                <span>
+                  <strong>{formatDateTime(h.assigned_at)}</strong> · {h.user_name}
+                  {h.assigned_by_name ? ` · assigned by ${h.assigned_by_name}` : ""}
+                  {h.remark ? ` · “${h.remark}”` : ""}
+                </span>
+              )}
+            />
+          </Box>
 
-      <Box title={`Call History${callHistory.data ? ` (${callHistory.data.length})` : ""}`}>
-        <History
-          history={callHistory}
-          emptyLabel="No calls logged yet. Calls are logged by the sales team from their Call Queue."
-          render={(c) => (
-            <>
-              <span>
-                <strong>{formatDateTime(c.called_at)}</strong>
-                {c.called_by_name ? ` · ${c.called_by_name}` : ""}
-                {c.next_callback_at ? ` · callback ${formatDateTime(c.next_callback_at)}` : ""}
-                {c.lead_status_name ? ` · status → ${c.lead_status_name}` : ""}
-                {c.remark ? ` · “${c.remark}”` : ""}
-              </span>
-              <Badge tone={callStatusTone(callMaster, c.call_status)}>{callStatusLabel(callMaster, c.call_status)}</Badge>
-            </>
-          )}
-        />
-      </Box>
-
+          <Box title={`Call History${callHistory.data ? ` (${callHistory.data.length})` : ""}`}>
+            <History
+              history={callHistory}
+              emptyLabel="No calls logged yet. Calls are logged by the sales team from their Call Queue."
+              render={(c) => (
+                <>
+                  <span>
+                    <strong>{formatDateTime(c.called_at)}</strong>
+                    {c.called_by_name ? ` · ${c.called_by_name}` : ""}
+                    {c.next_callback_at ? ` · callback ${formatDateTime(c.next_callback_at)}` : ""}
+                    {c.lead_status_name ? ` · status → ${c.lead_status_name}` : ""}
+                    {c.remark ? ` · “${c.remark}”` : ""}
+                  </span>
+                  <Badge tone={callStatusTone(callMaster, c.call_status)}>{callStatusLabel(callMaster, c.call_status)}</Badge>
+                </>
+              )}
+            />
+          </Box>
+        </>
+      )}
     </div>
   );
 }

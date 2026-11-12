@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge, Box, BranchFilter, DataTable, LoadError, StatCard, leadStatusTone } from "@/components/ui";
 import { formatDateTime, startOfTodayIso } from "@/lib/format";
 import { useBellNotifications } from "@/lib/notifications";
+import { useCan } from "@/lib/roles";
 import { DASHBOARD_API, designStatusTone, useBranchTabs } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
@@ -20,6 +21,8 @@ export default function DashboardPage() {
   const branchId = branchTabs.branchId(branch);
   const summary = useApiData(DASHBOARD_API.summary, { since }, { branchId });
   const notifications = useBellNotifications(true);
+  // Who leads are assigned to is lead activity (Leads → View Activity).
+  const activity = useCan()("leads.activity");
 
   const { leads, call_queue: calls, designs } = summary.data || {};
   // Lead list links keep the selected branch tab.
@@ -141,7 +144,7 @@ export default function DashboardPage() {
               }
             >
               <DataTable
-                columns={["Lead", "Branch", "Source", "Status", "Assigned To", "Created"]}
+                columns={["Lead", "Branch", "Source", "Status", ...(activity ? ["Assigned To"] : []), "Created"]}
                 emptyLabel="No leads yet."
                 busy={summary.stale}
                 rows={leads.recent.map((l) => [
@@ -158,7 +161,7 @@ export default function DashboardPage() {
                   ) : (
                     "—"
                   ),
-                  l.assigned_to_names.join(", ") || "Unassigned",
+                  ...(activity ? [l.assigned_to_names.join(", ") || "Unassigned"] : []),
                   formatDateTime(l.created_at),
                 ])}
               />

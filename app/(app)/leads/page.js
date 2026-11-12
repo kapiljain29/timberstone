@@ -50,6 +50,8 @@ function Leads() {
   const budget = useDebouncedValue(values.budget.trim());
   const can = useCan();
   const canAssign = can("leads.assign");
+  // Who leads are assigned to is lead activity (Leads → View Activity).
+  const activity = can("leads.activity");
 
   const branchTabs = useBranchTabs();
   const branchId = branchTabs.branchId(values.branch);
@@ -139,18 +141,25 @@ function Leads() {
             </option>
           ))}
         </FilterSelect>
-        <div className="wf-field">
-          <label htmlFor="lead-filter-assigned">Assigned To</label>
-          <select id="lead-filter-assigned" className="wf-select" value={values.assigned} onChange={(e) => filters.set("assigned", e.target.value)}>
-            <option value="any">Anyone</option>
-            {canAssign && <option value="unassigned">Unassigned</option>}
-            {(master?.assignees || []).map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {activity && (
+          <div className="wf-field">
+            <label htmlFor="lead-filter-assigned">Assigned To</label>
+            <select
+              id="lead-filter-assigned"
+              className="wf-select"
+              value={values.assigned}
+              onChange={(e) => filters.set("assigned", e.target.value)}
+            >
+              <option value="any">Anyone</option>
+              {canAssign && <option value="unassigned">Unassigned</option>}
+              {(master?.assignees || []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <SearchField
           id="lead-filter-budget"
           label="Budget"
@@ -211,7 +220,7 @@ function Leads() {
                 "Branch",
                 "Source",
                 "Budget",
-                "Assigned To",
+                ...(activity ? ["Assigned To"] : []),
                 "Status",
                 "Created",
                 "",
@@ -237,7 +246,7 @@ function Leads() {
                 l.branch_name || "—",
                 [l.lead_source_name, l.lead_sub_source_name].filter(Boolean).join(" / ") || "—",
                 optionLabel(master?.budgets, l.budget),
-                l.assignees.map((a) => a.name).join(", ") || <Badge key="u">Unassigned</Badge>,
+                ...(activity ? [l.assignees.map((a) => a.name).join(", ") || <Badge key="u">Unassigned</Badge>] : []),
                 l.status_name ? (
                   <Badge key="s" tone={leadStatusTone(l.status_name)}>
                     {l.status_name}
