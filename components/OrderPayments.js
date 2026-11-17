@@ -210,6 +210,11 @@ function StageNote({ plan, order, canCreate }) {
   if (plan.stage === ORDER_STAGE.READY_TO_DISPATCH) {
     return <Alert tone="info">{`Payment before dispatch received — order ${order.order_no} is ready to dispatch. Accounts sends it with Delivery Challans (one per part).`}</Alert>;
   }
+  if (plan.stage === ORDER_STAGE.PARTLY_DISPATCHED) {
+    return (
+      <Alert tone="info">{`Order ${order.order_no} is partly dispatched — ${order.challan_count} ${order.challan_count === 1 ? "part" : "parts"} sent, ${order.delivered_count} confirmed delivered. Accounts sends the rest, or marks it fully dispatched.`}</Alert>
+    );
+  }
   if (plan.stage === ORDER_STAGE.DISPATCHED) {
     return (
       <Alert tone="info">{`Every part of order ${order.order_no} is dispatched — ${order.delivered_count} of ${order.challan_count} challans confirmed delivered by the site's supervisor.`}</Alert>

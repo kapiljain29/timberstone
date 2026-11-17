@@ -20,6 +20,8 @@ export default function OrderPage() {
   const summary = useApiData(ORDER_API.summary, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   // Bumped after a payment / the order is created — reloads Delivery Challans.
   const [challanRefresh, setChallanRefresh] = useState(0);
+  // Bumped after a challan / marking it fully dispatched — reloads Order & Payments.
+  const [orderRefresh, setOrderRefresh] = useState(0);
   const s = summary.data;
 
   if (!s) {
@@ -60,8 +62,8 @@ export default function OrderPage() {
           </Link>
         )}
       </div>
-      <OrderPayments leadId={leadId} onChanged={() => setChallanRefresh((n) => n + 1)} />
-      <OrderChallans leadId={leadId} refreshKey={challanRefresh} />
+      <OrderPayments leadId={leadId} refreshKey={orderRefresh} onChanged={() => setChallanRefresh((n) => n + 1)} />
+      <OrderChallans leadId={leadId} refreshKey={challanRefresh} onChanged={() => setOrderRefresh((n) => n + 1)} />
     </div>
   );
 }

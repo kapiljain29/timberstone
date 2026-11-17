@@ -22,13 +22,16 @@ const EMPTY_LINE = { product_id: "", item_name: "", quantity: "", unit: "" };
 
 /**
  * leadId — the lead; refreshKey — change it to reload (e.g. after a payment
- * on the same page made the order ready to dispatch).
+ * on the same page made the order ready to dispatch); onChanged() — after a
+ * challan or marking the order fully dispatched (the order's stage changes).
  */
-export default function OrderChallans({ leadId, refreshKey = 0 }) {
+export default function OrderChallans({ leadId, refreshKey = 0, onChanged }) {
   const can = useCan();
   const data = useApiData(can("challans.view") ? CHALLAN_API.forOrder : null, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   const { master } = useChallanMaster();
   const [creating, setCreating] = useState(false);
+  const complete = useSubmit({ fieldErrorsInToast: true });
+  const [confirm, confirmDialog] = useConfirm();
   const { reload } = data;
 
   useEffect(() => {
@@ -38,6 +41,22 @@ export default function OrderChallans({ leadId, refreshKey = 0 }) {
   // Nothing to show before the order exists.
   if (!can("challans.view") || (data.data && !data.data.order)) return null;
   const d = data.data;
+
+  // The last part went out without being marked as the last one.
+  async function completeDispatch() {
+    const ok = await confirm({
+      title: `Mark ${d.order.order_no} fully dispatched?`,
+      message: `Use this when the last part is already sent (${d.challans.length} ${d.challans.length === 1 ? "challan" : "challans"} so far). No more challans can be added afterwards.`,
+      confirmLabel: "Mark Fully Dispatched",
+      tone: "primary",
+    });
+    if (!ok) return;
+    const updated = await complete.post(CHALLAN_API.completeDispatch, { lead_id: leadId }, { branchId: ALL_BRANCHES });
+    if (updated) {
+      data.patch(() => updated);
+      onChanged?.();
+    }
+  }
 
   return (
     <Box
@@ -58,6 +77,14 @@ export default function OrderChallans({ leadId, refreshKey = 0 }) {
       ) : (
         <>
           {!d.can_dispatch && d.blocked_reason && <Alert tone="info">{d.blocked_reason}</Alert>}
+          {d.can_complete && can("challans.add") && !creating && (
+            <Alert tone="info">
+              {`${d.challans.length} ${d.challans.length === 1 ? "part" : "parts"} sent so far. Is that everything? `}
+              <button type="button" className="wf-link-btn" onClick={completeDispatch} disabled={complete.submitting}>
+                Mark Fully Dispatched
+              </button>
+            </Alert>
+          )}
           {creating && (
             <ChallanForm
               leadId={leadId}
@@ -68,6 +95,7 @@ export default function OrderChallans({ leadId, refreshKey = 0 }) {
               onSaved={(updated) => {
                 setCreating(false);
                 data.patch(() => updated);
+                onChanged?.();
               }}
             />
           )}
@@ -78,6 +106,7 @@ export default function OrderChallans({ leadId, refreshKey = 0 }) {
           )}
         </>
       )}
+      {confirmDialog}
     </Box>
   );
 }

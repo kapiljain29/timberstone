@@ -134,7 +134,14 @@ export default function SitePage() {
       )}
 
       <OrderPayments leadId={s.lead_id} refreshKey={orderRefresh} onChanged={() => setChallanRefresh((n) => n + 1)} />
-      <OrderChallans leadId={s.lead_id} refreshKey={challanRefresh} />
+      <OrderChallans
+        leadId={s.lead_id}
+        refreshKey={challanRefresh}
+        onChanged={() => {
+          setOrderRefresh((n) => n + 1);
+          site.reload();
+        }}
+      />
 
       <Alert tone="info">The rest of the stage-by-stage workflow will appear here as each stage goes live.</Alert>
     </div>

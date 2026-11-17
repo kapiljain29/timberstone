@@ -9,17 +9,17 @@ import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { useListFilters } from "@/lib/useListFilters";
 
 const PAGE_SIZE = 20;
-const FILTERS = { branch: "all", tab: "pending", search: "" };
+const FILTERS = { branch: "all", tab: "ordered", search: "" };
 const TABS = [
-  { value: "pending", label: "Awaiting Order" },
   { value: "ordered", label: "Orders" },
+  { value: "pending", label: "Awaiting Order" },
 ];
 
 // Orders — leads whose client approved the Final Quotation (POST
-// /api/admin/orders/list, Orders & Payments → View): "Awaiting Order" =
-// collecting the advance / ready for the order (Accounts creates it);
-// "Orders" = created, collecting the payment before dispatch / ready to
-// dispatch. A row opens the lead's Order & Payments (/orders/[leadId]).
+// /api/admin/orders/list, Orders & Payments → View): "Orders" (first) =
+// created — collecting the payment before dispatch, dispatching, delivered;
+// "Awaiting Order" = collecting the advance / ready for the order (Accounts
+// creates it). A row opens the lead's Order & Payments (/orders/[leadId]).
 export default function OrdersPage() {
   const filters = useListFilters(FILTERS);
   const { page, setPage, values } = filters;

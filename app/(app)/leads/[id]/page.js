@@ -200,7 +200,7 @@ export default function LeadDetailPage() {
       {/* After the client approves the Final Quotation: payments and the order. */}
       {l.site && <OrderPayments leadId={l.id} refreshKey={orderRefresh} onChanged={() => setChallanRefresh((n) => n + 1)} />}
       {/* Once the order exists: dispatching it in parts, and each delivery. */}
-      {l.site && <OrderChallans leadId={l.id} refreshKey={challanRefresh} />}
+      {l.site && <OrderChallans leadId={l.id} refreshKey={challanRefresh} onChanged={() => setOrderRefresh((n) => n + 1)} />}
 
       {activity && (
         <Box title="Status History">
