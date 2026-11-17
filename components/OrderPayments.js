@@ -184,6 +184,8 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
 const INSTALLMENTS = {
   advance: { title: "Advance", when: "Before the order is created — the booking token counts" },
   dispatch: { title: "Before dispatch", when: "Before the material leaves" },
+  progress: { title: "On progress", when: "When 50% of the work is done" },
+  handover: { title: "On handover", when: "Before the final coat" },
   remaining: { title: "Remaining", when: "During and after the work" },
 };
 
@@ -196,8 +198,8 @@ function PaymentSchedule({ plan }) {
   const dueIndex = plan.installments.findIndex((i) => i.balance > 0);
   const status = (inst, index) => {
     if (inst.balance <= 0) return <Badge tone="done">Received</Badge>;
-    if (index === dueIndex && inst.key !== "remaining") return <Badge tone="pending">{inst.received > 0 ? "Part paid — due now" : "Due now"}</Badge>;
-    return <Badge tone="idle">{inst.key === "remaining" ? "Later" : "Upcoming"}</Badge>;
+    if (index === dueIndex) return <Badge tone="pending">{inst.received > 0 ? "Part paid — due next" : "Due next"}</Badge>;
+    return <Badge tone="idle">Upcoming</Badge>;
   };
 
   return (
@@ -265,10 +267,16 @@ function StageNote({ plan, order, canCreate }) {
 // Records one customer payment toward the order.
 function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
   const save = useSubmit();
-  const due = hasOrder ? plan.dispatch_remaining : plan.advance_remaining;
+  // The instalment due next (an older order's "remaining" part is paid as
+  // progress); its balance is the suggested amount.
+  const recordable = Object.values(ORDER_PAYMENT_TYPE);
+  const balanceOf = (type) => plan.installments.find((i) => i.key === type)?.balance || 0;
+  const next = plan.installments.find((i) => i.balance > 0);
+  const firstType = next && recordable.includes(next.key) ? next.key : hasOrder ? ORDER_PAYMENT_TYPE.PROGRESS : ORDER_PAYMENT_TYPE.ADVANCE;
+  const firstAmount = next ? next.balance : 0;
   const [form, setForm] = useState({
-    payment_type: hasOrder ? ORDER_PAYMENT_TYPE.DISPATCH : ORDER_PAYMENT_TYPE.ADVANCE,
-    amount: due > 0 ? String(due) : "",
+    payment_type: firstType,
+    amount: firstAmount > 0 ? String(firstAmount) : "",
     payment_mode: "",
     paid_on: todayDate(),
     reference_no: "",
@@ -300,7 +308,18 @@ function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
       <div className="wf-grid wf-grid-3">
         <div className="wf-field">
           <label htmlFor="pay-type">Payment For</label>
-          <select id="pay-type" className="wf-select" required value={form.payment_type} onChange={(e) => set("payment_type", e.target.value)} disabled={save.submitting}>
+          <select
+            id="pay-type"
+            className="wf-select"
+            required
+            value={form.payment_type}
+            onChange={(e) => {
+              // Suggest the picked instalment's balance.
+              const balance = balanceOf(e.target.value);
+              setForm((f) => ({ ...f, payment_type: e.target.value, amount: balance > 0 ? String(balance) : f.amount }));
+            }}
+            disabled={save.submitting}
+          >
             {types.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
