@@ -86,6 +86,7 @@ const GROUPS = {
           { key: "notify_design_requests", label: "A design request is sent, submitted, approved or sent back for changes", type: "toggle" },
           { key: "notify_approvals", label: "An approval is requested (to approvers), approved or rejected (to the requester)", type: "toggle" },
           { key: "notify_site_assigned", label: "A booked lead is moved to Site (to its Operation Head)", type: "toggle" },
+          { key: "notify_orders", label: "Orders: Final Quotation approved, advance received, order created, ready to dispatch", type: "toggle" },
         ],
       },
       {
@@ -187,6 +188,26 @@ const GROUPS = {
             type: "number",
             required: true,
             hint: "Needed to mark a lead Booked (statuses with “Needs token amount”). Less needs Management approval. 0 = any amount above zero.",
+          },
+        ],
+      },
+      {
+        title: "Order Payment Terms",
+        note: "Percent of the approved Final Quotation's total before GST. Each order keeps the terms in force when it was created — changing them here affects new orders only.",
+        fields: [
+          {
+            key: "payment_advance_pct",
+            label: "Advance with Order (%)",
+            type: "number",
+            required: true,
+            hint: "Collected before the order is created — the booking token counts toward it.",
+          },
+          {
+            key: "payment_dispatch_pct",
+            label: "Before Dispatch (%)",
+            type: "number",
+            required: true,
+            hint: "Collected after the order, before the material is dispatched — plus all the GST.",
           },
         ],
       },

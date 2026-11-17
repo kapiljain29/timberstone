@@ -12,8 +12,9 @@
 import { useState } from "react";
 import { Alert, Box, DataTable, Detail, DetailGroup, LoadError } from "@/components/ui";
 import QuotationForm from "@/components/QuotationForm";
+import QuotationClientDecision from "@/components/QuotationClientDecision";
 import { formatAmount, formatDate, formatDateTime } from "@/lib/format";
-import { QUOTATION_API, QUOTATION_TYPES } from "@/lib/quotation";
+import { CLIENT_STATUS, QUOTATION_API, QUOTATION_TYPES } from "@/lib/quotation";
 import { useCan } from "@/lib/roles";
 import { ALL_BRANCHES } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
@@ -82,7 +83,9 @@ export default function LeadQuotation({ lead, type = "tentative", onSaved }) {
       title={q ? `${kind.label} ${q.quotation_no}` : kind.label}
       right={
         q
-          ? can("quotations.edit") && (
+          ? can("quotations.edit") &&
+            // Approved by the client = locked (undo the approval to revise).
+            q.client_status !== CLIENT_STATUS.APPROVED && (
               <button type="button" className="wf-link-btn" onClick={() => setEditing("update")}>
                 Update Quotation
               </button>
@@ -125,6 +128,15 @@ export default function LeadQuotation({ lead, type = "tentative", onSaved }) {
             </Detail>
             <Detail label="PDF">{pdfLink(current)}</Detail>
           </DetailGroup>
+          <QuotationClientDecision
+            quotation={q}
+            label={kind.label}
+            isFinal={isFinal}
+            onDecided={(updated) => {
+              quotation.patch(() => updated);
+              onSaved();
+            }}
+          />
           <div className="wf-field">
             <label>History ({q.revisions.length})</label>
             <DataTable

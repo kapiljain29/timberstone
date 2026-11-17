@@ -12,6 +12,7 @@ import LeadSite from "@/components/LeadSite";
 import LeadQuotation from "@/components/LeadQuotation";
 import SiteMeasurements from "@/components/SiteMeasurements";
 import FinalQuotationStep from "@/components/FinalQuotationStep";
+import OrderPayments from "@/components/OrderPayments";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -34,6 +35,8 @@ export default function LeadDetailPage() {
   const { id } = useParams();
   const can = useCan();
   const lead = useApiData(LEAD_API.details, { id }, { branchId: ALL_BRANCHES });
+  // Bumped when the Final Quotation changes (e.g. approved) — reloads Order & Payments.
+  const [orderRefresh, setOrderRefresh] = useState(0);
   // The lead's activity — who it is assigned to, its histories and token &
   // booking — needs Leads → View Activity; without it (e.g. Marketing) the
   // page shows only the lead's details, and none of these are loaded.
@@ -182,7 +185,17 @@ export default function LeadDetailPage() {
 
       {/* Once moved to Site: the supervisor's measurement, and the Final Quotation made from it. */}
       {l.site && can("sites.view") && <SiteMeasurements siteId={l.site.id} />}
-      {l.site && <FinalQuotationStep lead={l} onSaved={lead.reload} />}
+      {l.site && (
+        <FinalQuotationStep
+          lead={l}
+          onSaved={() => {
+            lead.reload();
+            setOrderRefresh((n) => n + 1);
+          }}
+        />
+      )}
+      {/* After the client approves the Final Quotation: payments and the order. */}
+      {l.site && <OrderPayments leadId={l.id} refreshKey={orderRefresh} />}
 
       {activity && (
         <Box title="Status History">

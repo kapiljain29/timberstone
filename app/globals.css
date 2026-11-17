@@ -590,10 +590,19 @@ button {
 
 /* Read-only details (DetailGroup / Detail in components/ui.js). */
 .wf-detail-group + .wf-detail-group,
-.wf-box > .wf-detail-group + :is(.wf-field, .wf-grid) {
+.wf-box > .wf-detail-group + :is(.wf-field, .wf-grid, .wf-subform) {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid var(--line-soft);
+}
+/* A form opened inside a card under other content (e.g. Record Payment
+   under the order details, a reason under the client's answer): spaced
+   from what is above it, and its rows spaced like the card's own. */
+.wf-box > :not(.wf-box-title, .wf-detail-group) + .wf-subform {
+  margin-top: 16px;
+}
+.wf-subform > :is(.wf-grid, .wf-field, .wf-field-error) + :is(.wf-grid, .wf-field) {
+  margin-top: 16px;
 }
 .wf-detail-group-title {
   margin: 0 0 12px;

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { Alert, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
 import SiteSupervisor from "@/components/SiteSupervisor";
 import SiteMeasurements from "@/components/SiteMeasurements";
 import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
+import OrderPayments from "@/components/OrderPayments";
 import { formatAmount, formatDate } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
@@ -23,6 +25,8 @@ export default function SitePage() {
   const can = useCan();
   const site = useApiData(SITE_API.details, { id }, { branchId: ALL_BRANCHES });
   const s = site.data;
+  // Bumped when the Final Quotation changes (e.g. approved) — reloads Order & Payments.
+  const [orderRefresh, setOrderRefresh] = useState(0);
   // The site's lead, for the Final Quotation step (needs Leads → View).
   const canOpenLead = can("leads.view");
   const leadDetails = useApiData(s && canOpenLead ? LEAD_API.details : null, { id: s?.lead_id }, { branchId: ALL_BRANCHES });
@@ -108,13 +112,21 @@ export default function SitePage() {
         leadDetails.error ? (
           <LoadError error={leadDetails.error} onRetry={leadDetails.reload} />
         ) : leadDetails.data ? (
-          <FinalQuotationStep lead={leadDetails.data} onSaved={leadDetails.reload} />
+          <FinalQuotationStep
+            lead={leadDetails.data}
+            onSaved={() => {
+              leadDetails.reload();
+              setOrderRefresh((n) => n + 1);
+            }}
+          />
         ) : (
           <div className="wf-empty">Loading quotation…</div>
         )
       ) : (
         <Alert tone="info">{finalQuotationNextStep(s.latest_measurement)}</Alert>
       )}
+
+      <OrderPayments leadId={s.lead_id} refreshKey={orderRefresh} />
 
       <Alert tone="info">The rest of the stage-by-stage workflow will appear here as each stage goes live.</Alert>
     </div>
