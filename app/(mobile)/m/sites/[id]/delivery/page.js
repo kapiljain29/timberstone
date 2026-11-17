@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Badge, Box, DataTable, Detail, DetailGroup, FieldError, ImageGallery, LoadError } from "@/components/ui";
+import { Badge, FieldError, ImageGallery, LoadError } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { MEmpty, MIcon, MSectionTitle } from "@/components/MobileUI";
+import { MCard, MChallanSummary, MEmpty, MIcon, MSectionTitle } from "@/components/MobileUI";
 import MPhotoPicker from "@/components/MPhotoPicker";
 import { CHALLAN_PHOTO_FIELDS, CHALLAN_STATUS, challanStatusTone } from "@/lib/challans";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { ALL_BRANCHES, SUPERVISOR_SITE_API, useSupervisorSite } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
@@ -66,47 +66,32 @@ export default function MobileDeliveryPage() {
 
       {delivered.length > 0 && <MSectionTitle>Delivered</MSectionTitle>}
       {delivered.map((c) => (
-        <Box key={c.id} title={c.challan_no} right={<Badge tone={challanStatusTone(c.delivery_status)}>Delivered</Badge>}>
-          <ChallanSummary challan={c} />
-          <DetailGroup>
-            <Detail label="Confirmed">{`${formatDateTime(c.delivered_at)}${c.delivered_by_name ? ` by ${c.delivered_by_name}` : ""}`}</Detail>
-            {c.delivery_remark && (
-              <Detail label="Note" wide>
-                {c.delivery_remark}
-              </Detail>
-            )}
-          </DetailGroup>
-          <div className="wf-field">
-            <label>Signed Challan</label>
+        <MCard key={c.id} title={c.challan_no} right={<Badge tone={challanStatusTone(c.delivery_status)}>Delivered</Badge>}>
+          <MChallanSummary challan={c} />
+          <hr className="wf-mcard-divider" />
+          <div>
+            <span className="wf-mlabel">Confirmed</span>
+            {`${formatDateTime(c.delivered_at)}${c.delivered_by_name ? ` by ${c.delivered_by_name}` : ""}`}
+          </div>
+          {c.delivery_remark && (
+            <div className="wf-mnote">
+              <span className="wf-mlabel">Your note</span>
+              {c.delivery_remark}
+            </div>
+          )}
+          <div>
+            <span className="wf-mlabel">Signed challan</span>
             <ImageGallery images={c.signed_challan} />
           </div>
           {c.material_photos.length > 0 && (
-            <div className="wf-field">
-              <label>Material on Site</label>
+            <div>
+              <span className="wf-mlabel">Material on site</span>
               <ImageGallery images={c.material_photos} />
             </div>
           )}
-        </Box>
+        </MCard>
       ))}
     </div>
-  );
-}
-
-// What was sent: dispatch details and the lines.
-function ChallanSummary({ challan: c }) {
-  return (
-    <>
-      <DetailGroup>
-        <Detail label="Dispatched">{formatDate(c.dispatch_date)}</Detail>
-        <Detail label="Vehicle / Driver">{[c.vehicle_no, c.driver_name].filter(Boolean).join(" · ") || "—"}</Detail>
-        {c.note && (
-          <Detail label="Note from Accounts" wide>
-            {c.note}
-          </Detail>
-        )}
-      </DetailGroup>
-      <DataTable columns={["Material", "Qty", "Unit"]} rows={c.items.map((i) => [i.item_name, Number(i.quantity).toLocaleString("en-IN"), i.unit])} />
-    </>
   );
 }
 
@@ -137,12 +122,13 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <Box title={c.challan_no} right={<Badge tone={challanStatusTone(c.delivery_status)}>On its way</Badge>}>
-        <ChallanSummary challan={c} />
+      <MCard title={c.challan_no} right={<Badge tone={challanStatusTone(c.delivery_status)}>On its way</Badge>}>
+        <MChallanSummary challan={c} />
+        <hr className="wf-mcard-divider" />
         <MPhotoPicker
           id={`signed-${c.id}`}
-          label="Signed Challan"
-          hint="A clear photo of the challan signed on receipt."
+          label="Photo of Signed Challan"
+          hint="Get the challan signed on receipt, then take a clear photo of it."
           files={signed}
           onChange={setSigned}
           required
@@ -151,15 +137,15 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
         />
         <MPhotoPicker
           id={`material-${c.id}`}
-          label="Material on Site"
-          hint="Optional — e.g. the buckets and bags as unloaded."
+          label="Photos of Material (optional)"
+          hint="The buckets, bags or boxes as unloaded."
           files={material}
           onChange={setMaterial}
           disabled={save.submitting}
           error={save.fieldErrors[CHALLAN_PHOTO_FIELDS.materialPhotos]}
         />
         <div className="wf-field">
-          <label htmlFor={`remark-${c.id}`}>Note</label>
+          <label htmlFor={`remark-${c.id}`}>Note (optional)</label>
           <textarea
             id={`remark-${c.id}`}
             className="wf-input"
@@ -172,12 +158,10 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
           />
           <FieldError>{save.fieldErrors.remark}</FieldError>
         </div>
-        <div className="wf-actions-end">
-          <button type="submit" className="wf-btn primary" disabled={save.submitting}>
-            {save.submitting ? "Uploading…" : "Confirm Delivery"}
-          </button>
-        </div>
-      </Box>
+        <button type="submit" className="wf-btn primary wf-mblock" disabled={save.submitting}>
+          <MIcon name="check" size={18} /> {save.submitting ? "Uploading…" : "Confirm Delivery"}
+        </button>
+      </MCard>
       {confirmDialog}
     </form>
   );

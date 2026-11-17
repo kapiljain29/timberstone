@@ -2,7 +2,7 @@
 // No hooks, so they work from both server and client components.
 
 import Link from "next/link";
-import { measurementLabel } from "@/lib/format";
+import { formatDate, measurementLabel } from "@/lib/format";
 
 const PATHS = {
   home: <path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19v-8.5Z" />,
@@ -89,6 +89,12 @@ const PATHS = {
     </>
   ),
   phone: <path d="M6.5 4h3l1.5 4-2 1.5a10 10 0 0 0 5.5 5.5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 5 5.6 1.5 1.5 0 0 1 6.5 4Z" />,
+  calendar: (
+    <>
+      <rect x="4" y="5.5" width="16" height="15" rx="2" />
+      <path d="M8 3.5v4M16 3.5v4M4 10h16" />
+    </>
+  ),
   lock: (
     <>
       <rect x="5" y="10.5" width="14" height="10" rx="2" />
@@ -179,5 +185,60 @@ export function MEmpty({ icon = "check", title, sub }) {
       <div className="wf-mempty-title">{title}</div>
       {sub && <div className="wf-mempty-sub">{sub}</div>}
     </div>
+  );
+}
+
+// A card in the Supervisor app: a title with an optional chip on the
+// right, and its content stacked with even spacing.
+export function MCard({ title, right, children }) {
+  return (
+    <section className="wf-mcard">
+      <div className="wf-mcard-head">
+        <span className="wf-mcard-title">{title}</span>
+        {right}
+      </div>
+      <div className="wf-mcard-body">{children}</div>
+    </section>
+  );
+}
+
+// What a Delivery Challan brought: dispatch date, vehicle and driver as
+// chips, Accounts' note, and the material sent as a list.
+export function MChallanSummary({ challan: c }) {
+  return (
+    <>
+      <div className="wf-mmeta">
+        <span>
+          <MIcon name="calendar" size={14} /> {formatDate(c.dispatch_date)}
+        </span>
+        {c.vehicle_no && (
+          <span>
+            <MIcon name="truck" size={14} /> {c.vehicle_no}
+          </span>
+        )}
+        {c.driver_name && (
+          <span>
+            <MIcon name="user" size={14} /> {c.driver_name}
+          </span>
+        )}
+      </div>
+      {c.note && (
+        <div className="wf-mnote">
+          <span className="wf-mlabel">Note from Accounts</span>
+          {c.note}
+        </div>
+      )}
+      <div>
+        <span className="wf-mlabel">Material sent</span>
+        <ul className="wf-mitems">
+          {c.items.map((i) => (
+            <li key={i.id}>
+              <span>{i.item_name}</span>
+              <strong>{`${Number(i.quantity).toLocaleString("en-IN")} ${i.unit}`}</strong>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
