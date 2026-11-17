@@ -9,6 +9,7 @@ import SiteMeasurements from "@/components/SiteMeasurements";
 import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
 import OrderPayments from "@/components/OrderPayments";
 import OrderChallans from "@/components/OrderChallans";
+import OrderStatus from "@/components/OrderStatus";
 import { formatAmount, formatDate } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
@@ -81,6 +82,9 @@ export default function SitePage() {
           <Detail label="Operation Head">{s.operation_head_name || "—"}</Detail>
           <Detail label="Supervisors">{supervisorNames(s, "Not assigned yet")}</Detail>
           <Detail label="Expected Start">{formatDate(s.expected_start_date)}</Detail>
+          <Detail label="Order">
+            <OrderStatus status={s.order_status} empty="Not yet — after the client approves the Final Quotation" />
+          </Detail>
           <Detail label="Site Address" wide>
             <span style={{ whiteSpace: "pre-line" }}>{s.address}</span>
           </Detail>

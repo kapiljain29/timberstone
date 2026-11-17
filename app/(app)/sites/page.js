@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import OrderStatus from "@/components/OrderStatus";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField } from "@/components/ui";
 import { formatAmount, formatDate, measurementLabel } from "@/lib/format";
 import { SITE_API, supervisorNames, useBranchTabs, useSiteMaster } from "@/lib/team";
@@ -75,7 +76,7 @@ export default function SitesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Site", "Customer", "Branch", "Operation Head", "Supervisors", "Measurement", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
+              columns={["Site", "Customer", "Branch", "Operation Head", "Supervisors", "Measurement", "Order", "Tentative Quotation", "Expected Start", "Moved to Site", ""]}
               emptyLabel={filters.active ? "No sites match these filters." : "No sites yet — a Booked lead is moved to Site from its lead page."}
               rows={items.map((s) => [
                 <div key="s">
@@ -90,6 +91,7 @@ export default function SitesPage() {
                 s.operation_head_name || "—",
                 supervisorNames(s),
                 measurementLabel(s.latest_measurement),
+                <OrderStatus key="ord" status={s.order_status} />,
                 s.lead?.tentative_quotation_amount ? formatAmount(s.lead.tentative_quotation_amount) : "—",
                 formatDate(s.expected_start_date),
                 formatDate(s.created_at),
