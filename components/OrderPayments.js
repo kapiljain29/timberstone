@@ -2,7 +2,8 @@
 
 // A lead's Order & Payments card (POST /api/admin/orders/summary, Orders &
 // Payments → View) — on the lead page, the site page and the Orders screen.
-// Once the client approved the Final Quotation it shows the payment plan
+// Once the client approved the Final Quotation it shows what is ordered
+// (the approved revision's lines) and the payment plan
 // (all amounts from the API):
 //   1. Advance — advance_pct of the total before GST, the booking token
 //      included → then the order can be created (Create Order, Orders &
@@ -87,6 +88,24 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
               <strong>{formatAmount(plan.grand_total)}</strong>
             </Detail>
           </DetailGroup>
+
+          {/* What is ordered — the approved quotation's lines, so the order can be placed from here. */}
+          <div className="wf-field">
+            <label>{`Order Items (${s.items.length})`}</label>
+            <DataTable
+              columns={["Product", "Category", "Area", "Colour / Pattern", "Quantity (sq.ft)", "Rate (₹/sq.ft)", "Amount"]}
+              align={[null, null, null, null, "right", "right", "right"]}
+              rows={s.items.map((i) => [
+                <strong key="p">{i.product_name}</strong>,
+                i.category_name || "—",
+                i.area_label,
+                i.colour_pattern,
+                Number(i.quantity).toLocaleString("en-IN"),
+                formatAmount(i.rate),
+                formatAmount(i.amount),
+              ])}
+            />
+          </div>
 
           <DetailGroup title="Payment Plan">
             <Detail label="Received So Far">

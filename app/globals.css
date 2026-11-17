@@ -590,7 +590,8 @@ button {
 
 /* Read-only details (DetailGroup / Detail in components/ui.js). */
 .wf-detail-group + .wf-detail-group,
-.wf-box > .wf-detail-group + :is(.wf-field, .wf-grid, .wf-subform) {
+.wf-box > .wf-detail-group + :is(.wf-field, .wf-grid, .wf-subform),
+.wf-box > :is(.wf-field, .wf-grid) + .wf-detail-group {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid var(--line-soft);
