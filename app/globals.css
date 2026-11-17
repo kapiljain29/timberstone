@@ -4060,3 +4060,19 @@ a.wf-mnext.done .wf-mnext-label {
   padding: 12px 16px;
   font-size: 15px;
 }
+
+/* Payment Schedule (components/OrderPayments.js): "₹x received of ₹y" above its progress bar. */
+.wf-pay-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.wf-pay-progress strong {
+  color: var(--ink);
+}
+.wf-pay-progress + .wf-progress-track {
+  margin-bottom: 14px;
+}

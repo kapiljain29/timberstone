@@ -14,7 +14,7 @@
 // payments; the list shows every payment, token included.
 
 import { useEffect, useState } from "react";
-import { Alert, Badge, Box, DataTable, Detail, DetailGroup, FieldError, LoadError } from "@/components/ui";
+import { Alert, Badge, Box, DataTable, Detail, DetailGroup, FieldError, LoadError, ProgressBar } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatAmount, formatDate, formatDateTime, todayDate } from "@/lib/format";
 import { ORDER_API, ORDER_PAYMENT_TYPE, ORDER_STAGE, orderStageTone, useOrderMaster } from "@/lib/orders";
@@ -107,19 +107,7 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
             />
           </div>
 
-          <DetailGroup title="Payment Plan">
-            <Detail label="Received So Far">
-              <strong>{formatAmount(plan.paid)}</strong>
-            </Detail>
-            <Detail label={`Advance — ${plan.advance_pct}%`}>
-              {`${formatAmount(plan.advance_due)} · `}
-              {plan.advance_remaining > 0 ? `${formatAmount(plan.advance_remaining)} due` : <Badge tone="done">Received</Badge>}
-            </Detail>
-            <Detail label={`Before Dispatch — +${plan.dispatch_pct}% + GST`}>
-              {`${formatAmount(plan.dispatch_due)} in all · `}
-              {plan.dispatch_remaining > 0 ? `${formatAmount(plan.dispatch_remaining)} due` : <Badge tone="done">Received</Badge>}
-            </Detail>
-          </DetailGroup>
+          <PaymentSchedule plan={plan} />
 
           {s.order && (
             <DetailGroup title={`Order ${s.order.order_no}`}>
@@ -189,6 +177,57 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
       )}
       {confirmDialog}
     </Box>
+  );
+}
+
+// How each instalment is described (the amounts come from the API).
+const INSTALLMENTS = {
+  advance: { title: "Advance", when: "Before the order is created — the booking token counts" },
+  dispatch: { title: "Before dispatch", when: "Before the material leaves" },
+  remaining: { title: "Remaining", when: "During and after the work" },
+};
+
+// The payment plan as a schedule: each instalment's own amount, what is
+// received against it (payments fill them in order), the balance and its
+// status; plus the overall progress.
+function PaymentSchedule({ plan }) {
+  const percent = plan.grand_total ? Math.min(Math.round((plan.paid / plan.grand_total) * 100), 100) : 0;
+  // The first instalment not fully paid is the one due now.
+  const dueIndex = plan.installments.findIndex((i) => i.balance > 0);
+  const status = (inst, index) => {
+    if (inst.balance <= 0) return <Badge tone="done">Received</Badge>;
+    if (index === dueIndex && inst.key !== "remaining") return <Badge tone="pending">{inst.received > 0 ? "Part paid — due now" : "Due now"}</Badge>;
+    return <Badge tone="idle">{inst.key === "remaining" ? "Later" : "Upcoming"}</Badge>;
+  };
+
+  return (
+    <div className="wf-field">
+      <label>Payment Schedule</label>
+      <div className="wf-pay-progress">
+        <span>
+          <strong>{formatAmount(plan.paid)}</strong> received of {formatAmount(plan.grand_total)} · <strong>{formatAmount(plan.balance)}</strong> balance
+        </span>
+        <span>{percent}%</span>
+      </div>
+      <ProgressBar percent={percent} />
+      <DataTable
+        columns={["Instalment", "When", "Amount", "Received", "Balance", "Status"]}
+        align={[null, null, "right", "right", "right", null]}
+        rows={plan.installments.map((inst, index) => [
+          <div key="t">
+            <strong>{`${INSTALLMENTS[inst.key]?.title || inst.key} — ${inst.percent}%${inst.gst ? " + GST" : ""}`}</strong>
+            <div className="wf-sub">
+              {inst.gst ? `${formatAmount(inst.amount - inst.gst)} + GST ${formatAmount(inst.gst)}` : `${inst.percent}% of ${formatAmount(plan.order_amount)}`}
+            </div>
+          </div>,
+          INSTALLMENTS[inst.key]?.when || "—",
+          formatAmount(inst.amount),
+          inst.received ? formatAmount(inst.received) : "—",
+          inst.balance ? <strong key="b">{formatAmount(inst.balance)}</strong> : "—",
+          <span key="s">{status(inst, index)}</span>,
+        ])}
+      />
+    </div>
   );
 }
 

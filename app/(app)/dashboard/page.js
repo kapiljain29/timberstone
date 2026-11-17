@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Badge, Box, BranchFilter, DataTable, LoadError, StatCard, leadStatusTone } from "@/components/ui";
-import { formatDateTime, startOfTodayIso } from "@/lib/format";
+import { formatAmount, formatDateTime, measurementLabel, startOfTodayIso } from "@/lib/format";
+import OrderStatus from "@/components/OrderStatus";
 import { useBellNotifications } from "@/lib/notifications";
 import { useCan } from "@/lib/roles";
 import { DASHBOARD_API, designStatusTone, useBranchTabs } from "@/lib/team";
@@ -11,7 +12,8 @@ import { useApiData } from "@/lib/useApi";
 
 // The signed-in user's overview. The API returns one section per module
 // their role may see (leads, call queue — a caller's own, everyone else's
-// team-wide — and design requests; null otherwise), already limited to their branches and data scope, so the
+// team-wide — design requests, sites (e.g. Operation Heads) and orders
+// (e.g. Accounts); null otherwise), already limited to their branches and data scope, so the
 // screen shows whatever comes back.
 export default function DashboardPage() {
   const [branch, setBranch] = useState("all");
@@ -24,7 +26,7 @@ export default function DashboardPage() {
   // Who leads are assigned to is lead activity (Leads → View Activity).
   const activity = useCan()("leads.activity");
 
-  const { leads, call_queue: calls, designs } = summary.data || {};
+  const { leads, call_queue: calls, designs, sites, orders } = summary.data || {};
   // Lead list links keep the selected branch tab.
   const leadsHref = (params = {}) => {
     const query = new URLSearchParams({ ...(branch !== "all" && { branch }), ...params }).toString();
@@ -35,7 +37,7 @@ export default function DashboardPage() {
     <div>
       <div className="wf-crumb">Overview</div>
       <h1 className="wf-h1">Dashboard</h1>
-      <p className="wf-sub">Your leads, calls and design requests at a glance, for the branches and records you can see.</p>
+      <p className="wf-sub">Your work at a glance, for the branches and records you can see.</p>
 
       {branchTabs.show && (
         <BranchFilter branches={branchTabs.options} allLabel={branchTabs.allLabel} value={branch} onChange={setBranch} />
@@ -47,7 +49,7 @@ export default function DashboardPage() {
 
       {summary.data && (
         <>
-          {(leads || calls || designs) && (
+          {(leads || calls || designs || sites || orders) && (
             <div className="wf-cards">
               {leads && (
                 <>
@@ -71,6 +73,21 @@ export default function DashboardPage() {
                 </>
               )}
               {designs && <StatCard value={designs.open} label="Open design requests" href="/design-requests" />}
+              {sites && (
+                <>
+                  <StatCard value={sites.total} label="Sites" href="/sites" />
+                  <StatCard value={sites.to_measure} label="Sites to measure" color="var(--amber-text)" href="/sites" />
+                  <StatCard value={sites.pending_deliveries} label="Deliveries to confirm" color="var(--amber-text)" href="/sites" />
+                </>
+              )}
+              {orders && (
+                <>
+                  <StatCard value={orders.ready_for_order} label="Ready for order" color="var(--amber-text)" href="/orders" />
+                  <StatCard value={orders.to_dispatch} label="To dispatch" color="var(--amber-text)" href="/orders" />
+                  <StatCard value={formatAmount(orders.due_total)} label="Payments due" href="/orders" />
+                  <StatCard value={formatAmount(orders.received_today)} label="Received today" color="var(--green-text)" />
+                </>
+              )}
             </div>
           )}
 
@@ -98,6 +115,13 @@ export default function DashboardPage() {
                   emptyLabel="No leads yet."
                 />
               </>
+            )}
+            {orders && (
+              <CountBox
+                title="Orders by Stage"
+                rows={orders.by_stage.filter((s) => s.count > 0).map((s) => ({ key: s.value, label: s.label, count: s.count, href: "/orders" }))}
+                emptyLabel="No approved Final Quotations yet."
+              />
             )}
             {designs && (
               <CountBox
@@ -163,6 +187,60 @@ export default function DashboardPage() {
                   ),
                   ...(activity ? [l.assigned_to_names.join(", ") || "Unassigned"] : []),
                   formatDateTime(l.created_at),
+                ])}
+              />
+            </Box>
+          )}
+
+          {orders && (
+            <Box
+              title="Orders Needing Action"
+              right={
+                <Link href="/orders" className="wf-link-btn">
+                  Go to Orders →
+                </Link>
+              }
+            >
+              <DataTable
+                columns={["Customer", "Order", "Stage", "Grand Total", "Due", ""]}
+                emptyLabel="Nothing to create or dispatch right now."
+                busy={summary.stale}
+                rows={orders.needs_action.map((o) => [
+                  <strong key="c">{o.customer_name}</strong>,
+                  o.order_no || "Not created yet",
+                  <OrderStatus key="s" status={{ stage: o.stage, stage_label: o.stage_label }} />,
+                  formatAmount(o.grand_total),
+                  formatAmount(o.due),
+                  <Link key="o" href={`/orders/${o.lead_id}`} className="wf-link-btn">
+                    Open →
+                  </Link>,
+                ])}
+              />
+            </Box>
+          )}
+
+          {sites && (
+            <Box
+              title="Latest Sites"
+              right={
+                <Link href="/sites" className="wf-link-btn">
+                  Go to Sites →
+                </Link>
+              }
+            >
+              <DataTable
+                columns={["Site", "Customer", "Operation Head", "Measurement", "Deliveries to Confirm", "Order"]}
+                emptyLabel="No sites yet."
+                busy={summary.stale}
+                rows={sites.recent.map((s) => [
+                  <Link key={s.id} href={`/sites/${s.id}`} className="wf-link-btn">
+                    {s.site_code} · {s.site_name}
+                  </Link>,
+                  s.customer_name || "—",
+                  s.operation_head_name || "—",
+                  measurementLabel(s.latest_measurement),
+                  s.pending_deliveries || "—",
+                  <OrderStatus key="o" status={s.order_status} />,
                 ])}
               />
             </Box>
