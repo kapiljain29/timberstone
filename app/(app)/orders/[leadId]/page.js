@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import OrderPayments from "@/components/OrderPayments";
+import OrderChallans from "@/components/OrderChallans";
 import { LoadError } from "@/components/ui";
 import { ORDER_API } from "@/lib/orders";
 import { useCan } from "@/lib/roles";
@@ -16,6 +18,8 @@ export default function OrderPage() {
   const { leadId } = useParams();
   const can = useCan();
   const summary = useApiData(ORDER_API.summary, { lead_id: leadId }, { branchId: ALL_BRANCHES });
+  // Bumped after a payment / the order is created — reloads Delivery Challans.
+  const [challanRefresh, setChallanRefresh] = useState(0);
   const s = summary.data;
 
   if (!s) {
@@ -56,7 +60,8 @@ export default function OrderPage() {
           </Link>
         )}
       </div>
-      <OrderPayments leadId={leadId} />
+      <OrderPayments leadId={leadId} onChanged={() => setChallanRefresh((n) => n + 1)} />
+      <OrderChallans leadId={leadId} refreshKey={challanRefresh} />
     </div>
   );
 }

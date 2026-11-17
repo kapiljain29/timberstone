@@ -8,6 +8,7 @@ import SiteSupervisor from "@/components/SiteSupervisor";
 import SiteMeasurements from "@/components/SiteMeasurements";
 import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
 import OrderPayments from "@/components/OrderPayments";
+import OrderChallans from "@/components/OrderChallans";
 import { formatAmount, formatDate } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { useCan } from "@/lib/roles";
@@ -27,6 +28,8 @@ export default function SitePage() {
   const s = site.data;
   // Bumped when the Final Quotation changes (e.g. approved) — reloads Order & Payments.
   const [orderRefresh, setOrderRefresh] = useState(0);
+  // Bumped after a payment / the order is created — reloads Delivery Challans.
+  const [challanRefresh, setChallanRefresh] = useState(0);
   // The site's lead, for the Final Quotation step (needs Leads → View).
   const canOpenLead = can("leads.view");
   const leadDetails = useApiData(s && canOpenLead ? LEAD_API.details : null, { id: s?.lead_id }, { branchId: ALL_BRANCHES });
@@ -126,7 +129,8 @@ export default function SitePage() {
         <Alert tone="info">{finalQuotationNextStep(s.latest_measurement)}</Alert>
       )}
 
-      <OrderPayments leadId={s.lead_id} refreshKey={orderRefresh} />
+      <OrderPayments leadId={s.lead_id} refreshKey={orderRefresh} onChanged={() => setChallanRefresh((n) => n + 1)} />
+      <OrderChallans leadId={s.lead_id} refreshKey={challanRefresh} />
 
       <Alert tone="info">The rest of the stage-by-stage workflow will appear here as each stage goes live.</Alert>
     </div>

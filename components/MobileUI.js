@@ -125,12 +125,13 @@ export function MSectionTitle({ children, right }) {
 }
 
 // Site card used on Home and My Sites (POST /api/mobile/sites/list): name,
-// customer, and the Measurement step — highlighted ("Your task") until a
-// measurement is uploaded.
+// customer, and the supervisor's steps — the Measurement (until uploaded)
+// and Material Delivery (challans to confirm) are highlighted ("Your task").
 export function MSiteCard({ site, href }) {
-  const pending = !site.latest_measurement;
+  const toMeasure = !site.latest_measurement;
+  const toConfirm = site.pending_deliveries > 0;
   return (
-    <Link href={href} className={`wf-mproj${pending ? " action" : ""}`}>
+    <Link href={href} className={`wf-mproj${toMeasure || toConfirm ? " action" : ""}`}>
       <div className="wf-mproj-top">
         <div className="wf-mproj-text">
           <div className="wf-mproj-title">{site.site_name}</div>
@@ -142,15 +143,31 @@ export function MSiteCard({ site, href }) {
           <MIcon name="chevron" size={16} />
         </span>
       </div>
-      <div className={`wf-mproj-step${pending ? " action" : ""}`}>
+      <div className={`wf-mproj-step${toMeasure ? " action" : ""}`}>
         <span className="wf-mproj-step-n">
           <MIcon name="ruler" size={12} />
         </span>
         <span className="wf-mproj-step-t">Measurement</span>
-        <span className="wf-mproj-step-tag">{pending ? "Your task" : measurementLabel(site.latest_measurement)}</span>
+        <span className="wf-mproj-step-tag">{toMeasure ? "Your task" : measurementLabel(site.latest_measurement)}</span>
       </div>
+      {toConfirm && (
+        <div className="wf-mproj-step action">
+          <span className="wf-mproj-step-n">
+            <MIcon name="truck" size={12} />
+          </span>
+          <span className="wf-mproj-step-t">Material Delivery</span>
+          <span className="wf-mproj-step-tag">{`${site.pending_deliveries} to confirm`}</span>
+        </div>
+      )}
     </Link>
   );
+}
+
+// Where a site's card takes the supervisor: their pending step first.
+export function siteTaskHref(site) {
+  if (!site.latest_measurement) return `/m/sites/${site.id}/measurement`;
+  if (site.pending_deliveries > 0) return `/m/sites/${site.id}/delivery`;
+  return `/m/sites/${site.id}`;
 }
 
 export function MEmpty({ icon = "check", title, sub }) {

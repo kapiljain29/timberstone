@@ -6,6 +6,7 @@ import { LoadError } from "@/components/ui";
 import { MEmpty, MIcon, MSectionTitle } from "@/components/MobileUI";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
+import { CHALLAN_STATUS } from "@/lib/challans";
 import { useSupervisorSite } from "@/lib/team";
 
 // One of the supervisor's sites (POST /api/mobile/sites/details): customer,
@@ -35,6 +36,8 @@ export default function MobileSiteDetailPage() {
 
   const lead = s.lead || {};
   const latest = s.measurements[0] || null;
+  // Challans dispatched to the site and those still to confirm.
+  const toConfirm = s.challans.filter((c) => c.delivery_status === CHALLAN_STATUS.DISPATCHED);
 
   return (
     <div>
@@ -60,7 +63,17 @@ export default function MobileSiteDetailPage() {
         </div>
       </div>
 
-      {latest ? (
+      {latest && toConfirm.length > 0 ? (
+        <Link href={`/m/sites/${s.id}/delivery`} className="wf-mnext">
+          <span className="wf-mnext-label">
+            Up next · Your task
+            <strong>{`Confirm ${toConfirm.length === 1 ? "a delivery" : `${toConfirm.length} deliveries`}`}</strong>
+          </span>
+          <span className="wf-mnext-go">
+            <MIcon name="chevron" size={18} />
+          </span>
+        </Link>
+      ) : latest ? (
         <Link href={`/m/sites/${s.id}/measurement`} className="wf-mnext done">
           <span className="wf-mnext-label">
             Measurement uploaded · v{latest.version}
@@ -90,6 +103,29 @@ export default function MobileSiteDetailPage() {
             <span className="wf-mtimeline-title">Measurement</span>
             <span className="wf-mtimeline-meta">
               {latest ? `v${latest.version} by ${latest.submitted_by_name || "—"}` : <span className="wf-mtag">Your task</span>}
+            </span>
+          </span>
+          <span className="wf-mtimeline-chev">
+            <MIcon name="chevron" size={16} />
+          </span>
+        </Link>
+        <Link
+          href={`/m/sites/${s.id}/delivery`}
+          className={`wf-mtimeline-row ${toConfirm.length ? "current" : s.challans.length ? "done" : "locked"}`}
+        >
+          <span className="wf-mtimeline-dot">
+            {s.challans.length && !toConfirm.length ? <MIcon name="check" size={14} /> : <MIcon name="truck" size={14} />}
+          </span>
+          <span className="wf-mtimeline-body">
+            <span className="wf-mtimeline-title">Material Delivery</span>
+            <span className="wf-mtimeline-meta">
+              {toConfirm.length ? (
+                <span className="wf-mtag">{`${toConfirm.length} to confirm`}</span>
+              ) : s.challans.length ? (
+                `${s.challans.length} ${s.challans.length === 1 ? "delivery" : "deliveries"} confirmed`
+              ) : (
+                "Nothing dispatched yet"
+              )}
             </span>
           </span>
           <span className="wf-mtimeline-chev">

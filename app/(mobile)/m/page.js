@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { LoadError } from "@/components/ui";
-import { MSiteCard, MSectionTitle, MEmpty } from "@/components/MobileUI";
+import { MSiteCard, MSectionTitle, MEmpty, siteTaskHref } from "@/components/MobileUI";
 import { initials } from "@/lib/format";
 import { useMyUser } from "@/lib/roles";
 import { ALL_BRANCHES, SUPERVISOR_SITE_API } from "@/lib/team";
@@ -23,6 +23,8 @@ export default function MobileHomePage() {
   const list = useApiData(SUPERVISOR_SITE_API.list, { page: 1, limit: 100 }, { branchId: ALL_BRANCHES });
   const sites = list.data?.items || [];
   const toMeasure = sites.filter((s) => !s.latest_measurement);
+  // Sites with a step waiting on the supervisor: to measure, or deliveries to confirm.
+  const needsAction = sites.filter((s) => !s.latest_measurement || s.pending_deliveries > 0);
   const now = new Date();
 
   return (
@@ -56,11 +58,11 @@ export default function MobileHomePage() {
         !list.error && <div className="wf-empty">Loading your sites…</div>
       ) : (
         <>
-          <MSectionTitle right={<span className="wf-mcount">{toMeasure.length}</span>}>Needs your action</MSectionTitle>
-          {toMeasure.length === 0 ? (
-            <MEmpty title="All caught up" sub="Every site of yours has its measurement uploaded." />
+          <MSectionTitle right={<span className="wf-mcount">{needsAction.length}</span>}>Needs your action</MSectionTitle>
+          {needsAction.length === 0 ? (
+            <MEmpty title="All caught up" sub="Nothing to measure and no deliveries to confirm." />
           ) : (
-            toMeasure.map((site) => <MSiteCard key={site.id} site={site} href={`/m/sites/${site.id}/measurement`} />)
+            needsAction.map((site) => <MSiteCard key={site.id} site={site} href={siteTaskHref(site)} />)
           )}
 
           <MSectionTitle

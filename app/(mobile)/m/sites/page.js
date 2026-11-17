@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LoadError } from "@/components/ui";
-import { MSiteCard } from "@/components/MobileUI";
+import { MSiteCard, siteTaskHref } from "@/components/MobileUI";
 import { ALL_BRANCHES, SUPERVISOR_SITE_API } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
@@ -36,7 +36,7 @@ export default function MobileSitesPage() {
       <LoadError error={list.error} onRetry={list.reload} />
       {list.data &&
         rows.map((site) => (
-          <MSiteCard key={site.id} site={site} href={!site.latest_measurement ? `/m/sites/${site.id}/measurement` : `/m/sites/${site.id}`} />
+          <MSiteCard key={site.id} site={site} href={siteTaskHref(site)} />
         ))}
       {list.data && rows.length === 0 && (
         <div className="wf-empty">{sites.length ? "No sites in this filter." : "No sites yet — they appear once a manager assigns you as a supervisor."}</div>

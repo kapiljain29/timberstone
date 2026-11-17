@@ -13,6 +13,7 @@ import LeadQuotation from "@/components/LeadQuotation";
 import SiteMeasurements from "@/components/SiteMeasurements";
 import FinalQuotationStep from "@/components/FinalQuotationStep";
 import OrderPayments from "@/components/OrderPayments";
+import OrderChallans from "@/components/OrderChallans";
 import TokenFields, { EMPTY_TOKEN, tokenBody } from "@/components/TokenFields";
 import { dateTimeLocalToIso, formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
@@ -37,6 +38,8 @@ export default function LeadDetailPage() {
   const lead = useApiData(LEAD_API.details, { id }, { branchId: ALL_BRANCHES });
   // Bumped when the Final Quotation changes (e.g. approved) — reloads Order & Payments.
   const [orderRefresh, setOrderRefresh] = useState(0);
+  // Bumped after a payment / the order is created — reloads Delivery Challans.
+  const [challanRefresh, setChallanRefresh] = useState(0);
   // The lead's activity — who it is assigned to, its histories and token &
   // booking — needs Leads → View Activity; without it (e.g. Marketing) the
   // page shows only the lead's details, and none of these are loaded.
@@ -195,7 +198,9 @@ export default function LeadDetailPage() {
         />
       )}
       {/* After the client approves the Final Quotation: payments and the order. */}
-      {l.site && <OrderPayments leadId={l.id} refreshKey={orderRefresh} />}
+      {l.site && <OrderPayments leadId={l.id} refreshKey={orderRefresh} onChanged={() => setChallanRefresh((n) => n + 1)} />}
+      {/* Once the order exists: dispatching it in parts, and each delivery. */}
+      {l.site && <OrderChallans leadId={l.id} refreshKey={challanRefresh} />}
 
       {activity && (
         <Box title="Status History">

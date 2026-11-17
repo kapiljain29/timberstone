@@ -23,9 +23,10 @@ import { useApiData, useSubmit } from "@/lib/useApi";
 
 /**
  * leadId — the lead; refreshKey — change it to reload (e.g. after the
- * Final Quotation was approved on the same page).
+ * Final Quotation was approved on the same page); onChanged() — after a
+ * payment or the order is created (e.g. to reload the Delivery Challans).
  */
-export default function OrderPayments({ leadId, refreshKey = 0 }) {
+export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
   const can = useCan();
   const summary = useApiData(can("orders.view") ? ORDER_API.summary : null, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   const { master } = useOrderMaster();
@@ -52,7 +53,10 @@ export default function OrderPayments({ leadId, refreshKey = 0 }) {
     });
     if (!ok) return;
     const updated = await create.post(ORDER_API.create, { lead_id: leadId }, { branchId: ALL_BRANCHES });
-    if (updated) summary.patch(() => updated);
+    if (updated) {
+      summary.patch(() => updated);
+      onChanged?.();
+    }
   }
 
   return (
@@ -141,6 +145,7 @@ export default function OrderPayments({ leadId, refreshKey = 0 }) {
               onSaved={(updated) => {
                 setPaying(false);
                 summary.patch(() => updated);
+                onChanged?.();
               }}
             />
           )}
@@ -183,7 +188,15 @@ function StageNote({ plan, order, canCreate }) {
       <Alert tone="info">{`Order ${order.order_no} is created. Collect ${formatAmount(plan.dispatch_remaining)} more (${plan.dispatch_pct}% + GST) before the material is dispatched.`}</Alert>
     );
   }
-  return <Alert tone="info">{`Payment before dispatch received — order ${order.order_no} is ready to dispatch.`}</Alert>;
+  if (plan.stage === ORDER_STAGE.READY_TO_DISPATCH) {
+    return <Alert tone="info">{`Payment before dispatch received — order ${order.order_no} is ready to dispatch. Accounts sends it with Delivery Challans (one per part).`}</Alert>;
+  }
+  if (plan.stage === ORDER_STAGE.DISPATCHED) {
+    return (
+      <Alert tone="info">{`Every part of order ${order.order_no} is dispatched — ${order.delivered_count} of ${order.challan_count} challans confirmed delivered by the site's supervisor.`}</Alert>
+    );
+  }
+  return <Alert tone="info">{`Order ${order.order_no} is delivered — every challan confirmed on site.`}</Alert>;
 }
 
 // Records one customer payment toward the order.
