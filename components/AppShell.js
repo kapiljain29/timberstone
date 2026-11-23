@@ -58,6 +58,12 @@ const ICONS = {
       <path d="M9 8h6M9 12h6M9 16h3" />
     </svg>
   ),
+  payments: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+      <path d="M2.5 10h19M6.5 14.5h4" />
+    </svg>
+  ),
   notifications: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13.5 6 9.5Z" />
@@ -164,6 +170,7 @@ const NAV = [
     links: [
       { href: "/sites", label: "Sites", icon: ICONS.sites },
       { href: "/orders", label: "Orders", icon: ICONS.orders },
+      { href: "/payments", label: "Payments", icon: ICONS.payments },
     ],
   },
   {

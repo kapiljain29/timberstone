@@ -4,13 +4,16 @@
 // received (vs the Site Settings minimum), each payment with its receipt,
 // and the request to book without the full token — pending / approved /
 // rejected. The person who recorded a payment attaches its receipt here
-// (POST /leads/payment-receipt, multipart).
+// (POST /leads/payment-receipt, multipart). Only payments Accounts marked
+// received count; a token that a booking waits for shows a note.
 
 import { useState } from "react";
 import { Alert, Box, DataTable, FieldError, LoadError } from "@/components/ui";
 import FileDropBox from "@/components/FileDropBox";
+import PaymentStatusBadge from "@/components/PaymentStatusBadge";
 import { getSession } from "@/lib/api";
 import { formatAmount, formatDate, formatDateTime } from "@/lib/format";
+import { PAYMENT_STATUS } from "@/lib/payments";
 import { SUPER_ADMIN_SLUG } from "@/lib/roles";
 import { ALL_BRANCHES, APPROVAL_STATUS, LEAD_API, optionLabel } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
@@ -37,9 +40,17 @@ export default function LeadBooking({ booking, master }) {
   const user = getSession()?.user;
   const mayAttach = (p) => !p.receipt_url && (p.created_by === user?.id || user?.role === SUPER_ADMIN_SLUG);
   const { approval } = data;
+  // A token the booking waits for (the lead is booked once it is received).
+  const waiting = data.payments.find((p) => p.payment_status === PAYMENT_STATUS.PENDING && p.on_received);
 
   return (
     <Box title="Token & Booking">
+      {waiting && (
+        <Alert tone="info">
+          Waiting for Accounts to confirm the {formatAmount(waiting.amount)} token recorded by {waiting.created_by_name || "—"} on {formatDateTime(waiting.created_at)} —
+          the lead becomes Booked once it is marked received.
+        </Alert>
+      )}
       {approval?.approval_status === APPROVAL_STATUS.PENDING && (
         <Alert tone="info">
           Waiting for Management to approve marking this lead {approval.to_status_name || "Booked"} without the full token — asked by{" "}
@@ -65,6 +76,7 @@ export default function LeadBooking({ booking, master }) {
         <div>
           <strong>{formatAmount(data.token_paid)}</strong>
           {data.token_min_amount ? ` · minimum to book ${formatAmount(data.token_min_amount)}` : ""}
+          <div className="wf-sub">Only payments Accounts has marked received count.</div>
         </div>
       </div>
 
@@ -72,13 +84,14 @@ export default function LeadBooking({ booking, master }) {
         <div className="wf-field">
           <label>Payments</label>
           <DataTable
-            columns={["Received On", "Amount", "Mode", "Reference No.", "Recorded By", "Receipt"]}
+            columns={["Received On", "Amount", "Mode", "Reference No.", "Recorded By", "Status", "Receipt"]}
             rows={data.payments.map((p) => [
               formatDate(p.paid_on),
               <strong key="a">{formatAmount(p.amount)}</strong>,
               optionLabel(master?.payment_modes, p.payment_mode),
               p.reference_no || "—",
               p.created_by_name || "—",
+              <PaymentStatusBadge key="st" payment={p} />,
               p.receipt_url ? (
                 <a key="r" href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="wf-link-btn">
                   View receipt ↗

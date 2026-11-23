@@ -10,14 +10,18 @@
 //      Payments → Create Order, confirmed);
 //   2. Before dispatch — dispatch_pct more plus all the GST → ready to
 //      dispatch.
-// Record Payment (Orders & Payments → Record Payment) adds the customer's
-// payments; the list shows every payment, token included.
+// Record Payment (Payments → Add) adds the customer's
+// payments; the list shows every payment, token included. A payment counts
+// only once Accounts marks it received (Payments screen, /payments).
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Alert, Badge, Box, DataTable, Detail, DetailGroup, FieldError, LoadError, ProgressBar } from "@/components/ui";
 import { useConfirm } from "@/components/ConfirmDialog";
+import PaymentStatusBadge from "@/components/PaymentStatusBadge";
 import { formatAmount, formatDate, formatDateTime, todayDate } from "@/lib/format";
 import { ORDER_API, ORDER_PAYMENT_TYPE, ORDER_STAGE, orderStageTone, useOrderMaster } from "@/lib/orders";
+import { PAYMENT_STATUS } from "@/lib/payments";
 import { useCan } from "@/lib/roles";
 import { ALL_BRANCHES, optionLabel } from "@/lib/team";
 import { useApiData, useSubmit } from "@/lib/useApi";
@@ -44,6 +48,9 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
   const s = summary.data;
   const plan = s?.plan;
   const stageLabel = plan ? optionLabel(master?.order_stages, plan.stage) || plan.stage : null;
+  // Recorded but not yet confirmed by Accounts — not in the plan yet.
+  const pending = (s?.payments || []).filter((p) => p.payment_status === PAYMENT_STATUS.PENDING);
+  const pendingTotal = pending.reduce((sum, p) => sum + p.amount, 0);
 
   async function createOrder() {
     const ok = await confirm({
@@ -70,6 +77,16 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
       ) : (
         <>
           <StageNote plan={plan} order={s.order} canCreate={can("orders.add")} />
+          {pending.length > 0 && (
+            <Alert tone="info">
+              {`${formatAmount(pendingTotal)} recorded (${pending.length} ${pending.length === 1 ? "payment" : "payments"}) is waiting for Accounts to confirm it is received — it counts toward the plan once confirmed. `}
+              {can("payments.view") && (
+                <Link href="/payments" className="wf-link-btn">
+                  Open Payments →
+                </Link>
+              )}
+            </Alert>
+          )}
 
           <DetailGroup title="Approved Final Quotation">
             <Detail label="Quotation">
@@ -121,9 +138,9 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
             </DetailGroup>
           )}
 
-          {!paying && (can("orders.payment") || (!s.order && can("orders.add"))) && (
+          {!paying && (can("payments.add") || (!s.order && can("orders.add"))) && (
             <div className="wf-actions-end">
-              {can("orders.payment") && (
+              {can("payments.add") && (
                 <button type="button" className={`wf-btn${plan.stage === ORDER_STAGE.READY_FOR_ORDER ? "" : " primary"}`} onClick={() => setPaying(true)}>
                   Record Payment
                 </button>
@@ -163,7 +180,7 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
         <div className="wf-field">
           <label>Payments ({s.payments.length})</label>
           <DataTable
-            columns={["Received On", "For", "Amount", "Mode", "Reference No.", "Recorded By"]}
+            columns={["Received On", "For", "Amount", "Mode", "Reference No.", "Recorded By", "Status"]}
             rows={s.payments.map((p) => [
               formatDate(p.paid_on),
               optionLabel(master?.payment_types, p.payment_type) || p.payment_type,
@@ -171,6 +188,7 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
               optionLabel(master?.payment_modes, p.payment_mode) || p.payment_mode,
               p.reference_no || "—",
               p.created_by_name || "—",
+              <PaymentStatusBadge key="st" payment={p} />,
             ])}
           />
         </div>
