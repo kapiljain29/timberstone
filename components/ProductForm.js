@@ -20,6 +20,8 @@ const EMPTY = {
   thickness: "",
   kgs_per_sqft: "",
   dimensions: "",
+  // ₹ per sq.ft — a quotation line's rate (not editable on the quotation).
+  price: "",
   // A sample must be uploaded (by Sales, on the lead's order) before
   // Accounts can order this product.
   requires_sample: false,
@@ -29,6 +31,7 @@ const EMPTY = {
 function fromProduct(product) {
   const values = { ...EMPTY };
   for (const key of Object.keys(EMPTY)) values[key] = product[key] || "";
+  values.price = product.price === null || product.price === undefined ? "" : String(product.price);
   values.requires_sample = product.requires_sample === true;
   return values;
 }
@@ -73,7 +76,7 @@ export default function ProductForm({ product = null, onSaved, onCancel }) {
 
   async function handleSave(e) {
     e.preventDefault();
-    const body = { ...form, sub_category_id: form.sub_category_id || null };
+    const body = { ...form, sub_category_id: form.sub_category_id || null, price: form.price === "" ? null : Number(form.price) };
     const saved = await save.post(product ? PRODUCT_API.update : PRODUCT_API.create, product ? { id: product.id, ...body } : body);
     if (saved) onSaved(saved);
   }
@@ -81,7 +84,7 @@ export default function ProductForm({ product = null, onSaved, onCancel }) {
   return (
     <form onSubmit={handleSave} noValidate>
       <Box title="Product Details">
-        <div className="wf-grid wf-grid-3">
+        <div className="wf-grid wf-grid-4">
           <div className="wf-field">
             <label htmlFor="prod-name">Product Name</label>
             <input
@@ -136,6 +139,23 @@ export default function ProductForm({ product = null, onSaved, onCancel }) {
               ))}
             </select>
             <FieldError>{save.fieldErrors.sub_category_id}</FieldError>
+          </div>
+          <div className="wf-field">
+            <label htmlFor="prod-price">Price / Sq.ft (₹)</label>
+            <input
+              id="prod-price"
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="wf-input"
+              value={form.price}
+              onChange={(e) => set("price", e.target.value)}
+              placeholder="e.g. 185"
+              disabled={save.submitting}
+            />
+            <FieldError>{save.fieldErrors.price}</FieldError>
           </div>
         </div>
       </Box>

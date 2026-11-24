@@ -21,6 +21,7 @@ import FileDropBox from "@/components/FileDropBox";
 import Modal from "@/components/Modal";
 import { formatAmount, formatDateTime } from "@/lib/format";
 import { ORDER_API, ORDER_STAGE, useOrderMaster } from "@/lib/orders";
+import { discounted } from "@/lib/quotation";
 import { useCan } from "@/lib/roles";
 import { ALL_BRANCHES } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
@@ -104,7 +105,16 @@ export default function OrderParts({ leadId, summary: s, onChanged }) {
           </button>
         </div>
       )}
-      {placing && <PlaceOrderForm leadId={leadId} lines={s.items} hasOrder={plan.has_order} onCancel={() => setPlacing(false)} onSaved={done} />}
+      {placing && (
+        <PlaceOrderForm
+          leadId={leadId}
+          lines={s.items}
+          discountPct={s.quotation?.discount_pct || 0}
+          hasOrder={plan.has_order}
+          onCancel={() => setPlacing(false)}
+          onSaved={done}
+        />
+      )}
     </>
   );
 }
@@ -238,14 +248,18 @@ function SampleDialog({ leadId, line, onClose, onSaved }) {
 
 // Accounts places an order part: tick lines, set each quantity (defaults
 // to what is left). Lines waiting for a sample can't be ticked.
-function PlaceOrderForm({ leadId, lines, hasOrder, onCancel, onSaved }) {
+// discountPct — the approved quotation's discount, applied to every part.
+function PlaceOrderForm({ leadId, lines, discountPct, hasOrder, onCancel, onSaved }) {
   const open = lines.filter((l) => l.remaining_quantity > 0);
   const [picked, setPicked] = useState(() => Object.fromEntries(open.filter((l) => l.can_order).map((l) => [l.id, String(l.remaining_quantity)])));
   const [note, setNote] = useState("");
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const chosen = open.filter((l) => picked[l.id] !== undefined);
-  const amount = chosen.reduce((sum, l) => sum + (Number(picked[l.id]) || 0) * l.rate, 0);
+  const amount = discounted(
+    chosen.map((l) => ({ quantity: picked[l.id], rate: l.rate })),
+    discountPct
+  ).net;
 
   function toggle(line, on) {
     setPicked((p) => {
@@ -262,7 +276,7 @@ function PlaceOrderForm({ leadId, lines, hasOrder, onCancel, onSaved }) {
     const ok = await confirm({
       title: `Place ${hasOrder ? "another order part" : "the order"} — ${chosen.length} ${chosen.length === 1 ? "line" : "lines"}?`,
       message:
-        `${chosen.map((l) => `${l.product_name}: ${qty(picked[l.id] || 0)} sq.ft`).join(", ")} — about ${formatAmount(amount)} before GST. ` +
+        `${chosen.map((l) => `${l.product_name}: ${qty(picked[l.id] || 0)} sq.ft`).join(", ")} — about ${formatAmount(amount)} before GST${discountPct ? `, after the quotation's ${discountPct}% discount` : ""}. ` +
         `It gets its own order number; the sales team and the site's Operation Head are notified. ${
           rest > 0 ? `${rest} ${rest === 1 ? "line stays" : "lines stay"} to be ordered later.` : "This orders everything that is left."
         } An order can't be deleted.`,
@@ -352,7 +366,10 @@ function OrderPart({ order: o }) {
     <div className="wf-field">
       <DetailGroup title={`Order ${o.order_no}`}>
         <Detail label="Placed">{`${formatDateTime(o.created_at)}${o.created_by_name ? ` by ${o.created_by_name}` : ""}`}</Detail>
-        <Detail label="Amount">{`${formatAmount(o.order_amount)} + GST ${formatAmount(o.gst_amount)} = ${formatAmount(o.grand_total)}`}</Detail>
+        <Detail label="Amount">
+          {`${o.discount_amount > 0 ? `${formatAmount(o.order_amount + o.discount_amount)} − ${o.discount_pct}% discount ${formatAmount(o.discount_amount)} = ` : ""}` +
+            `${formatAmount(o.order_amount)} + GST ${formatAmount(o.gst_amount)} = ${formatAmount(o.grand_total)}`}
+        </Detail>
         <Detail label="Ready to Dispatch">{o.ready_to_dispatch_at ? formatDateTime(o.ready_to_dispatch_at) : "Not yet"}</Detail>
         <Detail label="Dispatch">
           {o.dispatch_completed_at ? "Fully dispatched" : o.challan_count ? `${o.challan_count} ${o.challan_count === 1 ? "challan" : "challans"} sent` : "Not yet"}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Box, DataTable, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { PRODUCT_API, PRODUCT_SPECS, STATUS, useProductMaster } from "@/lib/team";
+import { formatAmount } from "@/lib/format";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { statusParam, useListFilters } from "@/lib/useListFilters";
 import { useCan } from "@/lib/roles";
@@ -83,7 +84,7 @@ export default function ProductsPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Product", "Category", ...PRODUCT_SPECS.map(([, label]) => label), "Colors", "Status", ""]}
+              columns={["Product", "Category", "Price / Sq.ft", ...PRODUCT_SPECS.map(([, label]) => label), "Colors", "Status", ""]}
               emptyLabel={filters.active ? "No products match these filters." : "No products yet. Add the first one."}
               rows={items.map((p) => [
                 <div key="n">
@@ -94,6 +95,13 @@ export default function ProductsPage() {
                   {p.category_name || "—"}
                   {p.sub_category_name && <span className="wf-cell-sub">{p.sub_category_name}</span>}
                 </div>,
+                p.price === null ? (
+                  <span key="pr" className="wf-cell-sub">
+                    Not set
+                  </span>
+                ) : (
+                  formatAmount(p.price)
+                ),
                 ...PRODUCT_SPECS.map(([key]) =>
                   p[key] ? (
                     <span key={key} className="wf-nowrap">

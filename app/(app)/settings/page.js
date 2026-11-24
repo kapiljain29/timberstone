@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Box, DataTable, FieldError, LoadError, PhoneField, TabBar } from "@/components/ui";
 import FileDropBox from "@/components/FileDropBox";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { formatDateTime } from "@/lib/format";
+import { formatAmount, formatDateTime } from "@/lib/format";
 import { useCan } from "@/lib/roles";
 import { SETTINGS_API, useSettingsMaster } from "@/lib/team";
 import { useApiData, useSubmit } from "@/lib/useApi";
@@ -237,6 +237,11 @@ const GROUPS = {
         ],
       },
       {
+        title: "Discount Slabs",
+        note: "The discount on a whole quotation, by its amount (the products' total, before freight and GST). The highest slab the amount reaches applies automatically — Sales can't change it. Each quotation keeps the discount it was saved with.",
+        slabs: "quotation_discount_slabs",
+      },
+      {
         title: "Printed on Every Quotation",
         note: "One per line. Each quotation keeps the text in force when it was saved — editing here changes new quotations and revisions only.",
         fields: [
@@ -329,6 +334,13 @@ function initialValues(layout, data, master) {
   const values = Object.fromEntries(Object.entries(data.values).map(([k, v]) => [k, v ?? ""]));
   for (const section of layout.sections) {
     for (const f of section.fields || []) if (f.secret) values[f.key] = "";
+    // Slab rows as the inputs hold them (text).
+    if (section.slabs) {
+      values[section.slabs] = (data.values[section.slabs] || []).map((slab) => ({
+        min_amount: String(slab.min_amount),
+        discount_pct: String(slab.discount_pct),
+      }));
+    }
     if (section.templates) {
       const saved = data.values.wa_templates || {};
       values.wa_templates = Object.fromEntries(
@@ -381,6 +393,16 @@ function SettingsForm({ layout, data, master, canEdit, onSaved, onDirtyChange, c
     const body = { group: data.group };
     for (const [key, value] of Object.entries(form)) {
       body[key] = isNumberField(layout, key) && value !== "" ? Number(value) : value === "" ? null : value;
+    }
+    // Discount slabs: numbers; a row left completely blank is dropped.
+    for (const section of layout.sections) {
+      if (!section.slabs) continue;
+      body[section.slabs] = form[section.slabs]
+        .filter((slab) => slab.min_amount !== "" || slab.discount_pct !== "")
+        .map((slab) => ({
+          min_amount: slab.min_amount === "" ? null : Number(slab.min_amount),
+          discount_pct: slab.discount_pct === "" ? null : Number(slab.discount_pct),
+        }));
     }
     let result = await save.post(SETTINGS_API.update, body);
     if (!result) return;
@@ -455,6 +477,8 @@ function SettingsForm({ layout, data, master, canEdit, onSaved, onDirtyChange, c
 
               {section.branding ? (
                 <Branding data={data} master={master} files={files} onChange={(kind, list) => setFiles((f) => ({ ...f, [kind]: list }))} errors={errors} />
+              ) : section.slabs ? (
+                <SlabTable name={section.slabs} value={form[section.slabs]} onChange={(v) => set(section.slabs, v)} errors={errors} />
               ) : section.templates ? (
                 enabled && <TemplateTable master={master} value={form.wa_templates} onChange={(v) => set("wa_templates", v)} errors={errors} />
               ) : (
@@ -674,6 +698,71 @@ function Branding({ data, master, files, onChange, errors }) {
         );
       })}
       <FieldError>{errors.file}</FieldError>
+    </div>
+  );
+}
+
+// Discount slabs: "order amount from" → discount %, one row each.
+// value = [{ min_amount, discount_pct }] as text; `name` = the setting key
+// (errors come back as <name>.<row>.<field>, or <name> for the whole list).
+function SlabTable({ name, value, onChange, errors }) {
+  const update = (index, patch) => onChange(value.map((slab, i) => (i === index ? { ...slab, ...patch } : slab)));
+  const remove = (index) => onChange(value.filter((_, i) => i !== index));
+  const add = () => onChange([...value, { min_amount: "", discount_pct: "" }]);
+  return (
+    <div className="wf-field">
+      {value.length > 0 ? (
+        <DataTable
+          columns={["Order Amount From (₹)", "Discount (%)", ""]}
+          widths={["45%", "40%", "15%"]}
+          align={[null, null, "right"]}
+          rows={value.map((slab, index) => [
+            <div key="a" className="wf-field">
+              <input
+                className="wf-input"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                required
+                aria-label={`Order amount from, slab ${index + 1}`}
+                value={slab.min_amount}
+                placeholder="e.g. 1200000"
+                onChange={(e) => update(index, { min_amount: e.target.value })}
+              />
+              {Number(slab.min_amount) > 0 && <p className="wf-login-field-hint">{formatAmount(slab.min_amount)} and above</p>}
+              <FieldError>{errors[`${name}.${index}.min_amount`]}</FieldError>
+            </div>,
+            <div key="p" className="wf-field">
+              <input
+                className="wf-input"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                inputMode="decimal"
+                required
+                aria-label={`Discount %, slab ${index + 1}`}
+                value={slab.discount_pct}
+                placeholder="e.g. 20"
+                onChange={(e) => update(index, { discount_pct: e.target.value })}
+              />
+              <FieldError>{errors[`${name}.${index}.discount_pct`]}</FieldError>
+            </div>,
+            <button key="x" type="button" className="wf-link-btn" onClick={() => remove(index)} aria-label={`Remove slab ${index + 1}`}>
+              Remove
+            </button>,
+          ])}
+        />
+      ) : (
+        <p className="wf-login-field-hint">No slabs — quotations get no discount.</p>
+      )}
+      <FieldError>{errors[name]}</FieldError>
+      <div>
+        <button type="button" className="wf-btn" onClick={add}>
+          + Add Slab
+        </button>
+      </div>
     </div>
   );
 }

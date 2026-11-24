@@ -5,8 +5,11 @@
 // the reason). Lines: category (Categories master), product (searched within
 // the category as you type), area, colour pattern (suggestions from the
 // product's colours as you type, or free text such as "As per client choice"),
-// quantity (sq.ft) and rate (₹/sq.ft); the amounts and totals shown are a
-// preview — the API calculates what is saved and generates the PDF.
+// quantity (sq.ft) and rate (₹/sq.ft — the product's price, read-only; the
+// API uses the price in force when saving). The discount is on the whole
+// quotation: the discount slab (Site Settings → Quotation) its products'
+// total reaches. The amounts and totals shown are a preview — the API
+// calculates what is saved and generates the PDF.
 
 import { useState } from "react";
 import { Box, DataTable, FieldError } from "@/components/ui";
@@ -18,6 +21,9 @@ import { ALL_BRANCHES } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
 const EMPTY_LINE = { category_id: "", product_id: "", product_name: "", area: "interior", colour_pattern: "", quantity: "", rate: "" };
+
+// A product's price as the line's rate ("" = no price set — can't be quoted).
+const priceText = (price) => (price === null || price === undefined ? "" : String(price));
 
 // Always offered as a colour pattern, whatever the product.
 const CLIENT_CHOICE = { name: "As per client choice" };
@@ -36,7 +42,8 @@ function initialValues(lead, revision) {
         area: i.area,
         colour_pattern: i.colour_pattern,
         quantity: String(i.quantity),
-        rate: String(i.rate),
+        // The product's price now — what this revision will be saved with.
+        rate: priceText(i.current_price),
       })),
       freight: revision.freight ? String(revision.freight) : "",
       round_off: revision.round_off ? String(revision.round_off) : "",
@@ -75,7 +82,9 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
   for (const i of revision?.items || []) {
     if (i.category_id && !categories.some((c) => c.id === i.category_id)) categories.push({ id: i.category_id, category_name: i.category_name });
   }
-  const totals = quotationTotals(form.items, { freight: form.freight, gstRate: master?.gst_rate });
+  const totals = quotationTotals(form.items, { freight: form.freight, gstRate: master?.gst_rate, slabs: master?.discount_slabs });
+  // The next slab up, to tell Sales how much more earns a bigger discount.
+  const nextSlab = (master?.discount_slabs || []).find((slab) => slab.min_amount > totals.subtotal);
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const patchLine = (index, patch) =>
@@ -111,7 +120,6 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
         area: line.area,
         colour_pattern: line.colour_pattern,
         quantity: toNumber(line.quantity),
-        rate: toNumber(line.rate),
       })),
       freight: toNumber(form.freight),
       round_off: toNumber(form.round_off),
@@ -185,9 +193,9 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
         <div className="wf-field">
           <label className="wf-required">Products</label>
           <DataTable
-            columns={["Category", "Product", "Area's", "Colour Pattern", "Qty (sq.ft)", "Rate / Sq.ft (₹)", "Amount", ""]}
+            columns={["Category", "Product", "Area's", "Colour Pattern", "Qty (sq.ft)", "Rate / Sq.ft", "Amount", ""]}
             widths={["15%", "20%", "10%", "16%", "10%", "10%", "12%", "7%"]}
-            align={[null, null, null, null, null, null, "right", "right"]}
+            align={[null, null, null, null, null, "right", "right", "right"]}
             rows={form.items.map((line, index) => [
               <select
                 key="g"
@@ -195,7 +203,7 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
                 className="wf-select"
                 value={line.category_id}
                 // A product belongs to its category — pick it again.
-                onChange={(e) => patchLine(index, { category_id: e.target.value, product_id: "", product_name: "" })}
+                onChange={(e) => patchLine(index, { category_id: e.target.value, product_id: "", product_name: "", rate: "" })}
                 disabled={save.submitting || !master}
               >
                 <option value="">{master ? "Select category" : "Loading…"}</option>
@@ -214,8 +222,9 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
                 params={{ category_id: line.category_id }}
                 text={line.product_name}
                 // Typing again un-picks the product until one is chosen.
-                onTextChange={(t) => patchLine(index, { product_name: t, product_id: "" })}
-                onPick={(p) => patchLine(index, { product_id: p.id, product_name: p.product_name })}
+                onTextChange={(t) => patchLine(index, { product_name: t, product_id: "", rate: "" })}
+                // The rate is the product's price — not editable here.
+                onPick={(p) => patchLine(index, { product_id: p.id, product_name: p.product_name, rate: priceText(p.price) })}
                 optionLabel={(p) => p.product_name}
                 emptyLabel="No products in this category match"
                 disabled={save.submitting || !line.category_id}
@@ -259,7 +268,9 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
                 inputMode: "decimal",
                 "aria-label": `Quantity, line ${index + 1}`,
               }),
-              lineInput(index, "rate", { key: "r", type: "number", min: "0", step: "any", inputMode: "decimal", "aria-label": `Rate, line ${index + 1}` }),
+              <span key="r" className="wf-nowrap" aria-label={`Rate, line ${index + 1}`}>
+                {!line.product_id ? "—" : line.rate === "" ? <span className="wf-cell-sub">No price set</span> : formatAmount(line.rate)}
+              </span>,
               formatAmount(totals.amounts[index]),
               <button
                 key="x"
@@ -283,6 +294,19 @@ export default function QuotationForm({ lead, type = "tentative", quotation = nu
                 <span>Subtotal</span>
                 <span>{formatAmount(totals.subtotal)}</span>
               </div>
+              {totals.discountPct > 0 && (
+                <div className="wf-quote-summary-row">
+                  <span>Less: Discount @ {totals.discountPct}%</span>
+                  <span>− {formatAmount(totals.discountAmount)}</span>
+                </div>
+              )}
+              {nextSlab && totals.subtotal > 0 && (
+                <div className="wf-quote-summary-row muted">
+                  <span>
+                    {formatAmount(nextSlab.min_amount - totals.subtotal)} more for {nextSlab.discount_pct}% off
+                  </span>
+                </div>
+              )}
               <div className="wf-quote-summary-row">
                 <label htmlFor="quote-freight">Freight (₹)</label>
                 <input
