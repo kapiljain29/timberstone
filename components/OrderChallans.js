@@ -2,12 +2,12 @@
 
 // A lead's Delivery Challans card (POST /api/admin/challans/for-order,
 // Delivery Challans → View) — next to Order & Payments on the lead, site
-// and order pages, once the order exists. Accounts (Delivery Challans →
-// Add) dispatches the order in parts: each challan has its lines (the
-// approved quotation's products or free text, quantity, unit), dispatch
-// date, vehicle and driver; ticking "last part" marks the order fully
-// dispatched. The site's supervisor confirms each delivery in the
-// Supervisor app — the list shows its status and confirmation photos.
+// and order pages, once an order part exists. The order is placed in parts
+// (each its own work order); Accounts (Delivery Challans → Add) dispatches
+// each part in one or more challans: lines (the part's products or free
+// text, quantity, unit), dispatch date, vehicle and driver; ticking "last"
+// marks that part fully dispatched. The site's supervisor confirms each
+// delivery in the Supervisor app — the list shows its status and photos.
 
 import { useEffect, useState } from "react";
 import { Alert, Badge, Box, DataTable, Detail, DetailGroup, FieldError, ImageGallery, LoadError } from "@/components/ui";
@@ -22,92 +22,102 @@ const EMPTY_LINE = { product_id: "", item_name: "", quantity: "", unit: "" };
 
 /**
  * leadId — the lead; refreshKey — change it to reload (e.g. after a payment
- * on the same page made the order ready to dispatch); onChanged() — after a
- * challan or marking the order fully dispatched (the order's stage changes).
+ * or a new order part on the same page); onChanged() — after a challan or
+ * marking a part fully dispatched (the lead's order stage changes).
  */
 export default function OrderChallans({ leadId, refreshKey = 0, onChanged }) {
   const can = useCan();
   const data = useApiData(can("challans.view") ? CHALLAN_API.forOrder : null, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   const { master } = useChallanMaster();
-  const [creating, setCreating] = useState(false);
-  const complete = useSubmit({ fieldErrorsInToast: true });
-  const [confirm, confirmDialog] = useConfirm();
+  const [creatingFor, setCreatingFor] = useState(null);
   const { reload } = data;
 
   useEffect(() => {
     if (refreshKey) reload();
   }, [refreshKey, reload]);
 
-  // Nothing to show before the order exists.
-  if (!can("challans.view") || (data.data && !data.data.order)) return null;
+  // Nothing to show before the first order part.
+  if (!can("challans.view") || (data.data && !data.data.orders.length)) return null;
   const d = data.data;
+  const total = d ? d.orders.reduce((sum, part) => sum + part.challans.length, 0) : 0;
+  const saved = (updated) => {
+    setCreatingFor(null);
+    data.patch(() => updated);
+    onChanged?.();
+  };
 
-  // The last part went out without being marked as the last one.
+  return (
+    <Box title={`Delivery Challans${d ? ` (${total})` : ""}`}>
+      <LoadError error={data.error} onRetry={data.reload} />
+      {!d
+        ? !data.error && <div className="wf-empty">Loading challans…</div>
+        : d.orders.map((part) => (
+            <PartChallans
+              key={part.order.id}
+              part={part}
+              master={master}
+              creating={creatingFor === part.order.id}
+              onCreate={() => setCreatingFor(part.order.id)}
+              onCancel={() => setCreatingFor(null)}
+              onSaved={saved}
+            />
+          ))}
+    </Box>
+  );
+}
+
+// One order part: its dispatch state, "Create Challan" and its challans.
+function PartChallans({ part, master, creating, onCreate, onCancel, onSaved }) {
+  const can = useCan();
+  const complete = useSubmit({ fieldErrorsInToast: true });
+  const [confirm, confirmDialog] = useConfirm();
+  const { order, challans } = part;
+
+  // Its last material went out without being marked as the last.
   async function completeDispatch() {
     const ok = await confirm({
-      title: `Mark ${d.order.order_no} fully dispatched?`,
-      message: `Use this when the last part is already sent (${d.challans.length} ${d.challans.length === 1 ? "challan" : "challans"} so far). No more challans can be added afterwards.`,
+      title: `Mark ${order.order_no} fully dispatched?`,
+      message: `Use this when everything in this order part is already sent (${challans.length} ${challans.length === 1 ? "challan" : "challans"} so far). No more challans can be added to it afterwards.`,
       confirmLabel: "Mark Fully Dispatched",
       tone: "primary",
     });
     if (!ok) return;
-    const updated = await complete.post(CHALLAN_API.completeDispatch, { lead_id: leadId }, { branchId: ALL_BRANCHES });
-    if (updated) {
-      data.patch(() => updated);
-      onChanged?.();
-    }
+    const updated = await complete.post(CHALLAN_API.completeDispatch, { work_order_id: order.id }, { branchId: ALL_BRANCHES });
+    if (updated) onSaved(updated);
   }
 
   return (
-    <Box
-      title={`Delivery Challans${d ? ` (${d.challans.length})` : ""}`}
-      right={
-        d?.can_dispatch &&
-        can("challans.add") &&
-        !creating && (
-          <button type="button" className="wf-link-btn" onClick={() => setCreating(true)}>
-            + Create Challan
+    <div className="wf-field">
+      <label>
+        {`Order ${order.order_no} — ${challans.length} ${challans.length === 1 ? "challan" : "challans"}`}
+        {order.dispatch_completed_at && " · fully dispatched"}
+      </label>
+      {!part.can_dispatch && part.blocked_reason && !order.dispatch_completed_at && <Alert tone="info">{part.blocked_reason}</Alert>}
+      {part.can_complete && can("challans.add") && !creating && (
+        <Alert tone="info">
+          {`${challans.length} ${challans.length === 1 ? "challan" : "challans"} sent for this order so far. Is that everything? `}
+          <button type="button" className="wf-link-btn" onClick={completeDispatch} disabled={complete.submitting}>
+            Mark Fully Dispatched
           </button>
-        )
-      }
-    >
-      <LoadError error={data.error} onRetry={data.reload} />
-      {!d ? (
-        !data.error && <div className="wf-empty">Loading challans…</div>
-      ) : (
-        <>
-          {!d.can_dispatch && d.blocked_reason && <Alert tone="info">{d.blocked_reason}</Alert>}
-          {d.can_complete && can("challans.add") && !creating && (
-            <Alert tone="info">
-              {`${d.challans.length} ${d.challans.length === 1 ? "part" : "parts"} sent so far. Is that everything? `}
-              <button type="button" className="wf-link-btn" onClick={completeDispatch} disabled={complete.submitting}>
-                Mark Fully Dispatched
-              </button>
-            </Alert>
-          )}
-          {creating && (
-            <ChallanForm
-              leadId={leadId}
-              orderNo={d.order.order_no}
-              products={d.products}
-              units={master?.units || []}
-              onCancel={() => setCreating(false)}
-              onSaved={(updated) => {
-                setCreating(false);
-                data.patch(() => updated);
-                onChanged?.();
-              }}
-            />
-          )}
-          {d.challans.length === 0 ? (
-            !creating && <div className="wf-empty">No challans yet — the order is sent in one or more parts, each with its own challan.</div>
-          ) : (
-            d.challans.map((c) => <ChallanView key={c.id} challan={c} master={master} />)
-          )}
-        </>
+        </Alert>
       )}
+      {creating ? (
+        <ChallanForm order={order} products={part.products} units={master?.units || []} onCancel={onCancel} onSaved={onSaved} />
+      ) : (
+        part.can_dispatch &&
+        can("challans.add") && (
+          <div>
+            <button type="button" className="wf-link-btn" onClick={onCreate}>
+              {`+ Create Challan for ${order.order_no}`}
+            </button>
+          </div>
+        )
+      )}
+      {challans.length === 0
+        ? !creating && <div className="wf-empty">No challans yet — this order part is sent in one or more challans.</div>
+        : challans.map((c) => <ChallanView key={c.id} challan={c} master={master} />)}
       {confirmDialog}
-    </Box>
+    </div>
   );
 }
 
@@ -154,8 +164,9 @@ function ChallanView({ challan: c, master }) {
   );
 }
 
-// Accounts dispatches a part of the order.
-function ChallanForm({ leadId, orderNo, products, units, onCancel, onSaved }) {
+// Accounts dispatches (a part of) an order part.
+function ChallanForm({ order, products, units, onCancel, onSaved }) {
+  const orderNo = order.order_no;
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
   const [form, setForm] = useState({
@@ -164,7 +175,7 @@ function ChallanForm({ leadId, orderNo, products, units, onCancel, onSaved }) {
     driver_name: "",
     note: "",
     completes_dispatch: false,
-    // Starts with one line per product of the approved quotation.
+    // Starts with one line per product of the order part.
     items: products.length ? products.map((p) => ({ ...EMPTY_LINE, product_id: p.product_id, item_name: p.product_name })) : [{ ...EMPTY_LINE }],
   });
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -179,9 +190,9 @@ function ChallanForm({ leadId, orderNo, products, units, onCancel, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
     const ok = await confirm({
-      title: form.completes_dispatch ? `Dispatch the last part of ${orderNo}?` : `Dispatch a part of ${orderNo}?`,
+      title: form.completes_dispatch ? `Dispatch the rest of ${orderNo}?` : `Dispatch material of ${orderNo}?`,
       message: `A Delivery Challan is created and the site's supervisor is asked to confirm the delivery.${
-        form.completes_dispatch ? " The order is marked fully dispatched — no more challans can be added." : ""
+        form.completes_dispatch ? ` ${orderNo} is marked fully dispatched — no more challans can be added to it.` : ""
       } A challan can't be edited afterwards.`,
       confirmLabel: "Create Challan",
       tone: "primary",
@@ -190,7 +201,7 @@ function ChallanForm({ leadId, orderNo, products, units, onCancel, onSaved }) {
     const updated = await save.post(
       CHALLAN_API.create,
       {
-        lead_id: leadId,
+        work_order_id: order.id,
         dispatch_date: form.dispatch_date || undefined,
         vehicle_no: form.vehicle_no.trim() || undefined,
         driver_name: form.driver_name.trim() || undefined,
@@ -287,11 +298,11 @@ function ChallanForm({ leadId, orderNo, products, units, onCancel, onSaved }) {
         <label className="wf-check-option">
           <input type="checkbox" checked={form.completes_dispatch} onChange={(e) => set("completes_dispatch", e.target.checked)} disabled={save.submitting} />
           <span>
-            <strong>This is the last part</strong> — the order is fully dispatched; no more challans can be added.
+            <strong>This is the last of {orderNo}</strong> — it is fully dispatched; no more challans can be added to it.
           </span>
         </label>
       </div>
-      <FieldError>{save.fieldErrors.lead_id}</FieldError>
+      <FieldError>{save.fieldErrors.work_order_id}</FieldError>
       <div className="wf-actions-end">
         <button type="button" className="wf-btn" onClick={onCancel} disabled={save.submitting}>
           Cancel

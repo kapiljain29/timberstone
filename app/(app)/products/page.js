@@ -86,7 +86,10 @@ export default function ProductsPage() {
               columns={["Product", "Category", ...PRODUCT_SPECS.map(([, label]) => label), "Colors", "Status", ""]}
               emptyLabel={filters.active ? "No products match these filters." : "No products yet. Add the first one."}
               rows={items.map((p) => [
-                <strong key="n">{p.product_name}</strong>,
+                <div key="n">
+                  <strong>{p.product_name}</strong>
+                  {p.requires_sample && <span className="wf-cell-sub">Requires sample</span>}
+                </div>,
                 <div key="c">
                   {p.category_name || "—"}
                   {p.sub_category_name && <span className="wf-cell-sub">{p.sub_category_name}</span>}

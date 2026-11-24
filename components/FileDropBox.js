@@ -2,8 +2,9 @@
 
 // Working file picker in the wireframe's upload-box look (.wf-upload, see
 // UploadBox in components/ui.js): drag files onto it or click "+ Choose
-// File"; the picked files are listed with a remove (×) each. Controlled —
-// the parent keeps `files` (File[]).
+// File"; the picked files are listed — a thumbnail for images, the file
+// type otherwise — each with a Remove button. Controlled — the parent keeps
+// `files` (File[]).
 //
 //   <FileDropBox id="design-jpeg" label="Upload design JPEG" extensions={[".jpg", ".jpeg"]}
 //     files={jpegs} onChange={setJpegs} />
@@ -11,10 +12,12 @@
 // Files with other extensions are skipped (the API checks again).
 
 import { useRef, useState } from "react";
+import { useFilePreviews } from "@/lib/useFilePreviews";
 
 export default function FileDropBox({ id, label, extensions = [], multiple = true, files, onChange, disabled = false }) {
   const input = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const previews = useFilePreviews(files);
 
   function allowed(file) {
     const name = file.name.toLowerCase();
@@ -69,9 +72,17 @@ export default function FileDropBox({ id, label, extensions = [], multiple = tru
         <ul className="wf-upload-files">
           {files.map((file, i) => (
             <li key={`${file.name}-${i}`}>
-              <span>{file.name}</span>
+              <span className="wf-upload-file">
+                {previews[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local preview of a picked file
+                  <img className="wf-upload-thumb" src={previews[i]} alt="" />
+                ) : (
+                  <span className="wf-upload-thumb">{file.name.split(".").pop()}</span>
+                )}
+                <span>{file.name}</span>
+              </span>
               <button type="button" className="wf-link-btn" onClick={() => remove(i)} disabled={disabled} aria-label={`Remove ${file.name}`}>
-                ×
+                Remove
               </button>
             </li>
           ))}

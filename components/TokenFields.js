@@ -3,7 +3,7 @@
 // Booking fields for a status change to a needs_token status (Booked) — on
 // the lead page's Change Status and the Call Queue's log-call form. Always
 // the tentative area and quotation amount (required); then either the
-// token received (amount, mode, date, reference) or, ticked,
+// token received (amount, date, reference) or, ticked,
 // a reason to ask Management for approval to book without the full token
 // (any amount entered is still recorded). The API decides what is enough
 // (token_min_amount); the receipt is attached afterwards on the lead page.
@@ -23,7 +23,6 @@ export const EMPTY_TOKEN = {
   area: "",
   quotation: "",
   amount: "",
-  mode: "",
   paidOn: "",
   referenceNo: "",
   bypass: false,
@@ -37,7 +36,6 @@ export function tokenBody(token) {
     tentative_area: token.area === "" ? null : Number(token.area) || null,
     tentative_quotation_amount: token.quotation === "" ? null : Number(token.quotation) || null,
     token_amount: amount || null,
-    token_payment_mode: amount ? token.mode || null : null,
     token_paid_on: amount ? token.paidOn || todayDate() : null,
     token_reference_no: amount ? token.referenceNo.trim() || null : null,
     bypass_reason: token.bypass ? token.reason.trim() || null : null,
@@ -45,8 +43,7 @@ export function tokenBody(token) {
 }
 
 /**
- * master — /leads/master or /call-queue/master (payment_modes,
- * token_min_amount). tokenPaid — token already received for the lead, when
+ * master — /leads/master or /call-queue/master (token_min_amount). tokenPaid — token already received for the lead, when
  * known (counts towards the minimum).
  */
 export default function TokenFields({ idPrefix, master, value, onChange, errors = {}, disabled = false, tokenPaid = 0 }) {
@@ -99,7 +96,7 @@ export default function TokenFields({ idPrefix, master, value, onChange, errors 
         </div>
       </div>
       {canRecord ? (
-        <div className="wf-grid wf-grid-4">
+        <div className="wf-grid wf-grid-3">
           <div className="wf-field">
             <label htmlFor={id("amount")}>Token Amount (₹)</label>
             <input
@@ -116,25 +113,6 @@ export default function TokenFields({ idPrefix, master, value, onChange, errors 
               disabled={disabled}
             />
             <FieldError>{errors.token_amount}</FieldError>
-          </div>
-          <div className="wf-field">
-            <label htmlFor={id("mode")}>Payment Mode</label>
-            <select
-              id={id("mode")}
-              required={Boolean(value.amount)}
-              className="wf-select"
-              value={value.mode}
-              onChange={(e) => set("mode", e.target.value)}
-              disabled={disabled || !master}
-            >
-              <option value="">Select mode</option>
-              {(master?.payment_modes || []).map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <FieldError>{errors.token_payment_mode}</FieldError>
           </div>
           <div className="wf-field">
             <label htmlFor={id("paid-on")}>Received On</label>

@@ -182,7 +182,7 @@ export default function LeadDetailPage() {
 
       <LeadQuotation lead={l} onSaved={lead.reload} />
 
-      {activity && <LeadBooking booking={booking} master={master} />}
+      {activity && <LeadBooking booking={booking} />}
 
       <LeadSite lead={l} onMoved={lead.reload} />
 

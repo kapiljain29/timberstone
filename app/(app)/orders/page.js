@@ -17,9 +17,9 @@ const TABS = [
 
 // Orders — leads whose client approved the Final Quotation (POST
 // /api/admin/orders/list, Orders & Payments → View): "Orders" (first) =
-// created — collecting the payment before dispatch, dispatching, delivered;
-// "Awaiting Order" = collecting the advance / ready for the order (Accounts
-// creates it). A row opens the lead's Order & Payments (/orders/[leadId]).
+// at least one order part placed — collecting the payment before dispatch,
+// dispatching, delivered; "Awaiting Order" = collecting the advance / ready
+// for the order (Accounts places it, in parts if needed). A row opens the lead's Order & Payments (/orders/[leadId]).
 export default function OrdersPage() {
   const filters = useListFilters(FILTERS);
   const { page, setPage, values } = filters;
@@ -78,8 +78,12 @@ export default function OrdersPage() {
                   <div className="wf-sub">{[o.company_name && o.full_name, o.site_code].filter(Boolean).join(" · ")}</div>
                 </div>,
                 <div key="q">
-                  {ordered ? o.order.order_no : o.revision_ref_no}
-                  <div className="wf-sub">{ordered ? `Created ${formatDate(o.order.created_at)}` : `Approved ${formatDate(o.approved_at)}`}</div>
+                  {ordered ? o.orders.map((p) => p.order_no).join(", ") : o.revision_ref_no}
+                  <div className="wf-sub">
+                    {ordered
+                      ? `${o.orders.length} ${o.orders.length === 1 ? "part" : "parts"}${o.plan.fully_ordered ? "" : " · lines still to order"}`
+                      : `Approved ${formatDate(o.approved_at)}`}
+                  </div>
                 </div>,
                 o.branch_name || "—",
                 formatAmount(o.plan.grand_total),

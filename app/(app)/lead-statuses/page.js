@@ -34,19 +34,26 @@ export default function LeadStatusesPage() {
     save.reset();
     setForm(
       leadStatus
-        ? { id: leadStatus.id, name: leadStatus.name, needs_follow_up: leadStatus.needs_follow_up, needs_token: leadStatus.needs_token }
-        : { id: null, name: "", needs_follow_up: false, needs_token: false }
+        ? {
+            id: leadStatus.id,
+            name: leadStatus.name,
+            needs_follow_up: leadStatus.needs_follow_up,
+            needs_token: leadStatus.needs_token,
+            hide_from_call_queue: leadStatus.hide_from_call_queue,
+          }
+        : { id: null, name: "", needs_follow_up: false, needs_token: false, hide_from_call_queue: false }
     );
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    const { id, name, needs_follow_up, needs_token } = form;
+    const { id, name, needs_follow_up, needs_token, hide_from_call_queue } = form;
     const saved = await save.post(id ? LEAD_STATUS_API.update : LEAD_STATUS_API.create, {
       ...(id && { id }),
       name,
       needs_follow_up,
       needs_token,
+      hide_from_call_queue,
     });
     if (saved) {
       setForm(null);
@@ -126,6 +133,21 @@ export default function LeadStatusesPage() {
               </label>
               <FieldError>{save.fieldErrors.needs_token}</FieldError>
             </div>
+            <div className="wf-field">
+              <label className="wf-check-option">
+                <input
+                  type="checkbox"
+                  checked={form.hide_from_call_queue}
+                  onChange={(e) => setForm((f) => ({ ...f, hide_from_call_queue: e.target.checked }))}
+                  disabled={save.submitting}
+                />
+                <span>
+                  <strong>Hide from call queue</strong> — leads in this status no longer show in anyone&apos;s Call Queue
+                  (e.g. Dead, Lost). They come back if the lead moves to another status.
+                </span>
+              </label>
+              <FieldError>{save.fieldErrors.hide_from_call_queue}</FieldError>
+            </div>
             <div className="wf-actions-end">
               <button type="button" className="wf-btn" onClick={() => setForm(null)} disabled={save.submitting}>
                 Cancel
@@ -151,7 +173,7 @@ export default function LeadStatusesPage() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Lead Status", "Next Follow-up", "Token", "Updated By", "Status", ""]}
+              columns={["Lead Status", "Next Follow-up", "Token", "Call Queue", "Updated By", "Status", ""]}
               emptyLabel={
                 filters.active ? "No lead statuses match these filters." : "No lead statuses yet. Add the first one."
               }
@@ -159,6 +181,7 @@ export default function LeadStatusesPage() {
                 <strong key="n">{s.name}</strong>,
                 s.needs_follow_up ? "Asked" : "—",
                 s.needs_token ? "Required" : "—",
+                s.hide_from_call_queue ? "Hidden" : "—",
                 s.updated_by_name || "—",
                 <StatusBadge key="s" active={s.status === STATUS.ACTIVE} />,
                 <div key="a" className="wf-btn-row">

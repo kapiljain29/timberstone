@@ -14,7 +14,7 @@ import { listTotal, useApiData, useDebouncedValue, useSubmit } from "@/lib/useAp
 import { useListFilters } from "@/lib/useListFilters";
 
 const PAGE_SIZE = 20;
-const FILTERS = { branch: "all", payment_status: PAYMENT_STATUS.PENDING, search: "", payment_type: "", payment_mode: "", from_date: "", to_date: "" };
+const FILTERS = { branch: "all", payment_status: PAYMENT_STATUS.PENDING, search: "", payment_type: "", from_date: "", to_date: "" };
 
 // Payments — every customer payment (POST /api/admin/payments/list,
 // Payments → View): the token given when a lead is Booked and the order's
@@ -52,7 +52,6 @@ function Payments() {
       search: search || undefined,
       payment_status: values.payment_status || undefined,
       payment_type: values.payment_type || undefined,
-      payment_mode: values.payment_mode || undefined,
       from_date: values.from_date || undefined,
       to_date: values.to_date || undefined,
     },
@@ -74,7 +73,7 @@ function Payments() {
     const ok = await confirm({
       title: `Mark ${formatAmount(p.amount)} from ${customer(p)} received?`,
       message:
-        `Only confirm once the money is in the account (${optionLabel(master?.payment_modes, p.payment_mode) || p.payment_mode}${p.reference_no ? `, ref. ${p.reference_no}` : ""}, ${formatDate(p.paid_on)}). ` +
+        `Only confirm once the money is in the account (${p.reference_no ? `ref. ${p.reference_no}, ` : ""}received on ${formatDate(p.paid_on)}). ` +
         `It then counts toward the ${typeLabel(p).toLowerCase()}${p.on_received_label ? ` and the lead is booked (${p.on_received_label.toLowerCase()})` : ""}, and ${p.created_by_name || "whoever recorded it"} is notified. This can't be undone.`,
       confirmLabel: "Mark Received",
       tone: "primary",
@@ -113,7 +112,7 @@ function Payments() {
           onChange={(v) => filters.set("search", v)}
           placeholder="Customer, mobile, reference, site or order no."
         />
-        <div className="wf-grid wf-grid-4">
+        <div className="wf-grid wf-grid-3">
           <div className="wf-field">
             <label htmlFor="payment-filter-type">Payment For</label>
             <select id="payment-filter-type" className="wf-select" value={values.payment_type} onChange={(e) => filters.set("payment_type", e.target.value)}>
@@ -121,17 +120,6 @@ function Payments() {
               {(master?.payment_types || []).map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="wf-field">
-            <label htmlFor="payment-filter-mode">Payment Mode</label>
-            <select id="payment-filter-mode" className="wf-select" value={values.payment_mode} onChange={(e) => filters.set("payment_mode", e.target.value)}>
-              <option value="">All</option>
-              {(master?.payment_modes || []).map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
                 </option>
               ))}
             </select>
@@ -155,7 +143,7 @@ function Payments() {
           !list.error && (
             <DataTable
               busy={list.loading}
-              columns={["Customer", "For", "Amount", "Mode / Reference", "Received On", "Recorded By", "Status", ""]}
+              columns={["Customer", "For", "Amount", "Reference", "Received On", "Recorded By", "Status", ""]}
               align={[null, null, "right", null, null, null, null, null]}
               emptyLabel={filters.active ? "No payments match these filters." : values.payment_status === PAYMENT_STATUS.PENDING ? "No payments waiting for confirmation." : "No payments yet."}
               rows={items.map((p) => [
@@ -171,8 +159,7 @@ function Payments() {
                 </div>,
                 <strong key="a">{formatAmount(p.amount)}</strong>,
                 <div key="m">
-                  {optionLabel(master?.payment_modes, p.payment_mode) || p.payment_mode}
-                  <div className="wf-sub">{p.reference_no || "—"}</div>
+                  {p.reference_no || "—"}
                   {p.receipt_url && (
                     <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="wf-link-btn">
                       Receipt ↗

@@ -177,7 +177,8 @@ export default function CallQueuePage() {
             onChange={(e) => filters.set("lead_status_id", e.target.value)}
           >
             <option value="">Any Lead Status</option>
-            {(master?.lead_statuses || []).map((s) => (
+            {/* Leads in a hide_from_call_queue status (Dead, Lost) never reach the queue. */}
+            {(master?.lead_statuses || []).filter((s) => !s.hide_from_call_queue).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>

@@ -49,7 +49,7 @@ export default function OrderPage() {
       </div>
       <div className="wf-queue-head">
         <div>
-          <h1 className="wf-h1">{s.order ? `${s.order.order_no} — ${s.lead.company_name || s.lead.full_name}` : s.lead.company_name || s.lead.full_name}</h1>
+          <h1 className="wf-h1">{s.orders.length ? `${s.orders.map((o) => o.order_no).join(", ")} — ${s.lead.company_name || s.lead.full_name}` : s.lead.company_name || s.lead.full_name}</h1>
           <p className="wf-sub">
             {[s.lead.company_name && s.lead.full_name, s.lead.site && `Site ${s.lead.site.site_code}`, s.lead.branch_name && `Branch: ${s.lead.branch_name}`]
               .filter(Boolean)

@@ -20,12 +20,16 @@ const EMPTY = {
   thickness: "",
   kgs_per_sqft: "",
   dimensions: "",
+  // A sample must be uploaded (by Sales, on the lead's order) before
+  // Accounts can order this product.
+  requires_sample: false,
 };
 
 // Form values for an existing product (/products/details).
 function fromProduct(product) {
   const values = { ...EMPTY };
   for (const key of Object.keys(EMPTY)) values[key] = product[key] || "";
+  values.requires_sample = product.requires_sample === true;
   return values;
 }
 
@@ -167,6 +171,16 @@ export default function ProductForm({ product = null, onSaved, onCancel }) {
             disabled={save.submitting}
           />
           <FieldError>{save.fieldErrors.description}</FieldError>
+        </div>
+        <div className="wf-field">
+          <label className="wf-check-option">
+            <input type="checkbox" checked={form.requires_sample} onChange={(e) => set("requires_sample", e.target.checked)} disabled={save.submitting} />
+            <span>
+              <strong>Requires sample</strong> — Accounts can order this product for a lead only after Sales uploads a sample on the lead&rsquo;s
+              order.
+            </span>
+          </label>
+          <FieldError>{save.fieldErrors.requires_sample}</FieldError>
         </div>
         <div className="wf-actions-end">
           <button type="button" className="wf-btn" onClick={handleCancel} disabled={save.submitting}>

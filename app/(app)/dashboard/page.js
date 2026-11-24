@@ -203,11 +203,11 @@ export default function DashboardPage() {
             >
               <DataTable
                 columns={["Customer", "Order", "Stage", "Grand Total", "Due", ""]}
-                emptyLabel="Nothing to create or dispatch right now."
+                emptyLabel="Nothing to order or dispatch right now."
                 busy={summary.stale}
                 rows={orders.needs_action.map((o) => [
                   <strong key="c">{o.customer_name}</strong>,
-                  o.order_no || "Not created yet",
+                  o.order_no ? `${o.order_no}${o.order_count > 1 ? ` +${o.order_count - 1}` : ""}` : "Not placed yet",
                   <OrderStatus key="s" status={{ stage: o.stage, stage_label: o.stage_label }} />,
                   formatAmount(o.grand_total),
                   formatAmount(o.due),

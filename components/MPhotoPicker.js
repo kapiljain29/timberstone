@@ -7,15 +7,15 @@
 //
 //   <MPhotoPicker id="site-photos" label="Site Photos" files={photos} onChange={setPhotos} required error={fieldErrors.site_photos} />
 
-import { useEffect, useMemo, useRef } from "react";
+import { useRef } from "react";
 import { FieldError } from "@/components/ui";
 import { MIcon } from "@/components/MobileUI";
+import { useFilePreviews } from "@/lib/useFilePreviews";
 
 export default function MPhotoPicker({ id, label, hint, files, onChange, multiple = true, required = false, disabled = false, error }) {
   const camera = useRef(null);
   const gallery = useRef(null);
-  const previews = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);
-  useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
+  const previews = useFilePreviews(files);
 
   function add(list) {
     const picked = [...list].filter((file) => file.type.startsWith("image/"));

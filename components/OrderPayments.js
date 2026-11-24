@@ -2,14 +2,14 @@
 
 // A lead's Order & Payments card (POST /api/admin/orders/summary, Orders &
 // Payments → View) — on the lead page, the site page and the Orders screen.
-// Once the client approved the Final Quotation it shows what is ordered
-// (the approved revision's lines) and the payment plan
-// (all amounts from the API):
+// Once the client approved the Final Quotation it shows the quotation's
+// lines and the order parts placed from them (components/OrderParts.js —
+// samples, Place Order) and the lead's payment plan (all amounts from the
+// API):
 //   1. Advance — advance_pct of the total before GST, the booking token
-//      included → then the order can be created (Create Order, Orders &
-//      Payments → Create Order, confirmed);
-//   2. Before dispatch — dispatch_pct more plus all the GST → ready to
-//      dispatch.
+//      included → then the first order part can be placed;
+//   2. Before dispatch — dispatch_pct more plus all the GST → the parts
+//      can be dispatched.
 // Record Payment (Payments → Add) adds the customer's
 // payments; the list shows every payment, token included. A payment counts
 // only once Accounts marks it received (Payments screen, /payments).
@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Alert, Badge, Box, DataTable, Detail, DetailGroup, FieldError, LoadError, ProgressBar } from "@/components/ui";
-import { useConfirm } from "@/components/ConfirmDialog";
+import OrderParts from "@/components/OrderParts";
 import PaymentStatusBadge from "@/components/PaymentStatusBadge";
 import { formatAmount, formatDate, formatDateTime, todayDate } from "@/lib/format";
 import { ORDER_API, ORDER_PAYMENT_TYPE, ORDER_STAGE, orderStageTone, useOrderMaster } from "@/lib/orders";
@@ -29,14 +29,12 @@ import { useApiData, useSubmit } from "@/lib/useApi";
 /**
  * leadId — the lead; refreshKey — change it to reload (e.g. after the
  * Final Quotation was approved on the same page); onChanged() — after a
- * payment or the order is created (e.g. to reload the Delivery Challans).
+ * payment, a sample or an order part (e.g. to reload the Delivery Challans).
  */
 export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
   const can = useCan();
   const summary = useApiData(can("orders.view") ? ORDER_API.summary : null, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   const { master } = useOrderMaster();
-  const create = useSubmit({ fieldErrorsInToast: true });
-  const [confirm, confirmDialog] = useConfirm();
   const [paying, setPaying] = useState(false);
   const { reload } = summary;
 
@@ -52,20 +50,10 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
   const pending = (s?.payments || []).filter((p) => p.payment_status === PAYMENT_STATUS.PENDING);
   const pendingTotal = pending.reduce((sum, p) => sum + p.amount, 0);
 
-  async function createOrder() {
-    const ok = await confirm({
-      title: `Create the order for ${s.lead.company_name || s.lead.full_name}?`,
-      message: `From ${s.quotation.revision_ref_no} — ${formatAmount(plan.grand_total)} incl. GST, with ${plan.advance_pct}% advance / ${plan.dispatch_pct}% + GST before dispatch. The sales team and the site's Operation Head are notified. An order can't be deleted.`,
-      confirmLabel: "Create Order",
-      tone: "primary",
-    });
-    if (!ok) return;
-    const updated = await create.post(ORDER_API.create, { lead_id: leadId }, { branchId: ALL_BRANCHES });
-    if (updated) {
-      summary.patch(() => updated);
-      onChanged?.();
-    }
-  }
+  const changed = (updated) => {
+    summary.patch(() => updated);
+    onChanged?.();
+  };
 
   return (
     <Box title="Order & Payments" right={plan && <Badge tone={orderStageTone(plan.stage)}>{stageLabel}</Badge>}>
@@ -76,7 +64,7 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
         <div className="wf-empty">Payments start once the client approves the Final Quotation.</div>
       ) : (
         <>
-          <StageNote plan={plan} order={s.order} canCreate={can("orders.add")} />
+          <StageNote plan={plan} orders={s.orders} canCreate={can("orders.add")} />
           {pending.length > 0 && (
             <Alert tone="info">
               {`${formatAmount(pendingTotal)} recorded (${pending.length} ${pending.length === 1 ? "payment" : "payments"}) is waiting for Accounts to confirm it is received — it counts toward the plan once confirmed. `}
@@ -106,56 +94,15 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
             </Detail>
           </DetailGroup>
 
-          {/* What is ordered — the approved quotation's lines, so the order can be placed from here. */}
-          <div className="wf-field">
-            <label>{`Order Items (${s.items.length})`}</label>
-            <DataTable
-              columns={["Product", "Category", "Area", "Colour / Pattern", "Quantity (sq.ft)", "Rate (₹/sq.ft)", "Amount"]}
-              align={[null, null, null, null, "right", "right", "right"]}
-              rows={s.items.map((i) => [
-                <strong key="p">{i.product_name}</strong>,
-                i.category_name || "—",
-                i.area_label,
-                i.colour_pattern,
-                Number(i.quantity).toLocaleString("en-IN"),
-                formatAmount(i.rate),
-                formatAmount(i.amount),
-              ])}
-            />
-          </div>
+          <OrderParts leadId={leadId} summary={s} onChanged={changed} />
 
           <PaymentSchedule plan={plan} />
 
-          {s.order && (
-            <DetailGroup title={`Order ${s.order.order_no}`}>
-              <Detail label="Created">{`${formatDateTime(s.order.created_at)}${s.order.created_by_name ? ` by ${s.order.created_by_name}` : ""}`}</Detail>
-              <Detail label="Ready to Dispatch">{s.order.ready_to_dispatch_at ? formatDateTime(s.order.ready_to_dispatch_at) : "Not yet"}</Detail>
-              {s.order.note && (
-                <Detail label="Note" wide>
-                  {s.order.note}
-                </Detail>
-              )}
-            </DetailGroup>
-          )}
-
-          {!paying && (can("payments.add") || (!s.order && can("orders.add"))) && (
+          {!paying && can("payments.add") && (
             <div className="wf-actions-end">
-              {can("payments.add") && (
-                <button type="button" className={`wf-btn${plan.stage === ORDER_STAGE.READY_FOR_ORDER ? "" : " primary"}`} onClick={() => setPaying(true)}>
-                  Record Payment
-                </button>
-              )}
-              {!s.order && can("orders.add") && (
-                <button
-                  type="button"
-                  className="wf-btn primary"
-                  onClick={createOrder}
-                  disabled={create.submitting || plan.stage !== ORDER_STAGE.READY_FOR_ORDER}
-                  title={plan.stage === ORDER_STAGE.READY_FOR_ORDER ? undefined : "Complete the advance first"}
-                >
-                  Create Order
-                </button>
-              )}
+              <button type="button" className="wf-btn primary" onClick={() => setPaying(true)}>
+                Record Payment
+              </button>
             </div>
           )}
 
@@ -164,12 +111,11 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
               leadId={leadId}
               master={master}
               plan={plan}
-              hasOrder={Boolean(s.order)}
+              hasOrder={s.orders.length > 0}
               onCancel={() => setPaying(false)}
               onSaved={(updated) => {
                 setPaying(false);
-                summary.patch(() => updated);
-                onChanged?.();
+                changed(updated);
               }}
             />
           )}
@@ -180,12 +126,11 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
         <div className="wf-field">
           <label>Payments ({s.payments.length})</label>
           <DataTable
-            columns={["Received On", "For", "Amount", "Mode", "Reference No.", "Recorded By", "Status"]}
+            columns={["Received On", "For", "Amount", "Reference No.", "Recorded By", "Status"]}
             rows={s.payments.map((p) => [
               formatDate(p.paid_on),
               optionLabel(master?.payment_types, p.payment_type) || p.payment_type,
               <strong key="a">{formatAmount(p.amount)}</strong>,
-              optionLabel(master?.payment_modes, p.payment_mode) || p.payment_mode,
               p.reference_no || "—",
               p.created_by_name || "—",
               <PaymentStatusBadge key="st" payment={p} />,
@@ -193,14 +138,13 @@ export default function OrderPayments({ leadId, refreshKey = 0, onChanged }) {
           />
         </div>
       )}
-      {confirmDialog}
     </Box>
   );
 }
 
 // How each instalment is described (the amounts come from the API).
 const INSTALLMENTS = {
-  advance: { title: "Advance", when: "Before the order is created — the booking token counts" },
+  advance: { title: "Advance", when: "Before the order is placed — the booking token counts" },
   dispatch: { title: "Before dispatch", when: "Before the material leaves" },
   progress: { title: "On progress", when: "When 50% of the work is done" },
   handover: { title: "On handover", when: "Before the final coat" },
@@ -251,35 +195,41 @@ function PaymentSchedule({ plan }) {
   );
 }
 
-// What happens next, for the current stage.
-function StageNote({ plan, order, canCreate }) {
+// What happens next, for the current stage of the lead's order.
+function StageNote({ plan, orders, canCreate }) {
+  const parts = `${orders.length} order ${orders.length === 1 ? "part" : "parts"}`;
+  const toOrder = plan.has_order && !plan.fully_ordered ? " Some lines are still to be ordered." : "";
+  const challans = orders.reduce((sum, o) => sum + o.challan_count, 0);
+  const delivered = orders.reduce((sum, o) => sum + o.delivered_count, 0);
   if (plan.stage === ORDER_STAGE.AWAITING_ADVANCE) {
     return (
-      <Alert tone="info">{`Collect ${formatAmount(plan.advance_remaining)} more to complete the advance (${plan.advance_pct}% of the total before GST, token included). Then the order can be created.`}</Alert>
+      <Alert tone="info">{`Collect ${formatAmount(plan.advance_remaining)} more to complete the advance (${plan.advance_pct}% of the total before GST, token included). Then the order can be placed.`}</Alert>
     );
   }
   if (plan.stage === ORDER_STAGE.READY_FOR_ORDER) {
-    return <Alert tone="info">{canCreate ? "The advance is received — create the order." : "The advance is received — Accounts creates the order next."}</Alert>;
+    return (
+      <Alert tone="info">
+        {canCreate ? "The advance is received — place the order (all lines at once, or in parts)." : "The advance is received — Accounts places the order next."}
+      </Alert>
+    );
   }
   if (plan.stage === ORDER_STAGE.AWAITING_DISPATCH_PAYMENT) {
     return (
-      <Alert tone="info">{`Order ${order.order_no} is created. Collect ${formatAmount(plan.dispatch_remaining)} more (${plan.dispatch_pct}% + GST) before the material is dispatched.`}</Alert>
+      <Alert tone="info">{`${parts} placed. Collect ${formatAmount(plan.dispatch_remaining)} more (${plan.dispatch_pct}% + GST) before the material is dispatched.${toOrder}`}</Alert>
     );
   }
   if (plan.stage === ORDER_STAGE.READY_TO_DISPATCH) {
-    return <Alert tone="info">{`Payment before dispatch received — order ${order.order_no} is ready to dispatch. Accounts sends it with Delivery Challans (one per part).`}</Alert>;
+    return <Alert tone="info">{`Payment before dispatch received — ${parts} ready to dispatch. Accounts sends each with Delivery Challans.${toOrder}`}</Alert>;
   }
   if (plan.stage === ORDER_STAGE.PARTLY_DISPATCHED) {
     return (
-      <Alert tone="info">{`Order ${order.order_no} is partly dispatched — ${order.challan_count} ${order.challan_count === 1 ? "part" : "parts"} sent, ${order.delivered_count} confirmed delivered. Accounts sends the rest, or marks it fully dispatched.`}</Alert>
+      <Alert tone="info">{`Dispatch in progress — ${challans} ${challans === 1 ? "challan" : "challans"} sent across ${parts}, ${delivered} confirmed delivered.${toOrder}`}</Alert>
     );
   }
   if (plan.stage === ORDER_STAGE.DISPATCHED) {
-    return (
-      <Alert tone="info">{`Every part of order ${order.order_no} is dispatched — ${order.delivered_count} of ${order.challan_count} challans confirmed delivered by the site's supervisor.`}</Alert>
-    );
+    return <Alert tone="info">{`Every line is ordered and dispatched — ${delivered} of ${challans} challans confirmed delivered by the site's supervisor.`}</Alert>;
   }
-  return <Alert tone="info">{`Order ${order.order_no} is delivered — every challan confirmed on site.`}</Alert>;
+  return <Alert tone="info">{`Every order part is delivered — all ${challans} challans confirmed on site.`}</Alert>;
 }
 
 // Records one customer payment toward the order.
@@ -295,7 +245,6 @@ function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
   const [form, setForm] = useState({
     payment_type: firstType,
     amount: firstAmount > 0 ? String(firstAmount) : "",
-    payment_mode: "",
     paid_on: todayDate(),
     reference_no: "",
     remark: "",
@@ -311,7 +260,6 @@ function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
         lead_id: leadId,
         payment_type: form.payment_type,
         amount: form.amount === "" ? undefined : Number(form.amount),
-        payment_mode: form.payment_mode || undefined,
         paid_on: form.paid_on || undefined,
         reference_no: form.reference_no.trim() || undefined,
         remark: form.remark.trim() || undefined,
@@ -323,7 +271,7 @@ function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="wf-subform">
-      <div className="wf-grid wf-grid-3">
+      <div className="wf-grid wf-grid-2">
         <div className="wf-field">
           <label htmlFor="pay-type">Payment For</label>
           <select
@@ -361,18 +309,6 @@ function PaymentForm({ leadId, master, plan, hasOrder, onCancel, onSaved }) {
             disabled={save.submitting}
           />
           <FieldError>{save.fieldErrors.amount}</FieldError>
-        </div>
-        <div className="wf-field">
-          <label htmlFor="pay-mode">Payment Mode</label>
-          <select id="pay-mode" className="wf-select" required value={form.payment_mode} onChange={(e) => set("payment_mode", e.target.value)} disabled={save.submitting}>
-            <option value="">Select…</option>
-            {(master?.payment_modes || []).map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <FieldError>{save.fieldErrors.payment_mode}</FieldError>
         </div>
       </div>
       <div className="wf-grid wf-grid-3">

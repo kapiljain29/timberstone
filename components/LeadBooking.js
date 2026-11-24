@@ -15,17 +15,16 @@ import { getSession } from "@/lib/api";
 import { formatAmount, formatDate, formatDateTime } from "@/lib/format";
 import { PAYMENT_STATUS } from "@/lib/payments";
 import { SUPER_ADMIN_SLUG } from "@/lib/roles";
-import { ALL_BRANCHES, APPROVAL_STATUS, LEAD_API, optionLabel } from "@/lib/team";
+import { ALL_BRANCHES, APPROVAL_STATUS, LEAD_API } from "@/lib/team";
 import { useSubmit } from "@/lib/useApi";
 
 // The receipt file types /leads/payment-receipt accepts.
 const RECEIPT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
 
 /**
- * booking — useApiData of /leads/booking; master — /leads/master
- * (payment_modes labels).
+ * booking — useApiData of /leads/booking.
  */
-export default function LeadBooking({ booking, master }) {
+export default function LeadBooking({ booking }) {
   const [attachTo, setAttachTo] = useState(null);
   const data = booking.data;
   if (booking.error) {
@@ -84,11 +83,10 @@ export default function LeadBooking({ booking, master }) {
         <div className="wf-field">
           <label>Payments</label>
           <DataTable
-            columns={["Received On", "Amount", "Mode", "Reference No.", "Recorded By", "Status", "Receipt"]}
+            columns={["Received On", "Amount", "Reference No.", "Recorded By", "Status", "Receipt"]}
             rows={data.payments.map((p) => [
               formatDate(p.paid_on),
               <strong key="a">{formatAmount(p.amount)}</strong>,
-              optionLabel(master?.payment_modes, p.payment_mode),
               p.reference_no || "—",
               p.created_by_name || "—",
               <PaymentStatusBadge key="st" payment={p} />,
