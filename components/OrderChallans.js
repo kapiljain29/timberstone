@@ -29,6 +29,8 @@ export default function OrderChallans({ leadId, refreshKey = 0, onChanged }) {
   const can = useCan();
   const data = useApiData(can("challans.view") ? CHALLAN_API.forOrder : null, { lead_id: leadId }, { branchId: ALL_BRANCHES });
   const { master } = useChallanMaster();
+  // The challan form open: { orderId, shortageId (sending the missing items
+  // of a short delivery) } or null.
   const [creatingFor, setCreatingFor] = useState(null);
   const { reload } = data;
 
@@ -56,8 +58,8 @@ export default function OrderChallans({ leadId, refreshKey = 0, onChanged }) {
               key={part.order.id}
               part={part}
               master={master}
-              creating={creatingFor === part.order.id}
-              onCreate={() => setCreatingFor(part.order.id)}
+              creating={creatingFor?.orderId === part.order.id ? creatingFor : null}
+              onCreate={(shortageId = null) => setCreatingFor({ orderId: part.order.id, shortageId })}
               onCancel={() => setCreatingFor(null)}
               onSaved={saved}
             />
@@ -101,13 +103,36 @@ function PartChallans({ part, master, creating, onCreate, onCancel, onSaved }) {
           </button>
         </Alert>
       )}
+      {/* Short deliveries: the missing items still to send. */}
+      {!creating &&
+        (part.open_shortages || []).map((sh) => (
+          <Alert key={sh.id} tone="error">
+            <strong>{`${sh.challan_no} arrived short: `}</strong>
+            {sh.short_lines.map((l) => `${l.item_name} — ${Number(l.short).toLocaleString("en-IN")} ${l.unit} missing`).join(" · ")}
+            {can("challans.add") && (
+              <>
+                {" "}
+                <button type="button" className="wf-link-btn" onClick={() => onCreate(sh.id)}>
+                  Send Missing Items
+                </button>
+              </>
+            )}
+          </Alert>
+        ))}
       {creating ? (
-        <ChallanForm order={order} products={part.products} units={master?.units || []} onCancel={onCancel} onSaved={onSaved} />
+        <ChallanForm
+          order={order}
+          products={part.products}
+          units={master?.units || []}
+          shortage={creating.shortageId ? (part.open_shortages || []).find((sh) => sh.id === creating.shortageId) : null}
+          onCancel={onCancel}
+          onSaved={onSaved}
+        />
       ) : (
         part.can_dispatch &&
         can("challans.add") && (
           <div>
-            <button type="button" className="wf-link-btn" onClick={onCreate}>
+            <button type="button" className="wf-link-btn" onClick={() => onCreate()}>
               {`+ Create Challan for ${order.order_no}`}
             </button>
           </div>
@@ -126,13 +151,29 @@ function ChallanView({ challan: c, master }) {
   const delivered = c.delivered_at;
   return (
     <div className="wf-field">
-      <DetailGroup title={`${c.challan_no}${c.completes_dispatch ? " · last part" : ""}`}>
+      <DetailGroup
+        title={`${c.challan_no}${c.completes_dispatch ? " · last part" : ""}${c.shortage_for_challan_no ? ` · missing items of ${c.shortage_for_challan_no}` : ""}`}
+      >
         <Detail label="Status">
-          <Badge tone={challanStatusTone(c.delivery_status)}>{optionLabel(master?.delivery_statuses, c.delivery_status) || c.delivery_status}</Badge>
+          <Badge tone={challanStatusTone(c.delivery_status)}>
+            {optionLabel(master?.delivery_statuses, c.delivery_status) || c.delivery_status}
+          </Badge>
+          {c.short_items > 0 && (
+            <>
+              {" "}
+              <Badge tone={c.shortage_open ? "pending" : "done"}>
+                {c.shortage_open
+                  ? `${c.short_items} ${c.short_items === 1 ? "item" : "items"} short`
+                  : `Missing items delivered ${formatDate(c.shortage_resolved_at)}`}
+              </Badge>
+            </>
+          )}
         </Detail>
         <Detail label="Dispatched">{`${formatDate(c.dispatch_date)}${c.created_by_name ? ` by ${c.created_by_name}` : ""}`}</Detail>
         <Detail label="Vehicle / Driver">{[c.vehicle_no, c.driver_name].filter(Boolean).join(" · ") || "—"}</Detail>
-        {delivered && <Detail label="Delivered">{`${formatDateTime(c.delivered_at)}${c.delivered_by_name ? ` — confirmed by ${c.delivered_by_name}` : ""}`}</Detail>}
+        {delivered && (
+          <Detail label="Delivered">{`${formatDateTime(c.delivered_at)}${c.delivered_by_name ? ` — confirmed by ${c.delivered_by_name}` : ""}`}</Detail>
+        )}
         {c.note && (
           <Detail label="Note" wide>
             {c.note}
@@ -144,9 +185,27 @@ function ChallanView({ challan: c, master }) {
           </Detail>
         )}
       </DetailGroup>
+      {/* Once confirmed: what the supervisor received on each line. */}
       <DataTable
-        columns={["Material", "Quantity", "Unit"]}
-        rows={c.items.map((i) => [i.item_name, Number(i.quantity).toLocaleString("en-IN"), i.unit])}
+        columns={delivered ? ["Material", "Sent", "Received", "Short", "Unit"] : ["Material", "Quantity", "Unit"]}
+        align={delivered ? [null, "right", "right", "right", null] : [null, "right", null]}
+        rows={c.items.map((i) =>
+          delivered
+            ? [
+                i.item_name,
+                Number(i.quantity).toLocaleString("en-IN"),
+                i.received_quantity === null ? "—" : Number(i.received_quantity).toLocaleString("en-IN"),
+                i.short > 0 ? (
+                  <strong key="s" style={{ color: "var(--red-text)" }}>
+                    {Number(i.short).toLocaleString("en-IN")}
+                  </strong>
+                ) : (
+                  "—"
+                ),
+                i.unit,
+              ]
+            : [i.item_name, Number(i.quantity).toLocaleString("en-IN"), i.unit]
+        )}
       />
       {delivered && (
         <div className="wf-grid wf-grid-2">
@@ -165,7 +224,9 @@ function ChallanView({ challan: c, master }) {
 }
 
 // Accounts dispatches (a part of) an order part.
-function ChallanForm({ order, products, units, onCancel, onSaved }) {
+// shortage — { id, challan_no, short_lines } when sending the missing items
+// of a short delivery: the lines start from what is missing.
+function ChallanForm({ order, products, units, shortage = null, onCancel, onSaved }) {
   const orderNo = order.order_no;
   const save = useSubmit();
   const [confirm, confirmDialog] = useConfirm();
@@ -175,8 +236,12 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
     driver_name: "",
     note: "",
     completes_dispatch: false,
-    // Starts with one line per product of the order part.
-    items: products.length ? products.map((p) => ({ ...EMPTY_LINE, product_id: p.product_id, item_name: p.product_name })) : [{ ...EMPTY_LINE }],
+    // Starts with the missing lines (a follow-up), else one line per product of the order part.
+    items: shortage
+      ? shortage.short_lines.map((l) => ({ product_id: l.product_id || "", item_name: l.item_name, quantity: String(l.short), unit: l.unit }))
+      : products.length
+        ? products.map((p) => ({ ...EMPTY_LINE, product_id: p.product_id, item_name: p.product_name }))
+        : [{ ...EMPTY_LINE }],
   });
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const setLine = (index, patch) => setForm((f) => ({ ...f, items: f.items.map((l, i) => (i === index ? { ...l, ...patch } : l)) }));
@@ -190,7 +255,11 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
     const ok = await confirm({
-      title: form.completes_dispatch ? `Dispatch the rest of ${orderNo}?` : `Dispatch material of ${orderNo}?`,
+      title: shortage
+        ? `Send the missing items of ${shortage.challan_no}?`
+        : form.completes_dispatch
+          ? `Dispatch the rest of ${orderNo}?`
+          : `Dispatch material of ${orderNo}?`,
       message: `A Delivery Challan is created and the site's supervisor is asked to confirm the delivery.${
         form.completes_dispatch ? ` ${orderNo} is marked fully dispatched — no more challans can be added to it.` : ""
       } A challan can't be edited afterwards.`,
@@ -207,6 +276,7 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
         driver_name: form.driver_name.trim() || undefined,
         note: form.note.trim() || undefined,
         completes_dispatch: form.completes_dispatch,
+        shortage_for_id: shortage ? shortage.id : undefined,
         items: form.items.map((l) => ({
           product_id: l.product_id || null,
           item_name: l.item_name,
@@ -221,20 +291,47 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="wf-subform">
+      {shortage && (
+        <Alert tone="info">{`Sending the items missing from ${shortage.challan_no}. Once the supervisor confirms this challan, that shortage is closed.`}</Alert>
+      )}
       <div className="wf-grid wf-grid-3">
         <div className="wf-field">
           <label htmlFor="dc-date">Dispatch Date</label>
-          <input id="dc-date" type="date" required max={todayDate()} className="wf-input" value={form.dispatch_date} onChange={(e) => set("dispatch_date", e.target.value)} disabled={save.submitting} />
+          <input
+            id="dc-date"
+            type="date"
+            required
+            max={todayDate()}
+            className="wf-input"
+            value={form.dispatch_date}
+            onChange={(e) => set("dispatch_date", e.target.value)}
+            disabled={save.submitting}
+          />
           <FieldError>{save.fieldErrors.dispatch_date}</FieldError>
         </div>
         <div className="wf-field">
           <label htmlFor="dc-vehicle">Vehicle No.</label>
-          <input id="dc-vehicle" className="wf-input" maxLength={30} placeholder="e.g. RJ14 GB 4521" value={form.vehicle_no} onChange={(e) => set("vehicle_no", e.target.value)} disabled={save.submitting} />
+          <input
+            id="dc-vehicle"
+            className="wf-input"
+            maxLength={30}
+            placeholder="e.g. RJ14 GB 4521"
+            value={form.vehicle_no}
+            onChange={(e) => set("vehicle_no", e.target.value)}
+            disabled={save.submitting}
+          />
           <FieldError>{save.fieldErrors.vehicle_no}</FieldError>
         </div>
         <div className="wf-field">
           <label htmlFor="dc-driver">Driver</label>
-          <input id="dc-driver" className="wf-input" maxLength={100} value={form.driver_name} onChange={(e) => set("driver_name", e.target.value)} disabled={save.submitting} />
+          <input
+            id="dc-driver"
+            className="wf-input"
+            maxLength={100}
+            value={form.driver_name}
+            onChange={(e) => set("driver_name", e.target.value)}
+            disabled={save.submitting}
+          />
           <FieldError>{save.fieldErrors.driver_name}</FieldError>
         </div>
       </div>
@@ -249,7 +346,14 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
         <DataTable
           columns={["Product", "Material", "Quantity", "Unit", ""]}
           rows={form.items.map((line, i) => [
-            <select key="p" className="wf-select" aria-label={`Line ${i + 1} product`} value={line.product_id} onChange={(e) => pickProduct(i, e.target.value)} disabled={save.submitting}>
+            <select
+              key="p"
+              className="wf-select"
+              aria-label={`Line ${i + 1} product`}
+              value={line.product_id}
+              onChange={(e) => pickProduct(i, e.target.value)}
+              disabled={save.submitting}
+            >
               <option value="">Other (type below)</option>
               {products.map((p) => (
                 <option key={p.product_id} value={p.product_id}>
@@ -257,7 +361,15 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
                 </option>
               ))}
             </select>,
-            <input key="n" className="wf-input" aria-label={`Line ${i + 1} material`} maxLength={200} value={line.item_name} onChange={(e) => setLine(i, { item_name: e.target.value })} disabled={save.submitting} />,
+            <input
+              key="n"
+              className="wf-input"
+              aria-label={`Line ${i + 1} material`}
+              maxLength={200}
+              value={line.item_name}
+              onChange={(e) => setLine(i, { item_name: e.target.value })}
+              disabled={save.submitting}
+            />,
             <input
               key="q"
               className="wf-input"
@@ -270,9 +382,31 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
               onChange={(e) => setLine(i, { quantity: e.target.value })}
               disabled={save.submitting}
             />,
-            <input key="u" className="wf-input" list="dc-units" aria-label={`Line ${i + 1} unit`} maxLength={30} placeholder="Litres, Bags…" value={line.unit} onChange={(e) => setLine(i, { unit: e.target.value })} disabled={save.submitting} />,
+            <input
+              key="u"
+              className="wf-input"
+              list="dc-units"
+              aria-label={`Line ${i + 1} unit`}
+              maxLength={30}
+              placeholder="Litres, Bags…"
+              value={line.unit}
+              onChange={(e) => setLine(i, { unit: e.target.value })}
+              disabled={save.submitting}
+            />,
             form.items.length > 1 ? (
-              <button key="x" type="button" className="wf-link-btn" onClick={() => set("items", form.items.filter((_, j) => j !== i))} disabled={save.submitting} aria-label={`Remove line ${i + 1}`}>
+              <button
+                key="x"
+                type="button"
+                className="wf-link-btn"
+                onClick={() =>
+                  set(
+                    "items",
+                    form.items.filter((_, j) => j !== i)
+                  )
+                }
+                disabled={save.submitting}
+                aria-label={`Remove line ${i + 1}`}
+              >
                 ×
               </button>
             ) : (
@@ -284,31 +418,52 @@ function ChallanForm({ order, products, units, onCancel, onSaved }) {
         <FieldError>{Object.entries(save.fieldErrors).find(([param]) => param.startsWith("items"))?.[1]}</FieldError>
       </div>
       <div className="wf-field">
-        <button type="button" className="wf-link-btn" onClick={() => set("items", [...form.items, { ...EMPTY_LINE }])} disabled={save.submitting}>
+        <button
+          type="button"
+          className="wf-link-btn"
+          onClick={() => set("items", [...form.items, { ...EMPTY_LINE }])}
+          disabled={save.submitting}
+        >
           + Add Line
         </button>
       </div>
 
       <div className="wf-field">
         <label htmlFor="dc-note">Note</label>
-        <textarea id="dc-note" className="wf-input" rows={2} maxLength={2000} value={form.note} onChange={(e) => set("note", e.target.value)} disabled={save.submitting} />
+        <textarea
+          id="dc-note"
+          className="wf-input"
+          rows={2}
+          maxLength={2000}
+          value={form.note}
+          onChange={(e) => set("note", e.target.value)}
+          disabled={save.submitting}
+        />
         <FieldError>{save.fieldErrors.note}</FieldError>
       </div>
-      <div className="wf-field">
-        <label className="wf-check-option">
-          <input type="checkbox" checked={form.completes_dispatch} onChange={(e) => set("completes_dispatch", e.target.checked)} disabled={save.submitting} />
-          <span>
-            <strong>This is the last of {orderNo}</strong> — it is fully dispatched; no more challans can be added to it.
-          </span>
-        </label>
-      </div>
-      <FieldError>{save.fieldErrors.work_order_id}</FieldError>
+      {/* A follow-up for missing items doesn't change whether the part is fully dispatched. */}
+      {!shortage && !order.dispatch_completed_at && (
+        <div className="wf-field">
+          <label className="wf-check-option">
+            <input
+              type="checkbox"
+              checked={form.completes_dispatch}
+              onChange={(e) => set("completes_dispatch", e.target.checked)}
+              disabled={save.submitting}
+            />
+            <span>
+              <strong>This is the last of {orderNo}</strong> — it is fully dispatched; no more challans can be added to it.
+            </span>
+          </label>
+        </div>
+      )}
+      <FieldError>{save.fieldErrors.work_order_id || save.fieldErrors.shortage_for_id}</FieldError>
       <div className="wf-actions-end">
         <button type="button" className="wf-btn" onClick={onCancel} disabled={save.submitting}>
           Cancel
         </button>
         <button type="submit" className="wf-btn primary" disabled={save.submitting}>
-          Create Challan
+          {shortage ? "Send Missing Items" : "Create Challan"}
         </button>
       </div>
       {confirmDialog}

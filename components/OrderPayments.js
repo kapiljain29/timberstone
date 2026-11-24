@@ -229,6 +229,14 @@ function StageNote({ plan, orders, canCreate }) {
   if (plan.stage === ORDER_STAGE.DISPATCHED) {
     return <Alert tone="info">{`Every line is ordered and dispatched — ${delivered} of ${challans} challans confirmed delivered by the site's supervisor.`}</Alert>;
   }
+  if (plan.stage === ORDER_STAGE.SHORT_DELIVERED) {
+    return (
+      <Alert tone="error">
+        Every challan is confirmed on site, but some items arrived short. Accounts sends the missing items from Delivery Challans (Send Missing
+        Items).
+      </Alert>
+    );
+  }
   return <Alert tone="info">{`Every order part is delivered — all ${challans} challans confirmed on site.`}</Alert>;
 }
 

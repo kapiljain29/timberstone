@@ -102,18 +102,32 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
   const [signed, setSigned] = useState([]);
   const [material, setMaterial] = useState([]);
   const [remark, setRemark] = useState("");
+  // What arrived on each line — starts at what was sent.
+  const [received, setReceived] = useState(() => Object.fromEntries(c.items.map((i) => [i.id, String(i.quantity)])));
+  const shortBy = (line) => {
+    const got = received[line.id];
+    return got === "" || Number.isNaN(Number(got)) ? 0 : Math.max(Math.round((Number(line.quantity) - Number(got)) * 100) / 100, 0);
+  };
+  const shortLines = c.items.filter((i) => shortBy(i) > 0);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const ok = await confirm({
-      title: `Confirm ${c.challan_no} delivered?`,
-      message: "Accounts and the Operation Head are told the material reached the site. This can't be undone.",
+      title: shortLines.length ? `Confirm ${c.challan_no} with items short?` : `Confirm ${c.challan_no} delivered?`,
+      message: shortLines.length
+        ? `${shortLines.length} ${shortLines.length === 1 ? "item is" : "items are"} short. Accounts is told to send the missing items. This can't be undone.`
+        : "Everything arrived. Accounts and the Operation Head are told the material reached the site. This can't be undone.",
       confirmLabel: "Confirm Delivery",
       tone: "primary",
     });
     if (!ok) return;
     const body = new FormData();
     body.append("id", c.id);
+    // [{ id, received_quantity }] as JSON text (multipart).
+    body.append(
+      "items",
+      JSON.stringify(c.items.map((i) => ({ id: i.id, received_quantity: received[i.id] === "" ? null : Number(received[i.id]) })))
+    );
     if (remark.trim()) body.append("remark", remark.trim());
     signed.forEach((file) => body.append(CHALLAN_PHOTO_FIELDS.signedChallan, file));
     material.forEach((file) => body.append(CHALLAN_PHOTO_FIELDS.materialPhotos, file));
@@ -123,7 +137,44 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
   return (
     <form onSubmit={handleSubmit} noValidate>
       <MCard title={c.challan_no} right={<Badge tone={challanStatusTone(c.delivery_status)}>On its way</Badge>}>
-        <MChallanSummary challan={c} />
+        <MChallanSummary challan={c} hideItems />
+        <div>
+          <span className="wf-mlabel">Check what arrived</span>
+          <ul className="wf-mitems wf-mreceive">
+            {c.items.map((i) => {
+              const short = shortBy(i);
+              return (
+                <li key={i.id} className={short > 0 ? "short" : undefined}>
+                  <span>
+                    <span className="wf-mreceive-name">{i.item_name}</span>
+                    <span className="wf-mreceive-sent">
+                      {`Sent ${Number(i.quantity).toLocaleString("en-IN")} ${i.unit}`}
+                      {short > 0 ? <span className="wf-mshort">{`${short.toLocaleString("en-IN")} short`}</span> : <span className="wf-mfull">✓ All here</span>}
+                    </span>
+                  </span>
+                  <label className="wf-mreceive-qty">
+                    <input
+                      type="number"
+                      min="0"
+                      max={i.quantity}
+                      step="any"
+                      inputMode="decimal"
+                      required
+                      className="wf-input"
+                      aria-label={`${i.item_name} received`}
+                      value={received[i.id]}
+                      onChange={(e) => setReceived((r) => ({ ...r, [i.id]: e.target.value }))}
+                      disabled={save.submitting}
+                    />
+                    <span>{i.unit}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {/* A line's error (items.<n>.<field>) is a full sentence. */}
+          <FieldError>{Object.entries(save.fieldErrors).find(([param]) => param.startsWith("items"))?.[1]}</FieldError>
+        </div>
         <hr className="wf-mcard-divider" />
         <MPhotoPicker
           id={`signed-${c.id}`}
@@ -145,12 +196,13 @@ function ConfirmDelivery({ challan: c, onConfirmed }) {
           error={save.fieldErrors[CHALLAN_PHOTO_FIELDS.materialPhotos]}
         />
         <div className="wf-field">
-          <label htmlFor={`remark-${c.id}`}>Note (optional)</label>
+          <label htmlFor={`remark-${c.id}`}>{shortLines.length ? "What's missing or damaged?" : "Note (optional)"}</label>
           <textarea
             id={`remark-${c.id}`}
             className="wf-input"
             rows={2}
             maxLength={2000}
+            required={shortLines.length > 0}
             placeholder="e.g. 1 bucket of primer damaged"
             value={remark}
             onChange={(e) => setRemark(e.target.value)}

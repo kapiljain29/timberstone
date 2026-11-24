@@ -4109,3 +4109,57 @@ a.wf-mnext.done .wf-mnext-label {
 .wf-pay-progress + .wf-progress-track {
   margin-bottom: 14px;
 }
+
+/* Confirm delivery (Supervisor app): each line with what was sent and a
+   "received" box; short lines in red. */
+.wf-mreceive li {
+  align-items: center;
+}
+.wf-mreceive li.short {
+  background: var(--red-050);
+}
+.wf-mreceive-name {
+  display: block;
+  font-weight: 600;
+}
+.wf-mreceive-sent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.wf-mreceive-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.wf-mreceive-qty .wf-input {
+  width: 84px;
+  text-align: right;
+}
+.wf-mshort,
+.wf-mfull {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.wf-mshort {
+  color: var(--red-text);
+  background: var(--red-050);
+}
+.wf-mreceive li.short .wf-mshort {
+  background: var(--panel);
+}
+.wf-mfull {
+  color: var(--green-text);
+  background: var(--green-050);
+}

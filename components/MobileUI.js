@@ -203,8 +203,10 @@ export function MCard({ title, right, children }) {
 }
 
 // What a Delivery Challan brought: dispatch date, vehicle and driver as
-// chips, Accounts' note, and the material sent as a list.
-export function MChallanSummary({ challan: c }) {
+// chips, Accounts' note, and the material sent as a list — once confirmed,
+// with what was received and any shortfall. hideItems leaves the list out
+// (the confirm form lists the lines itself, to enter what arrived).
+export function MChallanSummary({ challan: c, hideItems = false }) {
   return (
     <>
       <div className="wf-mmeta">
@@ -228,17 +230,32 @@ export function MChallanSummary({ challan: c }) {
           {c.note}
         </div>
       )}
-      <div>
-        <span className="wf-mlabel">Material sent</span>
-        <ul className="wf-mitems">
-          {c.items.map((i) => (
-            <li key={i.id}>
-              <span>{i.item_name}</span>
-              <strong>{`${Number(i.quantity).toLocaleString("en-IN")} ${i.unit}`}</strong>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {c.shortage_for_challan_no && (
+        <div className="wf-mnote">
+          <span className="wf-mlabel">Missing items</span>
+          {`These are the items missing from ${c.shortage_for_challan_no}.`}
+        </div>
+      )}
+      {!hideItems && (
+        <div>
+          <span className="wf-mlabel">{c.delivered_at ? "Material received" : "Material sent"}</span>
+          <ul className="wf-mitems">
+            {c.items.map((i) => (
+              <li key={i.id}>
+                <span>
+                  {i.item_name}
+                  {i.short > 0 && <span className="wf-mshort">{`${Number(i.short).toLocaleString("en-IN")} short`}</span>}
+                </span>
+                <strong>
+                  {i.received_quantity !== null && i.received_quantity !== undefined && i.short > 0
+                    ? `${Number(i.received_quantity).toLocaleString("en-IN")} of ${Number(i.quantity).toLocaleString("en-IN")} ${i.unit}`
+                    : `${Number(i.quantity).toLocaleString("en-IN")} ${i.unit}`}
+                </strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }
