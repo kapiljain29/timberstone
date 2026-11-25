@@ -73,20 +73,35 @@ export default function MobileMaterialsPage() {
   );
 }
 
-// The quotation's lines, each with an "extra quantity" box (blank = not
-// needed), and why it is needed.
+// The quotation's items as tap-to-select rows: tapping one selects it and
+// shows its quantity box (with − / +); only selected items are sent. Then
+// why it is needed.
 function RequestForm({ siteId, lines, onSent }) {
   const save = useSubmit();
+  // Selected items: { [line id]: quantity text } — not in it = not needed.
   const [qty, setQty] = useState({});
   const [reason, setReason] = useState("");
-  // Only lines with a quantity above 0 are requested — blank or 0 = not needed.
-  const picked = lines.filter((l) => Number(qty[l.id]) > 0);
+  const picked = lines.filter((l) => l.id in qty);
+
+  function toggle(line) {
+    setQty((q) => {
+      const next = { ...q };
+      if (line.id in next) delete next[line.id];
+      else next[line.id] = "";
+      return next;
+    });
+  }
+  const setLine = (id, value) => setQty((q) => ({ ...q, [id]: value }));
+  const step = (id, by) => setLine(id, String(Math.max((Number(qty[id]) || 0) + by, 0)));
+
+  // A line's error: items.<n>.quantity, n = its place among the selected.
+  const errorFor = (line) => save.fieldErrors[`items.${picked.indexOf(line)}.quantity`];
 
   async function handleSubmit(e) {
     e.preventDefault();
     const sent = await save.post(
       MATERIAL_REQUEST_API.create,
-      { site_id: siteId, items: picked.map((l) => ({ quotation_item_id: l.id, quantity: Number(qty[l.id]) })), reason },
+      { site_id: siteId, items: picked.map((l) => ({ quotation_item_id: l.id, quantity: qty[l.id] === "" ? null : Number(qty[l.id]) })), reason },
       { branchId: ALL_BRANCHES }
     );
     if (sent) {
@@ -98,39 +113,57 @@ function RequestForm({ siteId, lines, onSent }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <MCard title="Request More Material">
+      <MCard title="Request More Material" right={picked.length ? <Badge tone="pending">{`${picked.length} selected`}</Badge> : null}>
         <div>
-          <span className="wf-mlabel">Extra quantity needed (sq.ft) — fill in only the items you need</span>
-          <ul className="wf-mitems wf-mreceive">
-            {lines.map((l) => (
-              <li key={l.id}>
-                <span>
-                  <span className="wf-mreceive-name">{l.product_name}</span>
-                  <span className="wf-mreceive-sent">
-                    {`${l.area_label} · ${l.colour_pattern} · quoted ${sqft(l.quantity)}`}
-                    {l.extra_quantity > 0 ? ` · ${sqft(l.extra_quantity)} extra approved` : ""}
-                  </span>
-                </span>
-                <label className="wf-mreceive-qty">
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    inputMode="decimal"
-                    className="wf-input"
-                    aria-label={`${l.product_name} extra quantity`}
-                    placeholder="0"
-                    value={qty[l.id] ?? ""}
-                    onChange={(e) => setQty((q) => ({ ...q, [l.id]: e.target.value }))}
-                    disabled={save.submitting}
-                  />
-                  <span>sq.ft</span>
-                </label>
-              </li>
-            ))}
+          <span className="wf-mlabel">Tap the items you need, then enter the extra quantity</span>
+          <ul className="wf-mpick">
+            {lines.map((l) => {
+              const selected = l.id in qty;
+              const error = selected && errorFor(l);
+              return (
+                <li key={l.id} className={`wf-mpick-item${selected ? " selected" : ""}${error ? " error" : ""}`}>
+                  <button type="button" className="wf-mpick-head" onClick={() => toggle(l)} aria-pressed={selected} disabled={save.submitting}>
+                    <span className="wf-mpick-check">{selected && <MIcon name="check" size={14} />}</span>
+                    <span>
+                      <span className="wf-mpick-name">{l.product_name}</span>
+                      <span className="wf-mpick-meta">{`${l.area_label} · ${l.colour_pattern}`}</span>
+                      <span className="wf-mpick-meta">{`Quoted ${sqft(l.quantity)} · ordered ${sqft(l.ordered_quantity)}`}</span>
+                      {l.extra_quantity > 0 && <span className="wf-mpick-chip">{`${sqft(l.extra_quantity)} extra already approved`}</span>}
+                    </span>
+                  </button>
+                  {selected && (
+                    <>
+                      <div className="wf-mpick-qty">
+                        <button type="button" className="wf-mpick-step" onClick={() => step(l.id, -1)} aria-label={`Less ${l.product_name}`} disabled={save.submitting}>
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          className="wf-input"
+                          aria-label={`${l.product_name} extra quantity in sq.ft`}
+                          placeholder="Qty"
+                          autoFocus
+                          value={qty[l.id]}
+                          onChange={(e) => setLine(l.id, e.target.value)}
+                          disabled={save.submitting}
+                        />
+                        <button type="button" className="wf-mpick-step" onClick={() => step(l.id, 1)} aria-label={`More ${l.product_name}`} disabled={save.submitting}>
+                          +
+                        </button>
+                        <span className="wf-mpick-unit">sq.ft extra</span>
+                      </div>
+                      <FieldError>{error}</FieldError>
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-          {/* items or items.<n>.<field> — full sentences. */}
-          <FieldError>{Object.entries(save.fieldErrors).find(([param]) => param.startsWith("items"))?.[1]}</FieldError>
+          {/* Errors about the list as a whole (e.g. an item no longer on the quotation). */}
+          <FieldError>{save.fieldErrors.items}</FieldError>
         </div>
         <div className="wf-field">
           <label htmlFor="material-reason">Why is it needed?</label>
@@ -148,7 +181,12 @@ function RequestForm({ siteId, lines, onSent }) {
           <FieldError>{save.fieldErrors.reason}</FieldError>
         </div>
         <button type="submit" className="wf-btn primary wf-mblock" disabled={save.submitting || picked.length === 0}>
-          <MIcon name="truck" size={18} /> {save.submitting ? "Sending…" : picked.length ? `Send Request (${picked.length})` : "Enter a quantity"}
+          <MIcon name="truck" size={18} />{" "}
+          {save.submitting
+            ? "Sending…"
+            : picked.length === 0
+              ? "Select the items you need"
+              : `Send Request · ${picked.length} ${picked.length === 1 ? "item" : "items"}`}
         </button>
       </MCard>
     </form>

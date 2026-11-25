@@ -4163,3 +4163,212 @@ a.wf-mnext.done .wf-mnext-label {
   color: var(--green-text);
   background: var(--green-050);
 }
+
+/* Extra Material request (Supervisor app — /m/sites/[id]/materials): each
+   quoted item is a tap-to-select row; a selected one turns green and shows
+   its quantity stepper. Unselected items have no box at all. */
+.wf-mpick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wf-mpick-item {
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.wf-mpick-item.selected {
+  border-color: var(--brand);
+  background: var(--brand-050);
+}
+.wf-mpick-item.error {
+  border-color: var(--red);
+}
+.wf-mpick-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.wf-mpick-check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border: 2px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: #fff;
+}
+.wf-mpick-item.selected .wf-mpick-check {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.wf-mpick-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+.wf-mpick-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.wf-mpick-chip {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-text);
+  background: var(--green-050);
+}
+.wf-mpick-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 12px 48px;
+}
+.wf-mpick-qty .wf-input {
+  width: 96px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--panel);
+}
+.wf-mpick-step {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--brand-dark);
+  cursor: pointer;
+}
+.wf-mpick-unit {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.wf-mpick-item .wf-field-error,
+.wf-mpick-error {
+  padding: 0 14px 12px 48px;
+  margin: 0;
+}
+
+/* Site page progress (app/(app)/sites/[id]): the site's journey in five
+   clickable steps — each with its state line; done green, the current one
+   in brand colour, later ones faded. Click opens that step's tab. */
+.wf-journey {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.wf-journey-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  text-align: left;
+  font: inherit;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.wf-journey-step:hover {
+  box-shadow: var(--shadow-1);
+}
+.wf-journey-step.done {
+  border-left-color: var(--done);
+  background: var(--done-bg);
+}
+.wf-journey-step.current {
+  border-color: var(--brand);
+  border-left-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-050);
+}
+.wf-journey-step.upcoming {
+  opacity: 0.6;
+}
+.wf-journey-step.active {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 1px;
+}
+.wf-journey-num {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.wf-journey-step.done .wf-journey-num {
+  color: var(--done-text);
+}
+.wf-journey-step.current .wf-journey-num {
+  color: var(--brand);
+}
+.wf-journey-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.wf-journey-state {
+  font-size: 12px;
+  line-height: 1.35;
+}
+/* "Next step" banner under the journey, with the button that opens it. */
+.wf-next-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background: var(--brand-050);
+  color: var(--brand-dark);
+  font-size: 13.5px;
+}
+.wf-next-step strong {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.wf-next-step.done {
+  background: var(--done-bg);
+  color: var(--done-text);
+}
+@media (max-width: 900px) {
+  .wf-journey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wf-next-step {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

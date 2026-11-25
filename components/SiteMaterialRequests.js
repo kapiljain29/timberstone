@@ -5,7 +5,8 @@
 // (POST /api/admin/sites/material-requests). The site's Operation Head (or
 // a Super Admin — `can_decide`) approves or rejects (with the reason) a
 // pending one — useMaterialRequestDecision(), shared with the Material
-// Requests screen. Hidden until the site has a request.
+// Requests screen. The page loads the list (it also counts the pending
+// ones for its tab) and passes it in.
 
 import { Badge, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
 import { useMaterialRequestDecision } from "@/components/MaterialRequestDecision";
@@ -15,21 +16,32 @@ import { ALL_BRANCHES } from "@/lib/team";
 import { useApiData } from "@/lib/useApi";
 
 /**
- * siteId — the site; onDecided() — after an approval (e.g. reload the order).
+ * The site's requests (POST /api/admin/sites/material-requests) —
+ * useApiData's result, for SiteMaterialRequests and its tab's count.
  */
-export default function SiteMaterialRequests({ siteId, onDecided }) {
-  const list = useApiData(MATERIAL_REQUEST_API.site, { id: siteId }, { branchId: ALL_BRANCHES });
+export function useSiteMaterialRequests(siteId) {
+  return useApiData(siteId ? MATERIAL_REQUEST_API.site : null, { id: siteId }, { branchId: ALL_BRANCHES });
+}
+
+/**
+ * list — useSiteMaterialRequests(siteId); onDecided() — after an approval
+ * (e.g. reload the order).
+ */
+export default function SiteMaterialRequests({ list, onDecided }) {
   const decision = useMaterialRequestDecision((r, approved) => {
     list.reload();
     if (approved && onDecided) onDecided();
   });
   const d = list.data;
   if (list.error) return <LoadError error={list.error} onRetry={list.reload} />;
-  if (!d || d.requests.length === 0) return null;
+  if (!d) return <div className="wf-empty">Loading requests…</div>;
   const pending = d.requests.filter((r) => r.request_status === MATERIAL_REQUEST_STATUS.PENDING).length;
 
   return (
     <Box title="Extra Material Requests" right={pending > 0 ? <Badge tone="pending">{`${pending} waiting`}</Badge> : null}>
+      {d.requests.length === 0 && (
+        <div className="wf-empty">No requests yet. The site&rsquo;s supervisors ask for extra material from the Supervisor app.</div>
+      )}
       {d.requests.map((r) => (
         <div key={r.id} className="wf-subform">
           <DetailGroup>
