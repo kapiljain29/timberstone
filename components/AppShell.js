@@ -7,7 +7,8 @@ import { NOTIFICATIONS } from "@/lib/data";
 import { api, refreshProfile } from "@/lib/api";
 import { formatDateTime, initials } from "@/lib/format";
 import { NOTIFICATION_API, notificationsChanged, useBellNotifications } from "@/lib/notifications";
-import { WEB_ROLES, canAccess, setRoleId, signOut, useRole, useRoleId } from "@/lib/roles";
+import { useMaterialRequestsToDecide } from "@/lib/materialRequests";
+import { WEB_ROLES, canAccess, setRoleId, signOut, useCan, useRole, useRoleId } from "@/lib/roles";
 import PushPrompt from "@/components/PushPrompt";
 import { InstallAppLink } from "@/components/InstallBar";
 
@@ -169,6 +170,7 @@ const NAV = [
     group: "Site Execution",
     links: [
       { href: "/sites", label: "Sites", icon: ICONS.sites },
+      { href: "/material-requests", label: "Material Requests", icon: ICONS.approvals },
       { href: "/orders", label: "Orders", icon: ICONS.orders },
       { href: "/payments", label: "Payments", icon: ICONS.payments },
     ],
@@ -232,6 +234,11 @@ export default function AppShell({ children }) {
   // without a session keep the wireframe's sample list).
   const bell = useBellNotifications(fromApi);
   const unread = fromApi ? bell.data?.unread || 0 : NOTIFICATIONS.length;
+  // Extra material requests waiting for this user's decision.
+  const can = useCan();
+  const toDecide = useMaterialRequestsToDecide(fromApi && can("sites.view"));
+  // Counts shown next to menu links.
+  const badges = { "/notifications": unread, "/material-requests": toDecide };
 
   // Opening a notification from the bell marks it read.
   function openNotification(n) {
@@ -305,9 +312,7 @@ export default function AppShell({ children }) {
                   >
                     <span className="wf-sidebar-link-icon">{link.icon}</span>
                     {!collapsed && <span className="wf-sidebar-link-label">{link.label}</span>}
-                    {!collapsed && link.href === "/notifications" && unread > 0 && (
-                      <span className="wf-sidebar-link-badge">{unread}</span>
-                    )}
+                    {!collapsed && badges[link.href] > 0 && <span className="wf-sidebar-link-badge">{badges[link.href]}</span>}
                   </Link>
                 );
               })}

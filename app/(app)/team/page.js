@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import SetPasswordDialog from "@/components/SetPasswordDialog";
 import { Box, BranchFilter, DataTable, FilterPanel, LoadError, Pagination, SearchField, StatusBadge, StatusFilterField } from "@/components/ui";
 import { formatPhone } from "@/lib/phone";
 import { STATUS, TEAM_API, useBranchTabs, useTeamMaster } from "@/lib/team";
 import { listTotal, useApiData, useDebouncedValue } from "@/lib/useApi";
 import { statusParam, useListFilters } from "@/lib/useListFilters";
-import { useCan } from "@/lib/roles";
+import { SUPER_ADMIN_SLUG, useCan, useMyUser } from "@/lib/roles";
 import { useStatusToggle } from "@/lib/useStatusToggle";
 
 const PAGE_SIZE = 20;
@@ -51,6 +52,10 @@ function TeamMembers() {
     status: statusParam(filters.values.status),
   });
   const can = useCan();
+  // Only a Super Admin sets another member's password (the API checks too).
+  const me = useMyUser();
+  const isSuperAdmin = me?.role === SUPER_ADMIN_SLUG;
+  const [passwordFor, setPasswordFor] = useState(null);
   // Also reload the master: Department Head / Reporting Manager lists show active members only.
   const statusToggle = useStatusToggle(TEAM_API.status, list, reloadMaster);
 
@@ -169,6 +174,11 @@ function TeamMembers() {
                       {m.status === STATUS.ACTIVE ? "Deactivate" : "Activate"}
                     </button>
                   )}
+                  {isSuperAdmin && m.id !== me.id && (
+                    <button type="button" className="wf-link-btn" onClick={() => setPasswordFor(m)}>
+                      Change Password
+                    </button>
+                  )}
                 </div>,
               ])}
             />
@@ -177,6 +187,7 @@ function TeamMembers() {
         <Pagination pagination={list.data?.pagination} onPage={setPage} disabled={list.loading} />
       </Box>
       {statusToggle.confirmDialog}
+      {passwordFor && <SetPasswordDialog member={passwordFor} onClose={() => setPasswordFor(null)} />}
     </div>
   );
 }

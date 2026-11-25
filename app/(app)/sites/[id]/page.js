@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Alert, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
 import SiteSupervisor from "@/components/SiteSupervisor";
 import SiteMeasurements from "@/components/SiteMeasurements";
+import SiteMaterialRequests from "@/components/SiteMaterialRequests";
 import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
 import OrderPayments from "@/components/OrderPayments";
 import OrderChallans from "@/components/OrderChallans";
@@ -142,6 +143,8 @@ export default function SitePage() {
           site.reload();
         }}
       />
+      {/* Extra material asked for from the Supervisor app — the Operation Head decides. */}
+      <SiteMaterialRequests siteId={s.id} onDecided={() => setOrderRefresh((n) => n + 1)} />
 
       <Alert tone="info">The rest of the stage-by-stage workflow will appear here as each stage goes live.</Alert>
     </div>

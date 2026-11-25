@@ -132,6 +132,18 @@ export default function MobileSiteDetailPage() {
             <MIcon name="chevron" size={16} />
           </span>
         </Link>
+        <Link href={`/m/sites/${s.id}/materials`} className={`wf-mtimeline-row ${s.challans.length ? "done" : "locked"}`}>
+          <span className="wf-mtimeline-dot">
+            <MIcon name="checklist" size={14} />
+          </span>
+          <span className="wf-mtimeline-body">
+            <span className="wf-mtimeline-title">Extra Material</span>
+            <span className="wf-mtimeline-meta">Ask for more of the quoted items</span>
+          </span>
+          <span className="wf-mtimeline-chev">
+            <MIcon name="chevron" size={16} />
+          </span>
+        </Link>
       </div>
       <p className="wf-msub">The other steps will appear here as they go live.</p>
 

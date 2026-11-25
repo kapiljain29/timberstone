@@ -62,7 +62,11 @@ export default function OrderParts({ leadId, summary: s, onChanged }) {
             </div>,
             l.area_label,
             l.colour_pattern,
-            qty(l.quantity),
+            // + extra approved on the site's material requests (orderable too).
+            <div key="q">
+              {qty(l.quantity)}
+              {l.extra_quantity > 0 && <div className="wf-sub">{`+ ${qty(l.extra_quantity)} extra approved`}</div>}
+            </div>,
             formatAmount(l.rate),
             formatAmount(l.amount),
             l.ordered_quantity ? qty(l.ordered_quantity) : "—",
