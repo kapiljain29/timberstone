@@ -7,6 +7,7 @@ import { Alert, Box, Detail, DetailGroup, LoadError } from "@/components/ui";
 import SiteSupervisor from "@/components/SiteSupervisor";
 import SiteMeasurements from "@/components/SiteMeasurements";
 import SiteMaterialRequests from "@/components/SiteMaterialRequests";
+import SiteContractors from "@/components/SiteContractors";
 import FinalQuotationStep, { finalQuotationNextStep } from "@/components/FinalQuotationStep";
 import OrderPayments from "@/components/OrderPayments";
 import OrderChallans from "@/components/OrderChallans";
@@ -143,6 +144,8 @@ export default function SitePage() {
           site.reload();
         }}
       />
+      {/* Contractors per quotation item — added by the Operation Head. */}
+      <SiteContractors siteId={s.id} />
       {/* Extra material asked for from the Supervisor app — the Operation Head decides. */}
       <SiteMaterialRequests siteId={s.id} onDecided={() => setOrderRefresh((n) => n + 1)} />
 
